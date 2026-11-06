@@ -1,4 +1,5 @@
 import { ledgerMessages } from "@/features/ledger/messages";
+import { permissionsMessages } from "@/features/permissions/messages";
 import type { TextDictionary } from "@/i18n/text";
 
 // 这里只放跨业务复用的通用 UI 文案；业务文案由各 feature 通过 mergeText 合并进字典
@@ -130,4 +131,6 @@ export const baseMessages = {
   "ui.table.pagination": ["分页", "Pagination"],
   // 台账下载中心的业务文案由 feature 自带的元组补充
   ...ledgerMessages,
+  // 权限设置页的业务文案由 feature 自带的元组补充
+  ...permissionsMessages,
 } as const satisfies TextDictionary;
