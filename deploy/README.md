@@ -87,7 +87,51 @@ REMOTE
 - 未知路径返回 SPA 的 404 页面，而不是 Nginx 404。
 - `api.smedatacenter.xyz/healthz` 仍为 200，MCP 与 Launcher 不受影响。
 
-## 尚未自动化
+## 自动发布
 
-自动发布工作流（构建产物 → `current` 切换 → 公网校验 → 失败自动回滚）尚未落地。
-落地前按上面的手工步骤执行，并遵守服务仓库的发布授权边界。
+工作流：Actions → **Deploy app site** → 选择 `main` → 操作 `deploy` 或 `rollback`。
+
+**只有手动触发会发布**；普通 push 与 PR 合并都不会动线上。要改成合并即发布，再给工作流加
+`push: branches: [main]`，并先确认 `APP_DEPLOY_ENABLED` 门禁与回滚演练都已就绪。
+
+### GitHub Environment
+
+在仓库设置里建 `app-production` Environment，按套餐能力限制为 `main` 并配置所需审核人。
+
+| 类型     | 名称                  | 配置                                                                      |
+| -------- | --------------------- | ------------------------------------------------------------------------- |
+| Variable | `APP_DEPLOY_ENABLED`  | 完成主机准备后设为 `true`；未配置时工作流失败关闭                         |
+| Variable | `APP_HOST`            | 当前主机 `39.96.66.185`，换主机须重新核实并更新 `deploy/known_hosts`      |
+| Variable | `APP_SSH_USER`        | 已获准的部署用户，须能写 `/opt/smedc/app` 并获取 `/opt/smedc/deploy.lock` |
+| Secret   | `APP_SSH_PRIVATE_KEY` | 从获准的密钥管理渠道配置；不要复用官网的 key                              |
+
+主机需要 Bash、GNU tar/coreutils、flock、curl 与已有 SSH/Nginx/TLS。`deploy/known_hosts`
+保留已核实的主机公钥，SSH 使用严格主机校验，不在 CI 临时信任扫描结果。
+
+### 发布事务
+
+1. 手动触发后先运行本仓库的 `quality` 工作流（格式、lint、类型、测试、构建、契约校验）。
+2. 校验本次选择的提交仍是当前 `main`，防止重跑旧工作流覆盖新版本。
+3. `npm ci` + `contract:sync -- --check` + `build`，打包 `app.tar.gz`。
+4. SSH 上传并按 SHA-256 校验；`scripts/deploy-remote.sh` 在主机锁内解包到
+   `/opt/smedc/app/releases/<sha>.<suffix>`，验证必需文件，记录 `release-commit.txt`，原子切换 `current`。
+5. 存在 `/opt/smedc/app-enabled` 标记时做公网校验，失败自动恢复原 `current` 并保留原回滚指针。
+6. 校验通过后才更新 `previous-release`。
+
+公网校验除了首页与静态资源，还断言两件「配置是否真的通了」的事：
+`/api/web/v1/session` 无会话返回 **401**（代理到达后端），`/oauth/device/verify` 缺参数返回 **400**（服务端渲染页面被正确转发）。
+
+### 回滚
+
+在同一工作流选择 `main` → `rollback`：只恢复本仓库上一次成功发布前的目录并重新校验，
+不运行构建、不重启服务、不回滚数据库。历史静态版本不自动删除；清理时至少保留
+`current` 与 `previous-release` 指向的目录。
+
+### 首次启用顺序
+
+1. 按上文的首次启用步骤装好 Nginx 与证书，但**先不要**创建 `app-enabled` 标记。
+2. 配置好 Environment 变量与密钥后手动跑一次 `deploy`；此时只交付静态文件并切换 `current`，不做公网校验。
+3. 逐条走验收清单，确认无误后创建空标记 `/opt/smedc/app-enabled`（root 所有）。
+4. 之后再发布就会自动做公网校验与失败回滚。
+
+配置通过与本地测试都不代表线上已经验收；切换入口与退役旧链接仍需单独授权。
