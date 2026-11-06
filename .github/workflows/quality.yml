@@ -19,3 +19,5 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # 本地校验契约快照与生成物（不联网）；升级契约需显式 npm run contract:sync -- --ref <sha>
+      - run: npm run contract:sync -- --check

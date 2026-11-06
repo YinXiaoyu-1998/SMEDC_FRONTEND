@@ -21,6 +21,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "contract:sync": "node scripts/sync-contract.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "vite",
