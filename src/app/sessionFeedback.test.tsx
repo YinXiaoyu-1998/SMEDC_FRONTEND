@@ -86,7 +86,10 @@ describe("接口反馈", () => {
     );
     expect(queryClient.getQueryData(sessionQueryKey)).toBeNull();
     expect(queryClient.getQueryData(["business", "data"])).toBeUndefined();
-    expect(screen.getByRole("status")).toHaveTextContent("登录状态已过期");
+    // 路由跳转后的登录页是异步渲染的；用 findBy 重试，避免并行跑测试时拿到瞬时空 DOM
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "登录状态已过期",
+    );
   });
 
   it("403 显示无访问权限页并可重试恢复", async () => {
