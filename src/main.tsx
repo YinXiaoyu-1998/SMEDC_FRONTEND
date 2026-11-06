@@ -1,9 +1,13 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 
+import { AppProviders } from "@/app/AppProviders";
+import { AppErrorBoundary } from "@/app/ErrorBoundary";
 import { router } from "@/app/router";
+import "@/styles/tokens.css";
+import "@/styles/global.css";
 
 const queryClient = new QueryClient();
 
@@ -14,8 +18,10 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
+    <AppProviders queryClient={queryClient}>
+      <AppErrorBoundary>
+        <RouterProvider router={router} />
+      </AppErrorBoundary>
+    </AppProviders>
   </StrictMode>,
 );
