@@ -1,3 +1,4 @@
+import { ledgerMessages } from "@/features/ledger/messages";
 import type { TextDictionary } from "@/i18n/text";
 
 // 这里只放跨业务复用的通用 UI 文案；业务文案由各 feature 通过 mergeText 合并进字典
@@ -127,4 +128,6 @@ export const baseMessages = {
   "ui.table.previous": ["上一页", "Previous page"],
   "ui.table.next": ["下一页", "Next page"],
   "ui.table.pagination": ["分页", "Pagination"],
+  // 台账下载中心的业务文案由 feature 自带的元组补充
+  ...ledgerMessages,
 } as const satisfies TextDictionary;
