@@ -26,5 +26,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     globals: true,
+    // .worktrees/ 放并行批次的工作树；它们有自己的 node_modules 与测试，不能在这里重复收集
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.worktrees/**"],
   },
 });

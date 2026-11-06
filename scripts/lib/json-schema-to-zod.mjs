@@ -12,7 +12,6 @@ const UNSUPPORTED_KEYWORDS = [
   "then",
   "else",
   "patternProperties",
-  "propertyNames",
   "dependentSchemas",
   "dependentRequired",
   "unevaluatedProperties",
@@ -302,6 +301,22 @@ function assertSupportedKeywords(schema, path) {
   for (const keyword of UNSUPPORTED_KEYWORDS) {
     if (schema[keyword] !== undefined) {
       throw new SchemaCompileError(`${path}: 暂不支持关键字「${keyword}」`);
+    }
+  }
+  // 对象键在 JSON 里本来只能是字符串；zod 的 z.record(z.string(), X) 会顺带产出
+  // propertyNames: { type: "string" }。它没有额外的运行时含义，忽略即可；
+  // 一旦出现非字符串键约束就说明契约超出了可表达范围，必须显式失败。
+  const propertyNames = schema.propertyNames;
+  if (propertyNames !== undefined) {
+    const plainString =
+      propertyNames !== null &&
+      typeof propertyNames === "object" &&
+      !Array.isArray(propertyNames) &&
+      (propertyNames.type === "string" ||
+        (propertyNames.type === undefined &&
+          Object.keys(propertyNames).length === 0));
+    if (!plainString) {
+      throw new SchemaCompileError(`${path}: 暂不支持非字符串 propertyNames`);
     }
   }
 }
