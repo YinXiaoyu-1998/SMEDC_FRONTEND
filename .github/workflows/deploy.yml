@@ -1,0 +1,104 @@
+name: Deploy app site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy this main commit or restore the previous app version
+        type: choice
+        required: true
+        default: deploy
+        options: [deploy, rollback]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smedc-app-production
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.operation == 'deploy')
+    uses: ./.github/workflows/quality.yml
+
+  deploy:
+    needs: quality
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'workflow_dispatch' || vars.APP_AUTO_DEPLOY == 'true') &&
+          (needs.quality.result == 'success' || inputs.operation == 'rollback') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: app-production
+      url: https://app.smedatacenter.xyz
+    env:
+      APP_DEPLOY_ENABLED: ${{ vars.APP_DEPLOY_ENABLED }}
+      APP_HOST: ${{ vars.APP_HOST }}
+      APP_SSH_USER: ${{ vars.APP_SSH_USER }}
+      OPERATION: ${{ inputs.operation || 'deploy' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Verify the selected commit is current main
+        if: env.OPERATION == 'deploy'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          current_main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [ "$current_main" != "$GITHUB_SHA" ]; then
+            echo "A newer main commit exists; deploy it instead." >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        if: env.OPERATION == 'deploy'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build the static app
+        if: env.OPERATION == 'deploy'
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run contract:sync -- --check
+          npm run build
+          tar -czf app.tar.gz -C dist .
+
+      - name: Install the app SSH credential
+        env:
+          APP_SSH_PRIVATE_KEY: ${{ secrets.APP_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test "$APP_DEPLOY_ENABLED" = true
+          [[ "$APP_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$APP_SSH_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          test -n "$APP_SSH_PRIVATE_KEY"
+          umask 077
+          printf '%s\n' "$APP_SSH_PRIVATE_KEY" > "$RUNNER_TEMP/app-key"
+          ssh-keygen -y -f "$RUNNER_TEMP/app-key" >/dev/null
+
+      - name: Publish or roll back only the app site
+        run: |
+          set -euo pipefail
+          options=(-i "$RUNNER_TEMP/app-key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$PWD/deploy/known_hosts")
+          target="$APP_SSH_USER@$APP_HOST"
+          if [ "$OPERATION" = rollback ]; then
+            ssh "${options[@]}" "$target" 'bash -s -- rollback' < scripts/deploy-remote.sh
+          else
+            archive="/tmp/smedc-app-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tar.gz"
+            digest=$(sha256sum app.tar.gz | cut -d ' ' -f 1)
+            scp "${options[@]}" app.tar.gz "$target:$archive"
+            # 这些 SHA/run 标识本来就该在 runner 上展开。
+            # shellcheck disable=SC2029
+            ssh "${options[@]}" "$target" "bash -s -- deploy '$GITHUB_SHA' '$archive' '$digest'" < scripts/deploy-remote.sh
+          fi
+
+      - name: Remove the runner credential
+        if: always()
+        run: rm -f "$RUNNER_TEMP/app-key"

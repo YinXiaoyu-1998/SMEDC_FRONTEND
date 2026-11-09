@@ -1,0 +1,24 @@
+name: quality
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # 本地校验契约快照与生成物（不联网）；升级契约需显式 npm run contract:sync -- --ref <sha>
+      - run: npm run contract:sync -- --check
