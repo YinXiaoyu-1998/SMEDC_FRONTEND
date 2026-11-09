@@ -1,8 +1,8 @@
 name: Deploy app site
 
-# 只有显式手动触发才会走这条路；普通 push 与合并都不发布。
-# 需要自动发布时再增加 push: branches: [main] 与 APP_DEPLOY_ENABLED 门禁。
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       operation:
@@ -21,13 +21,14 @@ concurrency:
 
 jobs:
   quality:
-    if: github.ref == 'refs/heads/main' && inputs.operation == 'deploy'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.operation == 'deploy')
     uses: ./.github/workflows/quality.yml
 
   deploy:
     needs: quality
     if: >-
       ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'workflow_dispatch' || vars.APP_AUTO_DEPLOY == 'true') &&
           (needs.quality.result == 'success' || inputs.operation == 'rollback') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -38,7 +39,7 @@ jobs:
       APP_DEPLOY_ENABLED: ${{ vars.APP_DEPLOY_ENABLED }}
       APP_HOST: ${{ vars.APP_HOST }}
       APP_SSH_USER: ${{ vars.APP_SSH_USER }}
-      OPERATION: ${{ inputs.operation }}
+      OPERATION: ${{ inputs.operation || 'deploy' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
