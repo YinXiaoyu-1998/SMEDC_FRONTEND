@@ -40,7 +40,7 @@ jobs:
       APP_SSH_USER: ${{ vars.APP_SSH_USER }}
       OPERATION: ${{ inputs.operation }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Verify the selected commit is current main
         if: env.OPERATION == 'deploy'
@@ -54,7 +54,7 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         if: env.OPERATION == 'deploy'
         with:
           node-version: 22
