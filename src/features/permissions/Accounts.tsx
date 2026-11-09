@@ -201,7 +201,7 @@ function AccountEditor({
     submit: (draft, expectedVersion) =>
       scope.writes.saveAccount(
         account.id,
-        accountUpdateBody(draft, account.grants, expectedVersion),
+        accountUpdateBody(draft, expectedVersion),
       ),
     draftFromResult: (result) => ({
       clearance: result.value.clearance,

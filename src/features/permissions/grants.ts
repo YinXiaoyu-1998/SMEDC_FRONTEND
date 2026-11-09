@@ -70,27 +70,6 @@ export function grantToDraft(grant: GrantLike | PermissionGrant): GrantDraft {
   };
 }
 
-function copyGrantDraft(grant: GrantDraft): GrantDraft {
-  const dimensions: Readonly<Record<string, PermissionSelection>> =
-    grant.dimensions;
-  return {
-    id: grant.id,
-    orgId: grant.orgId,
-    enterpriseKey: grant.enterpriseKey,
-    categoryIds: [...grant.categoryIds],
-    ownership: grant.ownership,
-    ...(grant.stores === undefined
-      ? {}
-      : { stores: copySelection(grant.stores) }),
-    dimensions: Object.fromEntries(
-      Object.entries(dimensions).map(([id, selection]) => [
-        id,
-        copySelection(selection),
-      ]),
-    ),
-  };
-}
-
 export function accountToDraft(account: {
   readonly clearance: number;
   readonly grants: readonly (PermissionGrant | GrantLike)[];
@@ -99,21 +78,6 @@ export function accountToDraft(account: {
     clearance: account.clearance,
     grants: account.grants.map((grant) => grantToDraft(grant)),
   };
-}
-
-/**
- * 提交前把服务端已有、但当前草稿没有渲染/表现的授权条目并回来。
- * 账号保存是整组替换：不做这一步就会把表单没展示的既有授权静默删掉。
- */
-export function mergeGrantDrafts(
-  serverGrants: readonly (PermissionGrant | GrantLike)[],
-  draftGrants: readonly GrantDraft[],
-): readonly GrantDraft[] {
-  const draftIds = new Set(draftGrants.map((grant) => grant.id));
-  const preserved = serverGrants
-    .filter((grant) => !draftIds.has(grant.id))
-    .map((grant) => grantToDraft(grant));
-  return [...draftGrants.map(copyGrantDraft), ...preserved];
 }
 
 export function validSelection(
@@ -247,12 +211,10 @@ export function validateAccountDraft(
 
 export function accountUpdateBody(
   draft: AccountDraft,
-  serverGrants: readonly (PermissionGrant | GrantLike)[],
   expectedVersion: string,
 ): PermissionsAccountsUpdateBody {
-  const merged = mergeGrantDrafts(serverGrants, draft.grants);
   const grants: GrantInput[] = [];
-  for (const grant of merged) {
+  for (const grant of draft.grants) {
     const converted = draftToGrant(grant);
     if (converted !== null) grants.push(converted);
   }

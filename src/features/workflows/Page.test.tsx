@@ -49,7 +49,7 @@ function configCheckbox(name: string): HTMLElement {
 
 function configSaveButton(): HTMLElement {
   return within(configurationSection()).getByRole("button", {
-    name: "预览任务设置",
+    name: "保存任务设置",
   });
 }
 
@@ -138,6 +138,41 @@ describe("自动任务页", () => {
     expect(
       await screen.findByRole("heading", { name: "无访问权限" }),
     ).toBeInTheDocument();
+  });
+
+  it("门店选回原范围后保持保存置灰", async () => {
+    const api = createWorkflowApi({
+      views: [
+        dailyView({ configuration: dailyConfiguration(["门店A", "门店B"]) }),
+      ],
+    });
+    renderDeepLink(api);
+    await screen.findByRole("heading", { name: "任务业务设置" });
+
+    fireEvent.click(configCheckbox("门店A"));
+    expect(configSaveButton()).toBeEnabled();
+    fireEvent.click(configCheckbox("门店A"));
+    expect(configSaveButton()).toBeDisabled();
+  });
+
+  it("保存任务设置后保留共用来源的未提交草稿", async () => {
+    const api = createWorkflowApi();
+    renderDeepLink(api);
+    await screen.findByRole("heading", { name: "企业共用来源设置" });
+    const source = within(sectionByHeading("企业共用来源设置"));
+    fireEvent.click(source.getAllByRole("button", { name: "添加" })[0]!);
+    fireEvent.change(source.getByLabelText("账号显示名称"), {
+      target: { value: "未保存的来源" },
+    });
+
+    fireEvent.click(configCheckbox("门店B"));
+    fireEvent.click(configSaveButton());
+    await screen.findByRole("heading", { name: "核对本次变更" });
+    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
+    await screen.findByText("已保存。配置保存不代表任务已安装或启用。");
+
+    expect(source.getByLabelText("账号显示名称")).toHaveValue("未保存的来源");
+    expect(configSaveButton()).toBeDisabled();
   });
 
   it("保存任务设置成功时走准备、确认与提交", async () => {
@@ -371,7 +406,7 @@ describe("自动任务页", () => {
       screen.getByRole("button", { name: "Daily data ingestion" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Preview task settings" }),
+      screen.getByRole("button", { name: "Save task settings" }),
     ).toBeInTheDocument();
     expect(screen.getByText("示例企业")).toBeInTheDocument();
   });
@@ -427,7 +462,7 @@ describe("自动任务页", () => {
     });
 
     const save = within(section).getByRole("button", {
-      name: "预览来源设置",
+      name: "保存来源设置",
     });
     await waitFor(() => expect(save).toBeEnabled());
     fireEvent.click(save);
@@ -462,8 +497,8 @@ describe("自动任务页", () => {
     renderDeepLink(api);
 
     await screen.findByRole("heading", { name: "任务业务设置" });
-    const activate = screen.getByRole("button", { name: "预览允许执行" });
-    const pause = screen.getByRole("button", { name: "预览暂停" });
+    const activate = screen.getByRole("button", { name: "允许执行" });
+    const pause = screen.getByRole("button", { name: "暂停任务" });
     expect(activate).toBeDisabled();
     expect(pause).toBeDisabled();
 
@@ -504,7 +539,7 @@ describe("自动任务页", () => {
 
     await screen.findByRole("heading", { name: "任务业务设置" });
     const revoke = screen.getByRole("button", {
-      name: "预览撤销选中授权",
+      name: "撤销选中授权",
     });
     expect(revoke).toBeDisabled();
 

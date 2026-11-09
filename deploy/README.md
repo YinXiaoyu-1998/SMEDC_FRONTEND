@@ -6,77 +6,31 @@
 
 ## 主机布局
 
-| 路径                                          | 内容                                   |
-| --------------------------------------------- | -------------------------------------- |
-| `/opt/smedc/app/releases/<完整提交SHA>/`      | 每次构建的完整静态产物，只追加不覆盖   |
-| `/opt/smedc/app/current`                      | 指向某个 release 的软链，Nginx 的 root |
-| `/opt/smedc/app/previous-release`             | 上一次成功发布的目录名，用于回滚       |
-| `/etc/nginx/sites-available/smedc-app.conf`   | `deploy/nginx-app.conf`                |
-| `/etc/nginx/snippets/smedc-app-security.conf` | `deploy/security-headers.conf`         |
-| `/var/www/smedc-acme`                         | Certbot webroot，与官网共用            |
+| 路径                                            | 内容                                   |
+| ----------------------------------------------- | -------------------------------------- |
+| `/opt/smedc/app/releases/<完整提交SHA>.<后缀>/` | 每次构建的完整静态产物，只追加不覆盖   |
+| `/opt/smedc/app/current`                        | 指向某个 release 的软链，Nginx 的 root |
+| `/opt/smedc/app/previous-release`               | 相对于站点根目录的上一版目标，用于回滚 |
+| `/etc/nginx/sites-available/smedc-app.conf`     | `deploy/nginx-app.conf`                |
+| `/etc/nginx/snippets/smedc-app-security.conf`   | `deploy/security-headers.conf`         |
+| `/var/www/smedc-acme`                           | Certbot webroot，与官网共用            |
 
 `deploy/nginx-app.conf` 里的转发前缀是契约的一部分：`/api/web/v1/`、`/oauth/device/`、`/auth/password/`。
 少写一个，线上就是 404；多写一个，等于把 MCP 面暴露到网页域。
 
 ## 首次启用（需单独授权的主机操作）
 
-以下步骤是准备说明，不是已执行记录。执行前先确认 app 证书、DNS 与发布窗口。
+线上首次启用前确认发布窗口、前后端配对版本及上一版服务的回退点。
 
-1. 核对 `app.smedatacenter.xyz` 的 A 记录指向当前主机，80/443 可达。
-2. 备份现有 Nginx 配置。把 `deploy/nginx-app-bootstrap.conf` 安装为独立站点，`nginx -t` 通过后 reload。
-   它只开放 ACME challenge，其余路径 404；此时 API 站点与其他站点不受影响。
+1. 备份现有 Nginx 配置。把 `deploy/nginx-app-bootstrap.conf` 安装为独立站点，`nginx -t` 通过后 reload。
+   此站点只开放 ACME challenge。
+2. 添加并核对 `app.smedatacenter.xyz` 的 A 记录指向当前主机，确认 80/443 可达。
 3. 用现有 Certbot 申请 **app 单独一张证书**（不要动 api 的证书）：
    `sudo certbot certonly --webroot -w /var/www/smedc-acme --cert-name app.smedatacenter.xyz -d app.smedatacenter.xyz`
    核对证书 SAN 与续期任务；续期后需要 `nginx -t && systemctl reload nginx` 的 deploy hook。
 4. 安装 `deploy/security-headers.conf` 到 `/etc/nginx/snippets/smedc-app-security.conf`，
    再用 `deploy/nginx-app.conf` 替换 bootstrap 配置（二者不能同时启用）。`nginx -t` 通过后 reload。
-5. 发布第一个版本（见下节）。`/opt/smedc/app/current/index.html` 存在之后站点才算可用。
-
-## 发布
-
-```bash
-# 本地或 CI 构建，产物必须与本仓库某个完整提交 SHA 对应
-npm ci && npm run contract:sync -- --check && npm run build
-
-# 上传到主机（需要已获准的部署用户）
-sha=$(git rev-parse HEAD)
-tar -C dist -czf "/tmp/app-${sha}.tar.gz" .
-scp "/tmp/app-${sha}.tar.gz" deploy@HOST:/tmp/
-
-# 在主机执行：解包 → 校验 → 记录版本 → 原子切换
-ssh deploy@HOST "bash -s -- $sha" <<'REMOTE'
-set -euo pipefail
-sha="$1"; src="/tmp/app-$sha.tar.gz"; dir="/opt/smedc/app/releases/$sha"
-test -s "$src"
-test -f "$dir/.complete" && { echo "already published"; exit 0; }
-mkdir -p "$dir"
-tar -C "$dir" -xzf "$src"
-test -f "$dir/index.html" && test -d "$dir/assets"
-printf '%s\n' "$sha" > "$dir/release-commit.txt"
-: > "$dir/.complete"
-if [ -L /opt/smedc/app/current ]; then readlink -f /opt/smedc/app/current | xargs basename > /opt/smedc/app/previous-release; fi
-ln -sfn "$dir" /opt/smedc/app/current.new && mv -Tf /opt/smedc/app/current.new /opt/smedc/app/current
-REMOTE
-
-# 校验
-curl -fsS -o /dev/null -w '%{http_code}\n' https://app.smedatacenter.xyz/
-```
-
-`mv -Tf` 保证软链切换是原子的；切换前先写 `previous-release`，所以失败时回滚只是一次反向切换。
-
-## 回滚
-
-```bash
-ssh deploy@HOST 'bash -s' <<'REMOTE'
-set -euo pipefail
-prev=$(cat /opt/smedc/app/previous-release)
-test -d "/opt/smedc/app/releases/$prev"
-ln -sfn "/opt/smedc/app/releases/$prev" /opt/smedc/app/current.new && mv -Tf /opt/smedc/app/current.new /opt/smedc/app/current
-REMOTE
-```
-
-回滚只切静态产物，不重启服务、不回滚数据库、不动 api 站点。历史版本不自动删除；
-清理时至少保留 `current` 与 `previous-release` 指向的目录。
+5. 通过下文「发布与回滚」工作流交付第一个版本，核对 `current` 指向已校验的产物后再安排后端切换。
 
 ## 验收清单
 
@@ -87,12 +41,11 @@ REMOTE
 - 未知路径返回 SPA 的 404 页面，而不是 Nginx 404。
 - `api.smedatacenter.xyz/healthz` 仍为 200，MCP 与 Launcher 不受影响。
 
-## 自动发布
+## 发布与回滚
 
 工作流：Actions → **Deploy app site** → 选择 `main` → 操作 `deploy` 或 `rollback`。
 
-**只有手动触发会发布**；普通 push 与 PR 合并都不会动线上。要改成合并即发布，再给工作流加
-`push: branches: [main]`，并先确认 `APP_DEPLOY_ENABLED` 门禁与回滚演练都已就绪。
+通过手动触发发布。需要用 SSH 手工恢复时，同样从已审阅的前端版本调用 `scripts/deploy-remote.sh`，沿用工作流的参数及主机校验。脚本统一管理相对路径的版本软链和回退指针。
 
 ### GitHub Environment
 
@@ -131,7 +84,8 @@ REMOTE
 
 1. 按上文的首次启用步骤装好 Nginx 与证书，但**先不要**创建 `app-enabled` 标记。
 2. 配置好 Environment 变量与密钥后手动跑一次 `deploy`；此时只交付静态文件并切换 `current`，不做公网校验。
-3. 逐条走验收清单，确认无误后创建空标记 `/opt/smedc/app-enabled`（root 所有）。
-4. 之后再发布就会自动做公网校验与失败回滚。
+3. 先检查新站的 HTTPS、首页与静态资源，再按服务仓发布手册单独授权并手动切换后端。
+4. 两端切换后逐条走验收清单，包括密码兑换、设备授权及台账 PDF 预览。通过后创建空标记 `/opt/smedc/app-enabled`（root 所有）。此后发布脚本会检查公网并在失败时恢复上一版静态产物。
+5. 首次切换失败时，从服务仓回退上一版后端和配置以恢复旧网页入口。后续静态版本回退使用同一前端工作流。
 
 配置通过与本地测试都不代表线上已经验收；切换入口与退役旧链接仍需单独授权。

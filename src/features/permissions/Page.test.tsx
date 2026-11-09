@@ -950,6 +950,43 @@ describe("权限设置页", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("确认撤销后提交的授权列表只保留未删除的授权", async () => {
+    const state = createState();
+    const account = state.accounts[0]!;
+    state.accounts = [
+      {
+        ...account,
+        grants: [
+          ...account.grants,
+          { ...account.grants[0]!, id: "grant-keep" },
+        ],
+      },
+    ];
+    renderPermissions({ state });
+    await openCategories();
+    fireEvent.click(screen.getByRole("tab", { name: "账号授权" }));
+    fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
+    const [remove] = await screen.findAllByRole("button", {
+      name: "删除此授权条目",
+    });
+    fireEvent.click(remove!);
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "删除此授权条目",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "确认变更",
+      }),
+    );
+    await screen.findByText("已保存。");
+    expect(state.accounts[0]?.grants.map((grant) => grant.id)).toEqual([
+      "grant-keep",
+    ]);
+  });
+
   it("保存密级：确认摘要后提交 expectedVersion 并推进版本", async () => {
     const { fetchMock } = renderPermissions();
     await openCategories();

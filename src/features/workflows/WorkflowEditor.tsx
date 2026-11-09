@@ -59,6 +59,7 @@ type Prepared = WorkflowsPrepareEnterpriseWorkflowChangeResponse;
 type SaveOutcome =
   | {
       readonly ok: true;
+      readonly change: WorkflowChange;
       readonly saved: WorkflowsSaveEnterpriseWorkflowResponse;
     }
   | { readonly ok: false; readonly error: unknown };
@@ -84,8 +85,13 @@ export interface WorkflowEditorProps {
   readonly onReloadBundle: () => Promise<void>;
 }
 
-function normalizeDraft(value: DraftState): DraftState {
-  return value;
+function normalizeDraft(value: DraftState) {
+  return {
+    configurations: workflowTypes.map((type) =>
+      comparableConfiguration(value.configurations[type]),
+    ),
+    integration: value.integration,
+  };
 }
 
 function withRecordValue<T>(
@@ -144,28 +150,40 @@ function comparableConfiguration(
 ): Record<string, unknown> {
   if (configuration.type === "meituan-daily-ingestion") {
     return {
-      storeNames: configuration.storeNames,
-      datasets: configuration.datasets,
+      storeNames: [...configuration.storeNames].sort(),
+      datasets: [...configuration.datasets].sort(),
       orderScope: configuration.orderScope,
       cleanupPolicy: configuration.cleanupPolicy,
     };
   }
   if (configuration.type === "meituan-review-operations") {
     return {
-      storeNames: configuration.storeNames,
-      channels: configuration.channels,
-      publication: configuration.publication,
+      storeNames: [...configuration.storeNames].sort(),
+      channels: [...configuration.channels].sort(),
+      publication: {
+        ...configuration.publication,
+        storeNames: [...configuration.publication.storeNames].sort(),
+      },
       brandFacts: configuration.brandFacts,
       tone: configuration.tone,
       ignoredReviewIdentities: configuration.ignoredReviewIdentities,
-      draftNotification: configuration.draftNotification,
+      draftNotification: {
+        ...configuration.draftNotification,
+        recipients: [...configuration.draftNotification.recipients].sort(),
+      },
       cleanupPolicy: configuration.cleanupPolicy,
     };
   }
   return {
-    storeNames: configuration.storeNames,
-    groups: configuration.groups,
-    delivery: configuration.delivery,
+    storeNames: [...configuration.storeNames].sort(),
+    groups: configuration.groups.map((group) => ({
+      ...group,
+      storeNames: [...group.storeNames].sort(),
+    })),
+    delivery: {
+      ...configuration.delivery,
+      recipients: [...configuration.delivery.recipients].sort(),
+    },
     cleanupPolicy: configuration.cleanupPolicy,
   };
 }
@@ -325,7 +343,8 @@ export function WorkflowEditor({
   const configuration = draftState.configurations[selected];
   const savedConfiguration = savedState.configurations[selected];
   const configurationDirty =
-    stableSerialize(configuration) !== stableSerialize(savedConfiguration);
+    stableSerialize(comparableConfiguration(configuration)) !==
+    stableSerialize(comparableConfiguration(savedConfiguration));
   const integrationDirty =
     stableSerialize(draftState.integration) !==
     stableSerialize(savedState.integration);
@@ -384,31 +403,46 @@ export function WorkflowEditor({
     }
   };
 
-  const applySaved = (saved: WorkflowsSaveEnterpriseWorkflowResponse) => {
+  const applySaved = (
+    saved: WorkflowsSaveEnterpriseWorkflowResponse,
+    change: WorkflowChange,
+  ) => {
     onUpdateBundle(applySavedView(bundle, saved));
-    const savedConfigurationValue = saved.configuration;
-    setDraft((previous) => ({
-      configurations:
-        savedConfigurationValue === null
-          ? previous.configurations
-          : withRecordValue(
-              previous.configurations,
-              saved.workflowType,
-              savedConfigurationValue,
-            ),
-      integration: saved.integration.configuration,
-    }));
-    setAuthDrafts((current) =>
-      withRecordValue(
-        current,
-        saved.workflowType,
-        defaultAuthorizationDraft(saved.workflowType),
-      ),
-    );
-    setRevocations((current) =>
-      withRecordValue(current, saved.workflowType, new Set<string>()),
-    );
-    setReasons((current) => withRecordValue(current, saved.workflowType, ""));
+    if (change.kind === "configuration") {
+      const configuration = saved.configuration;
+      if (configuration !== null) {
+        setDraft((previous) => ({
+          ...previous,
+          configurations: withRecordValue(
+            previous.configurations,
+            saved.workflowType,
+            configuration,
+          ),
+        }));
+      }
+    } else if (change.kind === "integration") {
+      setDraft((previous) => ({
+        ...previous,
+        integration: saved.integration.configuration,
+      }));
+    } else if (change.kind === "authorization") {
+      if (change.grant.length > 0) {
+        setAuthDrafts((current) =>
+          withRecordValue(
+            current,
+            saved.workflowType,
+            defaultAuthorizationDraft(saved.workflowType),
+          ),
+        );
+      }
+      if (change.revokeAuthorizationIds.length > 0) {
+        setRevocations((current) =>
+          withRecordValue(current, saved.workflowType, new Set<string>()),
+        );
+      }
+    } else {
+      setReasons((current) => withRecordValue(current, saved.workflowType, ""));
+    }
     setNotice("saved");
     setPageError(null);
     setConflict(null);
@@ -447,7 +481,7 @@ export function WorkflowEditor({
           previewId: preview.previewId,
           confirmationDigest: preview.confirmationDigest,
         });
-        return { ok: true, saved };
+        return { ok: true, change: preview.change, saved };
       } catch (error) {
         return { ok: false, error };
       }
@@ -461,7 +495,7 @@ export function WorkflowEditor({
         }
         return;
       }
-      applySaved(outcome.saved);
+      applySaved(outcome.saved, outcome.change);
     },
   });
 
