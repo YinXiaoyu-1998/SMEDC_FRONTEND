@@ -60,7 +60,7 @@ function ledgerContext(
 ): LedgerContextResponse {
   return {
     identity: {
-      employeeId: "employee-2",
+      userAccountId: "employee-2",
       orgId: "org-1",
       displayName: "李四",
       organizationName: "示例企业",

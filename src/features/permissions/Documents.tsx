@@ -630,11 +630,21 @@ function DocumentScopeCard({
   }
 
   const storeOptions = data.stores
-    .filter((store) => store.enterpriseKey === scope.enterpriseKey)
+    .filter(
+      (store) =>
+        store.enterpriseKey === scope.enterpriseKey &&
+        (store.confirmation === undefined ||
+          store.confirmation === "confirmed" ||
+          store.name === scope.storeName),
+    )
     .map((store) => ({
       value: store.name,
-      label: itemLabel(t, store.name, store.retired),
-      disabled: store.retired && store.name !== scope.storeName,
+      label: itemLabel(t, store.officialName ?? store.name, store.retired),
+      disabled:
+        (store.retired ||
+          (store.confirmation !== undefined &&
+            store.confirmation !== "confirmed")) &&
+        store.name !== scope.storeName,
     }));
 
   const requiredDimensions =

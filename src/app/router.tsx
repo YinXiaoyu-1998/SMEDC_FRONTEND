@@ -6,6 +6,7 @@ import { LoginPage } from "@/app/LoginPage";
 import { NotFoundPage } from "@/app/NotFoundPage";
 import { RouteErrorPage } from "@/app/RouteErrorPage";
 import { SessionGate } from "@/app/SessionGate";
+import { DirectoryPage } from "@/features/directory/Page";
 import { LedgerPage } from "@/features/ledger/Page";
 import { PermissionsPage } from "@/features/permissions/Page";
 import { WorkflowsPage } from "@/features/workflows/Page";
@@ -17,6 +18,7 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <HomeRedirect /> },
+      { path: "admin/:orgId/directory", element: <DirectoryPage /> },
       { path: "admin/:orgId/permissions", element: <PermissionsPage /> },
       { path: "admin/:orgId/workflows", element: <WorkflowsPage /> },
       {

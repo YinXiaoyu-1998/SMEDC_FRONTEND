@@ -425,11 +425,20 @@ function GrantCard({
       ? []
       : selectedStores.values;
   const storeOptions = stores
-    .filter((store) => store.enterpriseKey === grant.enterpriseKey)
+    .filter(
+      (store) =>
+        store.enterpriseKey === grant.enterpriseKey &&
+        (store.confirmation === undefined ||
+          store.confirmation === "confirmed" ||
+          storeChoices.includes(store.name)),
+    )
     .map((store) => ({
       value: store.name,
-      label: itemLabel(t, store.name, store.retired),
-      disabled: store.retired,
+      label: itemLabel(t, store.officialName ?? store.name, store.retired),
+      disabled:
+        store.retired ||
+        (store.confirmation !== undefined &&
+          store.confirmation !== "confirmed"),
     }));
   for (const name of storeChoices) {
     if (!storeOptions.some((option) => option.value === name)) {

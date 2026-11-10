@@ -18,6 +18,89 @@ export const webApiPrefix = "/api/web/v1";
 
 export const contractVersion = 1;
 
+export const bDirectoryCreateEmployeeSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rDirectoryGetEmployeeSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rDirectoryListDirectorySchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rDirectoryListDirectorySchema1Schema = z
+  .string()
+  .regex(new RegExp("^(0|[1-9]\\d*)$"));
+
+export const bDirectoryListEmployeesSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rDirectoryListEmployeesSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bDirectoryManageDepartmentSchema0Schema = z
+  .string()
+  .min(1)
+  .max(255);
+
+export const bDirectoryManageDepartmentSchema1Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bDirectoryManageDepartmentSchema2Schema = z
+  .string()
+  .regex(new RegExp("^(0|[1-9]\\d*)$"));
+
+export const bDirectoryManageStoreSchema0Schema = z.string().min(1).max(255);
+
+export const bDirectoryManageStoreSchema1Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bDirectoryManageStoreSchema2Schema = z
+  .string()
+  .regex(new RegExp("^(0|[1-9]\\d*)$"));
+
+export const bDirectoryUpdateEmployeeSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
 export const bLedgerCoverageSchema0Schema = z.string().min(1).max(512);
 
 export const bLedgerCoverageSchema1Schema = z
@@ -4543,6 +4626,398 @@ export const rWorkflowsSaveEnterpriseWorkflowSchema33Schema = z.enum([
   "dianping",
 ]);
 
+export const directoryCreateEmployeeBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  name: z.string().min(1).max(255),
+  departmentId: bDirectoryCreateEmployeeSchema0Schema,
+  scope: z.union([
+    z.strictObject({
+      ownership: z.literal("group"),
+      storeId: z.null(),
+    }),
+    z.strictObject({
+      ownership: z.literal("store"),
+      storeId: bDirectoryCreateEmployeeSchema0Schema,
+    }),
+  ]),
+});
+
+export type DirectoryCreateEmployeeBody = z.infer<
+  typeof directoryCreateEmployeeBodySchema
+>;
+
+export const directoryCreateEmployeeParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryCreateEmployeeParams = z.infer<
+  typeof directoryCreateEmployeeParamsSchema
+>;
+
+export const directoryCreateEmployeeQuerySchema = z.strictObject({});
+
+export type DirectoryCreateEmployeeQuery = z.infer<
+  typeof directoryCreateEmployeeQuerySchema
+>;
+
+export const directoryCreateEmployeeResponseSchema = z.strictObject({
+  employeeUid: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type DirectoryCreateEmployeeResponse = z.infer<
+  typeof directoryCreateEmployeeResponseSchema
+>;
+
+export const directoryGetEmployeeBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  employeeUid: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type DirectoryGetEmployeeBody = z.infer<
+  typeof directoryGetEmployeeBodySchema
+>;
+
+export const directoryGetEmployeeParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryGetEmployeeParams = z.infer<
+  typeof directoryGetEmployeeParamsSchema
+>;
+
+export const directoryGetEmployeeQuerySchema = z.strictObject({});
+
+export type DirectoryGetEmployeeQuery = z.infer<
+  typeof directoryGetEmployeeQuerySchema
+>;
+
+export const directoryGetEmployeeResponseSchema = z.strictObject({
+  employee: z.strictObject({
+    employeeUid: rDirectoryGetEmployeeSchema0Schema,
+    name: z.string(),
+    departmentId: rDirectoryGetEmployeeSchema0Schema,
+    departmentName: z.string(),
+    scope: z.union([
+      z.strictObject({
+        ownership: z.literal("group"),
+        storeId: z.null(),
+        storeName: z.null(),
+      }),
+      z.strictObject({
+        ownership: z.literal("store"),
+        storeId: rDirectoryGetEmployeeSchema0Schema,
+        storeName: z.string(),
+      }),
+    ]),
+    status: z.enum(["active", "departed"]),
+    version: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
+  }),
+});
+
+export type DirectoryGetEmployeeResponse = z.infer<
+  typeof directoryGetEmployeeResponseSchema
+>;
+
+export const directoryListDirectoryBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  management: z.boolean().optional(),
+});
+
+export type DirectoryListDirectoryBody = z.infer<
+  typeof directoryListDirectoryBodySchema
+>;
+
+export const directoryListDirectoryParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryListDirectoryParams = z.infer<
+  typeof directoryListDirectoryParamsSchema
+>;
+
+export const directoryListDirectoryQuerySchema = z.strictObject({});
+
+export type DirectoryListDirectoryQuery = z.infer<
+  typeof directoryListDirectoryQuerySchema
+>;
+
+export const directoryListDirectoryResponseSchema = z.strictObject({
+  enterpriseKey: z.string(),
+  enterpriseName: z.string(),
+  stores: z.array(
+    z.strictObject({
+      storeId: rDirectoryListDirectorySchema0Schema,
+      storeKey: z.string().optional(),
+      name: z.string(),
+      status: z.enum(["confirmed", "pending", "historical", "retired"]),
+      version: rDirectoryListDirectorySchema1Schema,
+    }),
+  ),
+  departments: z.array(
+    z.strictObject({
+      departmentId: rDirectoryListDirectorySchema0Schema,
+      name: z.string(),
+      status: z.enum(["active", "retired"]),
+      version: rDirectoryListDirectorySchema1Schema,
+    }),
+  ),
+});
+
+export type DirectoryListDirectoryResponse = z.infer<
+  typeof directoryListDirectoryResponseSchema
+>;
+
+export const directoryListEmployeesBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  status: z.enum(["active", "departed"]).optional(),
+  search: z.string().max(255).optional(),
+  departmentId: bDirectoryListEmployeesSchema0Schema.optional(),
+  storeId: bDirectoryListEmployeesSchema0Schema.optional(),
+  cursor: bDirectoryListEmployeesSchema0Schema.optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+export type DirectoryListEmployeesBody = z.infer<
+  typeof directoryListEmployeesBodySchema
+>;
+
+export const directoryListEmployeesParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryListEmployeesParams = z.infer<
+  typeof directoryListEmployeesParamsSchema
+>;
+
+export const directoryListEmployeesQuerySchema = z.strictObject({});
+
+export type DirectoryListEmployeesQuery = z.infer<
+  typeof directoryListEmployeesQuerySchema
+>;
+
+export const directoryListEmployeesResponseSchema = z.strictObject({
+  employees: z.array(
+    z.strictObject({
+      employeeUid: rDirectoryListEmployeesSchema0Schema,
+      name: z.string(),
+      departmentId: rDirectoryListEmployeesSchema0Schema,
+      departmentName: z.string(),
+      scope: z.union([
+        z.strictObject({
+          ownership: z.literal("group"),
+          storeId: z.null(),
+          storeName: z.null(),
+        }),
+        z.strictObject({
+          ownership: z.literal("store"),
+          storeId: rDirectoryListEmployeesSchema0Schema,
+          storeName: z.string(),
+        }),
+      ]),
+      status: z.enum(["active", "departed"]),
+      version: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
+    }),
+  ),
+  access: z.enum(["none", "partial", "all"]),
+  nextCursor: z.union([rDirectoryListEmployeesSchema0Schema, z.null()]),
+});
+
+export type DirectoryListEmployeesResponse = z.infer<
+  typeof directoryListEmployeesResponseSchema
+>;
+
+export const directoryManageDepartmentBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  operation: z.union([
+    z.strictObject({
+      kind: z.literal("create"),
+      name: bDirectoryManageDepartmentSchema0Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("rename"),
+      departmentId: bDirectoryManageDepartmentSchema1Schema,
+      expectedVersion: bDirectoryManageDepartmentSchema2Schema,
+      name: bDirectoryManageDepartmentSchema0Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("retire"),
+      departmentId: bDirectoryManageDepartmentSchema1Schema,
+      expectedVersion: bDirectoryManageDepartmentSchema2Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("restore"),
+      departmentId: bDirectoryManageDepartmentSchema1Schema,
+      expectedVersion: bDirectoryManageDepartmentSchema2Schema,
+    }),
+  ]),
+});
+
+export type DirectoryManageDepartmentBody = z.infer<
+  typeof directoryManageDepartmentBodySchema
+>;
+
+export const directoryManageDepartmentParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryManageDepartmentParams = z.infer<
+  typeof directoryManageDepartmentParamsSchema
+>;
+
+export const directoryManageDepartmentQuerySchema = z.strictObject({});
+
+export type DirectoryManageDepartmentQuery = z.infer<
+  typeof directoryManageDepartmentQuerySchema
+>;
+
+export const directoryManageDepartmentResponseSchema = z.strictObject({
+  departmentId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+  version: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
+});
+
+export type DirectoryManageDepartmentResponse = z.infer<
+  typeof directoryManageDepartmentResponseSchema
+>;
+
+export const directoryManageStoreBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  operation: z.union([
+    z.strictObject({
+      kind: z.literal("create"),
+      name: bDirectoryManageStoreSchema0Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("rename"),
+      storeId: bDirectoryManageStoreSchema1Schema,
+      expectedVersion: bDirectoryManageStoreSchema2Schema,
+      name: bDirectoryManageStoreSchema0Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("confirm"),
+      storeId: bDirectoryManageStoreSchema1Schema,
+      expectedVersion: bDirectoryManageStoreSchema2Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("historical"),
+      storeId: bDirectoryManageStoreSchema1Schema,
+      expectedVersion: bDirectoryManageStoreSchema2Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("retire"),
+      storeId: bDirectoryManageStoreSchema1Schema,
+      expectedVersion: bDirectoryManageStoreSchema2Schema,
+    }),
+    z.strictObject({
+      kind: z.literal("restore"),
+      storeId: bDirectoryManageStoreSchema1Schema,
+      expectedVersion: bDirectoryManageStoreSchema2Schema,
+    }),
+  ]),
+});
+
+export type DirectoryManageStoreBody = z.infer<
+  typeof directoryManageStoreBodySchema
+>;
+
+export const directoryManageStoreParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryManageStoreParams = z.infer<
+  typeof directoryManageStoreParamsSchema
+>;
+
+export const directoryManageStoreQuerySchema = z.strictObject({});
+
+export type DirectoryManageStoreQuery = z.infer<
+  typeof directoryManageStoreQuerySchema
+>;
+
+export const directoryManageStoreResponseSchema = z.strictObject({
+  storeId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+  version: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
+});
+
+export type DirectoryManageStoreResponse = z.infer<
+  typeof directoryManageStoreResponseSchema
+>;
+
+export const directoryUpdateEmployeeBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  employeeUid: bDirectoryUpdateEmployeeSchema0Schema,
+  expectedVersion: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
+  name: z.string().min(1).max(255),
+  departmentId: bDirectoryUpdateEmployeeSchema0Schema,
+  scope: z.union([
+    z.strictObject({
+      ownership: z.literal("group"),
+      storeId: z.null(),
+    }),
+    z.strictObject({
+      ownership: z.literal("store"),
+      storeId: bDirectoryUpdateEmployeeSchema0Schema,
+    }),
+  ]),
+  status: z.enum(["active", "departed"]),
+});
+
+export type DirectoryUpdateEmployeeBody = z.infer<
+  typeof directoryUpdateEmployeeBodySchema
+>;
+
+export const directoryUpdateEmployeeParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryUpdateEmployeeParams = z.infer<
+  typeof directoryUpdateEmployeeParamsSchema
+>;
+
+export const directoryUpdateEmployeeQuerySchema = z.strictObject({});
+
+export type DirectoryUpdateEmployeeQuery = z.infer<
+  typeof directoryUpdateEmployeeQuerySchema
+>;
+
+export const directoryUpdateEmployeeResponseSchema = z.strictObject({
+  employeeUid: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+  version: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
+});
+
+export type DirectoryUpdateEmployeeResponse = z.infer<
+  typeof directoryUpdateEmployeeResponseSchema
+>;
+
 export const ledgerContextBodySchema = z.strictObject({});
 
 export type LedgerContextBody = z.infer<typeof ledgerContextBodySchema>;
@@ -4557,7 +5032,7 @@ export type LedgerContextQuery = z.infer<typeof ledgerContextQuerySchema>;
 
 export const ledgerContextResponseSchema = z.strictObject({
   identity: z.strictObject({
-    employeeId: z.string().min(1),
+    userAccountId: z.string().min(1),
     orgId: z.string().min(1),
     displayName: z.string().min(1),
     organizationName: z.string().min(1),
@@ -4780,7 +5255,7 @@ export const permissionsAccountsListResponseSchema = z.strictObject({
   accounts: z.array(
     z.strictObject({
       orgId: z.string(),
-      employeeId: z.string(),
+      userAccountId: z.string(),
       role: z.enum(["admin", "employee"]),
       disabled: z.boolean(),
       clearance: z.number().int().min(-9007199254740991).max(9007199254740991),
@@ -4831,7 +5306,7 @@ export type PermissionsAccountsReadBody = z.infer<
 
 export const permissionsAccountsReadParamsSchema = z.strictObject({
   orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
-  employeeId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+  userAccountId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
 });
 
 export type PermissionsAccountsReadParams = z.infer<
@@ -4846,7 +5321,7 @@ export type PermissionsAccountsReadQuery = z.infer<
 
 export const permissionsAccountsReadResponseSchema = z.strictObject({
   orgId: z.string(),
-  employeeId: z.string(),
+  userAccountId: z.string(),
   role: z.enum(["admin", "employee"]),
   disabled: z.boolean(),
   clearance: z.number().int().min(-9007199254740991).max(9007199254740991),
@@ -4894,7 +5369,7 @@ export type PermissionsAccountsUpdateBody = z.infer<
 
 export const permissionsAccountsUpdateParamsSchema = z.strictObject({
   orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
-  employeeId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+  userAccountId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
 });
 
 export type PermissionsAccountsUpdateParams = z.infer<
@@ -5709,7 +6184,7 @@ export type PermissionsMeReadQuery = z.infer<
 
 export const permissionsMeReadResponseSchema = z.strictObject({
   orgId: z.string(),
-  employeeId: z.string(),
+  userAccountId: z.string(),
   role: z.enum(["admin", "employee"]),
   disabled: z.boolean(),
   clearance: z.number().int().min(-9007199254740991).max(9007199254740991),
@@ -5778,6 +6253,17 @@ export const permissionsStoresListResponseSchema = z.strictObject({
       enterpriseKey: z.string(),
       name: z.string(),
       retired: z.boolean(),
+      storeId: z
+        .string()
+        .regex(
+          new RegExp(
+            "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          ),
+        )
+        .optional(),
+      officialName: z.string().optional(),
+      confirmation: z.enum(["pending", "confirmed", "historical"]).optional(),
+      version: z.string().optional(),
     }),
   ),
 });
@@ -5819,6 +6305,17 @@ export const permissionsStoresUpsertResponseSchema = z.strictObject({
     enterpriseKey: z.string(),
     name: z.string(),
     retired: z.boolean(),
+    storeId: z
+      .string()
+      .regex(
+        new RegExp(
+          "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+        ),
+      )
+      .optional(),
+    officialName: z.string().optional(),
+    confirmation: z.enum(["pending", "confirmed", "historical"]).optional(),
+    version: z.string().optional(),
     enterpriseName: z.string(),
   }),
 });
@@ -5844,7 +6341,7 @@ export type SessionLoginQuery = z.infer<typeof sessionLoginQuerySchema>;
 
 export const sessionLoginResponseSchema = z.strictObject({
   identity: z.strictObject({
-    employeeId: z.string().min(1),
+    userAccountId: z.string().min(1),
     displayName: z.string().min(1),
     email: z.string().min(1),
     orgId: z.string().min(1),
@@ -5890,7 +6387,7 @@ export type SessionReadQuery = z.infer<typeof sessionReadQuerySchema>;
 
 export const sessionReadResponseSchema = z.strictObject({
   identity: z.strictObject({
-    employeeId: z.string().min(1),
+    userAccountId: z.string().min(1),
     displayName: z.string().min(1),
     email: z.string().min(1),
     orgId: z.string().min(1),
@@ -6238,7 +6735,7 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
       orgId: z.string(),
       workflowId: z.string(),
       installationId: z.string(),
-      employeeId: z.string(),
+      userAccountId: z.string(),
       version: z.number().int().min(-9007199254740991).max(9007199254740991),
       deviceAlias: z.string(),
       host: z.string(),
@@ -6338,7 +6835,7 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
       orgId: z.string(),
       workflowId: z.string(),
       installationId: z.string(),
-      employeeId: z.string(),
+      userAccountId: z.string(),
       configurationVersion: z
         .number()
         .int()
@@ -6826,7 +7323,7 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
     orgId: z.string(),
     workflowId: z.string(),
     installationId: z.string(),
-    employeeId: z.string(),
+    userAccountId: z.string(),
     version: z.number().int().min(-9007199254740991).max(9007199254740991),
     deviceAlias: z.string(),
     host: z.string(),
@@ -6998,7 +7495,7 @@ export const workflowsManageWorkflowRunResponseSchema = z.union([
     orgId: rWorkflowsManageWorkflowRunSchema6Schema,
     workflowId: rWorkflowsManageWorkflowRunSchema7Schema,
     installationId: rWorkflowsManageWorkflowRunSchema8Schema,
-    employeeId: rWorkflowsManageWorkflowRunSchema9Schema,
+    userAccountId: rWorkflowsManageWorkflowRunSchema9Schema,
     configurationVersion: rWorkflowsManageWorkflowRunSchema10Schema,
     integrationVersion: rWorkflowsManageWorkflowRunSchema11Schema,
     controlVersion: rWorkflowsManageWorkflowRunSchema12Schema,
@@ -7036,7 +7533,7 @@ export const workflowsManageWorkflowRunResponseSchema = z.union([
     orgId: rWorkflowsManageWorkflowRunSchema6Schema,
     workflowId: rWorkflowsManageWorkflowRunSchema7Schema,
     installationId: rWorkflowsManageWorkflowRunSchema8Schema,
-    employeeId: rWorkflowsManageWorkflowRunSchema9Schema,
+    userAccountId: rWorkflowsManageWorkflowRunSchema9Schema,
     configurationVersion: rWorkflowsManageWorkflowRunSchema10Schema,
     integrationVersion: rWorkflowsManageWorkflowRunSchema11Schema,
     controlVersion: rWorkflowsManageWorkflowRunSchema12Schema,
@@ -7516,6 +8013,125 @@ export type WorkflowsSaveEnterpriseWorkflowResponse = z.infer<
 // route id → 调用方需要的静态元数据；运行时校验以各自的 zod schema 为准
 
 export const webApiRoutes = {
+  "directory.createEmployee": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/create_employee",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "创建员工档案",
+  },
+  "directory.getEmployee": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/get_employee",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "读取授权范围内的单个员工档案",
+  },
+  "directory.listDirectory": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/list_directory",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "读取企业门店和部门目录",
+  },
+  "directory.listEmployees": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/list_employees",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "读取授权范围内的员工档案",
+  },
+  "directory.manageDepartment": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/manage_department",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "维护部门目录",
+  },
+  "directory.manageStore": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/manage_store",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "维护正式门店目录",
+  },
+  "directory.updateEmployee": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/update_employee",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "维护员工档案与归属",
+  },
   "ledger.context": {
     method: "GET",
     path: "/api/web/v1/ledger/context",
@@ -7624,7 +8240,7 @@ export const webApiRoutes = {
   },
   "permissions.accounts.read": {
     method: "GET",
-    path: "/api/web/v1/orgs/:orgId/permissions/accounts/:employeeId",
+    path: "/api/web/v1/orgs/:orgId/permissions/accounts/:userAccountId",
     auth: "session",
     errors: [
       "AUTHORIZATION_ACCOUNT_NOT_FOUND",
@@ -7638,7 +8254,7 @@ export const webApiRoutes = {
   },
   "permissions.accounts.update": {
     method: "PATCH",
-    path: "/api/web/v1/orgs/:orgId/permissions/accounts/:employeeId",
+    path: "/api/web/v1/orgs/:orgId/permissions/accounts/:userAccountId",
     auth: "session-write",
     errors: [
       "AUTHORIZATION_ACCOUNT_NOT_FOUND",

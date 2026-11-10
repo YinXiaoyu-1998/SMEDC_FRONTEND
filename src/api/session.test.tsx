@@ -16,7 +16,7 @@ type FetchFunction = (
 ) => Promise<Response>;
 
 const identity = {
-  employeeId: "employee-1",
+  userAccountId: "employee-1",
   displayName: "张三",
   email: "zhangsan@example.com",
   orgId: "org-1",
