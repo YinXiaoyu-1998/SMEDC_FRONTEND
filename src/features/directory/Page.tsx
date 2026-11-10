@@ -59,7 +59,8 @@ export function DirectoryPage() {
   const [cursor, setCursor] = useState("");
   const [editing, setEditing] = useState<Employee | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const busy = pendingAction !== null;
   const [error, setError] = useState<unknown>(null);
   const [success, setSuccess] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -120,8 +121,9 @@ export function DirectoryPage() {
   const run = async (
     action: () => Promise<unknown>,
     after?: (result: unknown) => void,
+    actionKey = "employee-save",
   ) => {
-    setBusy(true);
+    setPendingAction(actionKey);
     setError(null);
     setSuccess("");
     setCreatedUid("");
@@ -140,7 +142,7 @@ export function DirectoryPage() {
         await reload();
       }
     } finally {
-      setBusy(false);
+      setPendingAction(null);
     }
   };
   const startEdit = (e: Employee) => {
@@ -165,8 +167,16 @@ export function DirectoryPage() {
     setConflict(false);
     setError(null);
   };
+  const departureAssignmentChanged = !!(
+    editing &&
+    draft &&
+    draft.status === "departed" &&
+    (draft.departmentId !== editing.departmentId ||
+      draft.ownership !== editing.scope.ownership ||
+      draft.storeId !== (editing.scope.storeId ?? ""))
+  );
   const save = () => {
-    if (!draft || !draft.ownership) return;
+    if (!draft || !draft.ownership || departureAssignmentChanged) return;
     const scope =
       draft.ownership === "group"
         ? { ownership: "group" as const, storeId: null }
@@ -230,14 +240,23 @@ export function DirectoryPage() {
       (e) => e.employeeUid === editing.employeeUid,
     );
   const changeStore = (operation: DirectoryManageStoreBody["operation"]) =>
-    void run(() =>
-      directoryApi.store(client, { enterpriseKey: enterprise, operation }),
+    void run(
+      () =>
+        directoryApi.store(client, { enterpriseKey: enterprise, operation }),
+      undefined,
+      `store:${"storeId" in operation ? operation.storeId : "new"}:${operation.kind}`,
     );
   const changeDepartment = (
     operation: DirectoryManageDepartmentBody["operation"],
   ) =>
-    void run(() =>
-      directoryApi.department(client, { enterpriseKey: enterprise, operation }),
+    void run(
+      () =>
+        directoryApi.department(client, {
+          enterpriseKey: enterprise,
+          operation,
+        }),
+      undefined,
+      `department:${"departmentId" in operation ? operation.departmentId : "new"}:${operation.kind}`,
     );
   return (
     <PageFrame title={L(["企业资料", "Enterprise directory"])} orgId={orgId}>
@@ -379,8 +398,9 @@ export function DirectoryPage() {
                 <div className={styles.row}>
                   <ActionButton
                     label={L(["保存", "Save"])}
-                    busy={busy}
+                    busy={pendingAction === "rename-save"}
                     disabled={
+                      busy ||
                       conflict ||
                       !rename.name.trim() ||
                       rename.name === rename.original
@@ -408,7 +428,7 @@ export function DirectoryPage() {
                                   name: rename.name,
                                 },
                               });
-                      void run(operation, () => setRename(null));
+                      void run(operation, () => setRename(null), "rename-save");
                     }}
                   />
                   <button type="button" onClick={() => setRename(null)}>
@@ -665,6 +685,14 @@ export function DirectoryPage() {
                     </select>
                   </label>
                 )}
+                {departureAssignmentChanged && (
+                  <p>
+                    {L([
+                      "离职时保留原归属；请先单独保存调动，或恢复原归属。",
+                      "Departure retains the original assignment; save the transfer separately or restore the original assignment.",
+                    ])}
+                  </p>
+                )}
                 {conflict && (
                   <div>
                     <p>
@@ -695,9 +723,11 @@ export function DirectoryPage() {
                 <div className={styles.row}>
                   <ActionButton
                     label={L(["保存", "Save"])}
-                    busy={busy}
+                    busy={pendingAction === "employee-save"}
                     disabled={
+                      busy ||
                       conflict ||
+                      departureAssignmentChanged ||
                       (editing !== null &&
                         draft.name === editing.name &&
                         draft.departmentId === editing.departmentId &&
@@ -756,8 +786,8 @@ export function DirectoryPage() {
             </label>
             <ActionButton
               label={L(["新增门店", "Add store"])}
-              busy={busy}
-              disabled={!newName.trim()}
+              busy={pendingAction === "store-create"}
+              disabled={busy || !newName.trim()}
               onRun={() => {
                 const name = newName;
                 void run(
@@ -767,6 +797,7 @@ export function DirectoryPage() {
                       operation: { kind: "create", name },
                     }),
                   () => setNewName(""),
+                  "store-create",
                 );
               }}
             />
@@ -802,23 +833,28 @@ export function DirectoryPage() {
                         </button>
                         {s.status === "pending" && (
                           <>
-                            <button
-                              type="button"
+                            <ActionButton
+                              label={L(["确认", "Confirm"])}
+                              busy={
+                                pendingAction === `store:${s.storeId}:confirm`
+                              }
                               disabled={busy}
-                              onClick={() =>
+                              onRun={() =>
                                 changeStore({
                                   kind: "confirm",
                                   storeId: s.storeId,
                                   expectedVersion: s.version,
                                 })
                               }
-                            >
-                              {L(["确认", "Confirm"])}
-                            </button>
-                            <button
-                              type="button"
+                            />
+                            <ActionButton
+                              label={L(["保留历史", "Keep historical"])}
+                              busy={
+                                pendingAction ===
+                                `store:${s.storeId}:historical`
+                              }
                               disabled={busy}
-                              onClick={() => {
+                              onRun={() => {
                                 if (
                                   window.confirm(
                                     L([
@@ -833,17 +869,23 @@ export function DirectoryPage() {
                                     expectedVersion: s.version,
                                   });
                               }}
-                            >
-                              {L(["保留历史", "Keep historical"])}
-                            </button>
+                            />
                           </>
                         )}
                         {(s.status === "confirmed" ||
                           s.status === "retired") && (
-                          <button
-                            type="button"
+                          <ActionButton
+                            label={
+                              s.status === "retired"
+                                ? L(["恢复", "Restore"])
+                                : L(["停用", "Retire"])
+                            }
+                            busy={
+                              pendingAction ===
+                              `store:${s.storeId}:${s.status === "retired" ? "restore" : "retire"}`
+                            }
                             disabled={busy}
-                            onClick={() => {
+                            onRun={() => {
                               const kind =
                                 s.status === "retired" ? "restore" : "retire";
                               if (
@@ -865,11 +907,7 @@ export function DirectoryPage() {
                                   expectedVersion: s.version,
                                 });
                             }}
-                          >
-                            {s.status === "retired"
-                              ? L(["恢复", "Restore"])
-                              : L(["停用", "Retire"])}
-                          </button>
+                          />
                         )}
                       </td>
                     </tr>
@@ -889,8 +927,8 @@ export function DirectoryPage() {
             </label>
             <ActionButton
               label={L(["新增部门", "Add department"])}
-              busy={busy}
-              disabled={!newName.trim()}
+              busy={pendingAction === "department-create"}
+              disabled={busy || !newName.trim()}
               onRun={() => {
                 const name = newName;
                 void run(
@@ -900,6 +938,7 @@ export function DirectoryPage() {
                       operation: { kind: "create", name },
                     }),
                   () => setNewName(""),
+                  "department-create",
                 );
               }}
             />
@@ -937,10 +976,18 @@ export function DirectoryPage() {
                       >
                         {L(["改名", "Rename"])}
                       </button>
-                      <button
-                        type="button"
+                      <ActionButton
+                        label={
+                          d.status === "active"
+                            ? L(["停用", "Retire"])
+                            : L(["恢复", "Restore"])
+                        }
+                        busy={
+                          pendingAction ===
+                          `department:${d.departmentId}:${d.status === "active" ? "retire" : "restore"}`
+                        }
                         disabled={busy}
-                        onClick={() => {
+                        onRun={() => {
                           const kind =
                             d.status === "active" ? "retire" : "restore";
                           if (
@@ -962,11 +1009,7 @@ export function DirectoryPage() {
                               expectedVersion: d.version,
                             });
                         }}
-                      >
-                        {d.status === "active"
-                          ? L(["停用", "Retire"])
-                          : L(["恢复", "Restore"])}
-                      </button>
+                      />
                     </td>
                   </tr>
                 ))}

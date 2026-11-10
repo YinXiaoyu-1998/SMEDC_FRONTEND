@@ -251,3 +251,129 @@ it("asks before marking an employee departed and does not submit when cancelled"
   );
   expect(calls.some((url) => url.includes("/update_employee"))).toBe(false);
 });
+
+it("shows progress only on the pending directory row action", async () => {
+  const storeId = "33333333-3333-4333-8333-333333333333";
+  let finish!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => {
+    finish = resolve;
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (url.includes("/enterprises"))
+        return jsonResponse({
+          authorizationVersion: "1",
+          enterprises: [
+            { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
+          ],
+        });
+      if (url.includes("/list_directory"))
+        return jsonResponse({
+          enterpriseKey: "enterprise-1",
+          enterpriseName: "示例企业",
+          stores: [
+            { storeId, name: "待确认店", status: "pending", version: "1" },
+          ],
+          departments: [],
+        });
+      if (url.includes("/list_employees"))
+        return jsonResponse({
+          employees: [],
+          access: "none",
+          nextCursor: null,
+        });
+      if (url.includes("/manage_store")) return pending;
+      return jsonResponse({});
+    }),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "门店目录" }));
+  fireEvent.click(screen.getByRole("button", { name: "待确认" }));
+  const row = await screen.findByRole("row", { name: /待确认店/ });
+  fireEvent.click(within(row).getByRole("button", { name: "确认" }));
+  const action = within(row).getByRole("button", { name: "确认" });
+  expect(action).toHaveAttribute("aria-busy", "true");
+  expect(within(action).getByTestId("button-spinner")).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "保留历史" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "新增门店" })).not.toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+  finish(jsonResponse({ storeId, version: "2" }));
+  await waitFor(() => expect(action).not.toHaveAttribute("aria-busy", "true"));
+});
+
+it("requires assignment changes to be saved separately from marking departure", async () => {
+  const first = "11111111-1111-4111-8111-111111111111";
+  const second = "44444444-4444-4444-8444-444444444444";
+  const uid = "22222222-2222-4222-8222-222222222222";
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (url.includes("/enterprises"))
+        return jsonResponse({
+          authorizationVersion: "1",
+          enterprises: [
+            { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
+          ],
+        });
+      if (url.includes("/list_directory"))
+        return jsonResponse({
+          enterpriseKey: "enterprise-1",
+          enterpriseName: "示例企业",
+          stores: [],
+          departments: [
+            {
+              departmentId: first,
+              name: "前厅",
+              status: "active",
+              version: "1",
+            },
+            {
+              departmentId: second,
+              name: "后厨",
+              status: "active",
+              version: "1",
+            },
+          ],
+        });
+      if (url.includes("/list_employees"))
+        return jsonResponse({
+          employees: [
+            {
+              employeeUid: uid,
+              name: "小王",
+              departmentId: first,
+              departmentName: "前厅",
+              scope: { ownership: "group", storeId: null, storeName: null },
+              status: "active",
+              version: "1",
+            },
+          ],
+          access: "all",
+          nextCursor: null,
+        });
+      return jsonResponse({});
+    }),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
+  const form = screen
+    .getByRole("heading", { name: "编辑员工" })
+    .closest("section")!;
+  fireEvent.change(within(form).getByLabelText("部门"), {
+    target: { value: second },
+  });
+  fireEvent.change(within(form).getByLabelText("状态"), {
+    target: { value: "departed" },
+  });
+  expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
+  expect(within(form).getByText(/离职时保留原归属/)).toBeInTheDocument();
+});
