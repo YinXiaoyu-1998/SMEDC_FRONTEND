@@ -95,7 +95,7 @@ function addDimensionValue(
 
 export interface PermissionsWrites {
   readonly busy: boolean;
-  readonly readAccount: (employeeId: string) => Promise<PermissionAccount>;
+  readonly readAccount: (userAccountId: string) => Promise<PermissionAccount>;
   readonly previewEnterprise: (
     name: string,
   ) => Promise<PermissionsEnterprisesPreviewResponse>;
@@ -130,7 +130,7 @@ export interface PermissionsWrites {
     name: string,
   ) => Promise<PermissionsEnterprisesDeclareResponse>;
   readonly saveAccount: (
-    employeeId: string,
+    userAccountId: string,
     body: PermissionsAccountsUpdateBody,
   ) => Promise<PermissionsAccountsUpdateResponse>;
   readonly saveDocument: (
@@ -185,11 +185,11 @@ export function usePermissionsWrites({
   );
 
   const readAccount = useCallback(
-    async (employeeId: string): Promise<PermissionAccount> => {
-      const account = await permissionsApi.readAccount(orgId, employeeId);
+    async (userAccountId: string): Promise<PermissionAccount> => {
+      const account = await permissionsApi.readAccount(orgId, userAccountId);
       const current = queryClient
         .getQueryData<PermissionsBundle>(queryKey)
-        ?.accounts.find((item) => item.id === employeeId);
+        ?.accounts.find((item) => item.id === userAccountId);
       if (current === undefined) {
         throw new Error("账号快照不在当前列表中");
       }
@@ -205,7 +205,7 @@ export function usePermissionsWrites({
       update((previous) => ({
         ...previous,
         accounts: previous.accounts.map((item) =>
-          item.id === employeeId ? merged : item,
+          item.id === userAccountId ? merged : item,
         ),
       }));
       return merged;
@@ -423,11 +423,11 @@ export function usePermissionsWrites({
   );
 
   const saveAccount = useCallback(
-    (employeeId: string, body: PermissionsAccountsUpdateBody) =>
+    (userAccountId: string, body: PermissionsAccountsUpdateBody) =>
       run(async () => {
         const result = await permissionsApi.updateAccount(
           orgId,
-          employeeId,
+          userAccountId,
           body,
           csrfToken,
         );
@@ -435,7 +435,7 @@ export function usePermissionsWrites({
           ...previous,
           version: result.authorizationVersion,
           accounts: previous.accounts.map((account) =>
-            account.id === employeeId
+            account.id === userAccountId
               ? {
                   ...account,
                   clearance: result.value.clearance,

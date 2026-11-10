@@ -20,6 +20,9 @@ export function AdminSectionNav({ orgId }: AdminSectionNavProps) {
       <NavLink to={appPaths.permissions(orgId)} className={linkClassName}>
         {t("nav.permissions")}
       </NavLink>
+      <NavLink to={appPaths.directory(orgId)} className={linkClassName}>
+        {t("nav.directory")}
+      </NavLink>
       <NavLink to={appPaths.workflows(orgId)} className={linkClassName}>
         {t("nav.workflows")}
       </NavLink>

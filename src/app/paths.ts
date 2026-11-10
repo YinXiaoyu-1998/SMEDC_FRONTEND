@@ -4,6 +4,7 @@ export const appPaths = {
   home: "/",
   login: "/login",
   ledger: "/ledger",
+  directory: (orgId: string) => `/admin/${encodeURIComponent(orgId)}/directory`,
   permissions: (orgId: string) =>
     `/admin/${encodeURIComponent(orgId)}/permissions`,
   workflows: (orgId: string) => `/admin/${encodeURIComponent(orgId)}/workflows`,
@@ -17,6 +18,7 @@ const knownPathPatterns: readonly RegExp[] = [
   /^\/$/,
   /^\/ledger$/,
   /^\/admin\/[^/]+\/permissions$/,
+  /^\/admin\/[^/]+\/directory$/,
   /^\/admin\/[^/]+\/workflows$/,
   /^\/admin\/[^/]+\/workflows\/[^/]+$/,
 ];

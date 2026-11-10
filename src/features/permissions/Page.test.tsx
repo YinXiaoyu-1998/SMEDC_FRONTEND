@@ -107,7 +107,7 @@ function createState(): MockState {
   };
   const account: PermissionAccount = {
     orgId: ORG,
-    employeeId: "employee-1",
+    userAccountId: "employee-1",
     role: "admin",
     disabled: false,
     clearance: 2,
@@ -316,7 +316,7 @@ function handleRequest(
       const account = state.accounts[0];
       return jsonResponse({
         orgId: ORG,
-        employeeId: account?.id ?? "employee-1",
+        userAccountId: account?.id ?? "employee-1",
         role: account?.role ?? "admin",
         disabled: account?.disabled ?? false,
         clearance: state.clearance,
@@ -350,8 +350,8 @@ function handleRequest(
         })),
       });
     case "accounts.read": {
-      const employeeId = request.pathname.split("/").at(-1);
-      const account = state.accounts.find((item) => item.id === employeeId);
+      const userAccountId = request.pathname.split("/").at(-1);
+      const account = state.accounts.find((item) => item.id === userAccountId);
       if (account === undefined) {
         return jsonResponse(
           {
@@ -365,7 +365,7 @@ function handleRequest(
       }
       return jsonResponse({
         orgId: ORG,
-        employeeId: account.id,
+        userAccountId: account.id,
         role: account.role,
         disabled: account.disabled,
         clearance: account.clearance,
@@ -671,10 +671,10 @@ function handleRequest(
         readonly clearance: number;
         readonly grants: PermissionAccount["grants"];
       };
-      const employeeId = request.pathname.split("/").at(-1) ?? "";
+      const userAccountId = request.pathname.split("/").at(-1) ?? "";
       state.version = nextVersion(state.version);
       state.accounts = state.accounts.map((account) =>
-        account.id === employeeId
+        account.id === userAccountId
           ? {
               ...account,
               clearance: body.clearance,

@@ -91,7 +91,7 @@ describe("生成的契约代码", () => {
   it("生成的 zod schema 能按契约校验登录响应", () => {
     const parsed = generated.sessionLoginResponseSchema.safeParse({
       identity: {
-        employeeId: "employee-1",
+        userAccountId: "employee-1",
         displayName: "张三",
         email: "zhangsan@example.com",
         orgId: "org-1",

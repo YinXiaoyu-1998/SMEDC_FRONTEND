@@ -82,8 +82,16 @@ export function WorkflowsPage() {
   const stores = useMemo(
     () =>
       (storesQuery.data?.stores ?? [])
-        .filter((store) => store.enterpriseKey === enterpriseKey)
-        .map((store) => ({ name: store.name, retired: store.retired })),
+        .filter(
+          (store) =>
+            store.enterpriseKey === enterpriseKey &&
+            (store.confirmation === undefined ||
+              store.confirmation === "confirmed"),
+        )
+        .map((store) => ({
+          name: store.officialName ?? store.name,
+          retired: store.retired,
+        })),
     [enterpriseKey, storesQuery.data],
   );
 

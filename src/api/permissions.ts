@@ -182,11 +182,11 @@ export function listAccounts(
 
 export function readAccount(
   orgId: string,
-  employeeId: string,
+  userAccountId: string,
 ): Promise<PermissionsAccountsReadResponse> {
   const { method, path } = webApiRoutes["permissions.accounts.read"];
   return requestWebApi(
-    { method, path, params: { orgId, employeeId } },
+    { method, path, params: { orgId, userAccountId } },
     permissionsAccountsReadResponseSchema,
   );
 }
@@ -365,13 +365,13 @@ export function previewEnterprise(
 
 export function updateAccount(
   orgId: string,
-  employeeId: string,
+  userAccountId: string,
   body: PermissionsAccountsUpdateBody,
   csrfToken: string,
 ): Promise<PermissionsAccountsUpdateResponse> {
   const { method, path } = webApiRoutes["permissions.accounts.update"];
   return requestWebApi(
-    { method, path, params: { orgId, employeeId }, body, csrfToken },
+    { method, path, params: { orgId, userAccountId }, body, csrfToken },
     permissionsAccountsUpdateResponseSchema,
   );
 }

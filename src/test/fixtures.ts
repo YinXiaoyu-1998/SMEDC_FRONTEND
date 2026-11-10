@@ -1,7 +1,7 @@
 import type { Session } from "@/api/session";
 
 const baseIdentity = {
-  employeeId: "employee-1",
+  userAccountId: "employee-1",
   displayName: "张三",
   email: "zhangsan@example.com",
   orgId: "org-1",
@@ -19,7 +19,7 @@ export const adminSession: Session = {
 export const employeeSession: Session = {
   identity: {
     ...baseIdentity,
-    employeeId: "employee-2",
+    userAccountId: "employee-2",
     displayName: "李四",
     email: "lisi@example.com",
     role: "employee",

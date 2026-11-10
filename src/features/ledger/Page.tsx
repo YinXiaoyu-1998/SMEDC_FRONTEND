@@ -74,7 +74,7 @@ export function LedgerPage() {
   // 身份变化（另一个账号）时整页重置，选择与任务不带到新账号名下
   return (
     <LedgerWorkspaceView
-      key={`${contextQuery.data.identity.orgId}:${contextQuery.data.identity.employeeId}`}
+      key={`${contextQuery.data.identity.orgId}:${contextQuery.data.identity.userAccountId}`}
       context={contextQuery.data}
       refreshContext={async () => {
         const result = await contextQuery.refetch();

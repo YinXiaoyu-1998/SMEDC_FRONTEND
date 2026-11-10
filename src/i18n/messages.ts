@@ -12,6 +12,7 @@ export const baseMessages = {
   "nav.closeMenu": ["收起导航", "Close navigation"],
   "nav.management": ["管理设置", "Administration"],
   "nav.permissions": ["权限设置", "Permissions"],
+  "nav.directory": ["企业资料", "Enterprise directory"],
   "nav.workflows": ["自动任务", "Automations"],
   "nav.ledger": ["台账下载中心", "Ledger downloads"],
   "nav.logout": ["退出登录", "Sign out"],
