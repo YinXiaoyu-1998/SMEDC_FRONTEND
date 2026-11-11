@@ -33,7 +33,24 @@ const blank: Draft = {
 type Tab = "employees" | "stores" | "departments";
 type DepartmentNameIssue = "empty" | "whitespace" | "duplicate";
 
-// 部门名称全企业唯一（含已停用）：比较前 trim 且不区分大小写；重命名时排除自身。
+type DepartmentNameConflict = {
+  orgId: string;
+  enterprise: string;
+  departmentId: string | null;
+  name: string;
+};
+
+function departmentNameKey(name: string): string {
+  // MySQL ignores trailing ASCII spaces. Preserve leading spaces in legacy names.
+  const stored = name.replace(/ +$/u, "");
+  // Fold common Latin case and accents, including in names that also contain
+  // other scripts. MySQL checks the remaining collation rules on submission.
+  return stored.replace(/\p{Script=Latin}[\u0300-\u036f]*/gu, (letter) => {
+    const latin = letter.normalize("NFD").replace(/[\u0300-\u036f]/gu, "");
+    return /^[a-z]$/iu.test(latin) ? latin.toLowerCase() : letter;
+  });
+}
+
 function departmentNameIssue(
   name: string,
   departments: readonly { departmentId: string; name: string }[],
@@ -42,11 +59,11 @@ function departmentNameIssue(
   const trimmed = name.trim();
   if (trimmed === "") return "empty";
   if (name !== trimmed) return "whitespace";
-  const key = trimmed.toLowerCase();
+  const key = departmentNameKey(name);
   return departments.some(
     (department) =>
       department.departmentId !== excludeId &&
-      department.name.trim().toLowerCase() === key,
+      departmentNameKey(department.name) === key,
   )
     ? "duplicate"
     : null;
@@ -84,9 +101,8 @@ export function DirectoryPage() {
   const [error, setError] = useState<unknown>(null);
   const [success, setSuccess] = useState("");
   const [conflict, setConflict] = useState(false);
-  const [duplicateNameError, setDuplicateNameError] = useState<
-    "create" | "rename" | null
-  >(null);
+  const [duplicateNameError, setDuplicateNameError] =
+    useState<DepartmentNameConflict | null>(null);
   const [storeNameDraft, setStoreNameDraft] = useState("");
   const [departmentNameDraft, setDepartmentNameDraft] = useState("");
   const newName = tab === "stores" ? storeNameDraft : departmentNameDraft;
@@ -145,6 +161,10 @@ export function DirectoryPage() {
     action: () => Promise<unknown>,
     after?: (result: unknown) => void,
     actionKey = "employee-save",
+    departmentNameSubmission?: Pick<
+      DepartmentNameConflict,
+      "name" | "departmentId"
+    >,
   ) => {
     setPendingAction(actionKey);
     setError(null);
@@ -156,14 +176,16 @@ export function DirectoryPage() {
       after?.(result);
       await reload();
     } catch (e) {
-      if (e instanceof WebApiError && e.code === "DIRECTORY_DUPLICATE_NAME") {
-        setDuplicateNameError(
-          actionKey === "department-create"
-            ? "create"
-            : actionKey === "rename-save" && rename?.kind === "department"
-              ? "rename"
-              : null,
-        );
+      if (
+        departmentNameSubmission &&
+        e instanceof WebApiError &&
+        e.code === "DIRECTORY_DUPLICATE_NAME"
+      ) {
+        setDuplicateNameError({
+          orgId,
+          enterprise,
+          ...departmentNameSubmission,
+        });
         await reload();
         return;
       }
@@ -283,27 +305,27 @@ export function DirectoryPage() {
             "Department name cannot start or end with whitespace",
           ])
         : L(["该部门名称已存在", "This department name already exists"]);
-  const createNameIssue = departmentNameIssue(newName, departments, null);
+  const nameIssue = (
+    name: string,
+    departmentId: string | null,
+  ): DepartmentNameIssue | null =>
+    departmentNameIssue(name, departments, departmentId) ??
+    (duplicateNameError?.orgId === orgId &&
+    duplicateNameError.enterprise === enterprise &&
+    duplicateNameError.name === name &&
+    duplicateNameError.departmentId === departmentId
+      ? "duplicate"
+      : null);
+  const createNameIssue =
+    tab === "departments" ? nameIssue(newName, null) : null;
   const createNameError =
-    tab !== "departments"
-      ? null
-      : duplicateNameError === "create"
-        ? departmentNameMessage("duplicate")
-        : newName !== "" && createNameIssue !== null
-          ? departmentNameMessage(createNameIssue)
-          : null;
+    newName !== "" && createNameIssue !== null
+      ? departmentNameMessage(createNameIssue)
+      : null;
   const renameNameIssue =
-    rename?.kind === "department"
-      ? departmentNameIssue(rename.name, departments, rename.id)
-      : null;
+    rename?.kind === "department" ? nameIssue(rename.name, rename.id) : null;
   const renameNameError =
-    rename?.kind === "department"
-      ? duplicateNameError === "rename"
-        ? departmentNameMessage("duplicate")
-        : renameNameIssue !== null
-          ? departmentNameMessage(renameNameIssue)
-          : null
-      : null;
+    renameNameIssue === null ? null : departmentNameMessage(renameNameIssue);
   const changeStore = (operation: DirectoryManageStoreBody["operation"]) =>
     void run(
       () =>
@@ -479,8 +501,7 @@ export function DirectoryPage() {
                       busy ||
                       conflict ||
                       (rename.kind === "department"
-                        ? duplicateNameError === "rename" ||
-                          renameNameIssue !== null
+                        ? renameNameIssue !== null
                         : !rename.name.trim()) ||
                       rename.name === rename.original
                     }
@@ -509,7 +530,14 @@ export function DirectoryPage() {
                                   name: rename.name,
                                 },
                               });
-                      void run(operation, () => setRename(null), "rename-save");
+                      void run(
+                        operation,
+                        () => setRename(null),
+                        "rename-save",
+                        rename.kind === "department"
+                          ? { departmentId: rename.id, name: rename.name }
+                          : undefined,
+                      );
                     }}
                   />
                   <button type="button" onClick={() => setRename(null)}>
@@ -1020,7 +1048,7 @@ export function DirectoryPage() {
               busy={pendingAction === "department-create"}
               disabled={busy || createNameIssue !== null}
               onRun={() => {
-                if (createNameError !== null) return;
+                if (createNameIssue !== null) return;
                 setDuplicateNameError(null);
                 const name = newName;
                 void run(
@@ -1031,6 +1059,7 @@ export function DirectoryPage() {
                     }),
                   () => setNewName(""),
                   "department-create",
+                  { departmentId: null, name },
                 );
               }}
             />

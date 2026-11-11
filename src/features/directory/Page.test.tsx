@@ -390,7 +390,7 @@ const kitchenId = "22222222-2222-4222-8222-222222222222";
 
 function stubDepartmentDirectory(
   departments: DirectoryDepartment[],
-  manageDepartment?: (body: unknown) => Response,
+  manageDepartment?: (body: unknown) => Response | Promise<Response>,
 ) {
   const calls: { url: string; body: unknown }[] = [];
   vi.stubGlobal(
@@ -442,7 +442,7 @@ it("blocks creating a department whose name duplicates an existing one", async (
   const calls = stubDepartmentDirectory([
     {
       departmentId: frontDeskId,
-      name: "Front Desk",
+      name: "前厅 Café",
       status: "active",
       version: "1",
     },
@@ -452,7 +452,7 @@ it("blocks creating a department whose name duplicates an existing one", async (
     initialEntries: ["/admin/org-1/directory"],
   });
   const input = await openDepartments();
-  fireEvent.change(input, { target: { value: "front desk" } });
+  fireEvent.change(input, { target: { value: "前厅 CAFE" } });
   expect(screen.getByText("该部门名称已存在")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
   expect(calls).toHaveLength(0);
@@ -517,8 +517,36 @@ it("shows a duplicate-name error beside the name field when the server rejects a
   fireEvent.click(screen.getByRole("button", { name: "新增部门" }));
   expect(await screen.findByText("该部门名称已存在")).toBeInTheDocument();
   expect(input).toHaveValue("后厨");
+  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
   expect(screen.queryByText(/数据已变化，草稿保留/)).not.toBeInTheDocument();
   expect(calls).toHaveLength(1);
+});
+
+it("keeps a new draft submittable when an older request reports a duplicate", async () => {
+  let respond!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => {
+    respond = resolve;
+  });
+  const calls = stubDepartmentDirectory([], () => pending);
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  const input = await openDepartments();
+  const button = screen.getByRole("button", { name: "新增部门" });
+  fireEvent.change(input, { target: { value: "前厅" } });
+  fireEvent.click(button);
+  await waitFor(() => expect(calls).toHaveLength(1));
+  fireEvent.change(input, { target: { value: "后厨" } });
+  respond(
+    jsonResponse(
+      { error: { code: "DIRECTORY_DUPLICATE_NAME", message: "duplicate" } },
+      409,
+    ),
+  );
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(input).toHaveValue("后厨");
+  expect(screen.queryByText("该部门名称已存在")).not.toBeInTheDocument();
 });
 
 it("shows a duplicate-name error beside the name field when the server rejects a rename", async () => {
