@@ -391,6 +391,11 @@ const kitchenId = "22222222-2222-4222-8222-222222222222";
 function stubDepartmentDirectory(
   departments: DirectoryDepartment[],
   manageDepartment?: (body: unknown) => Response | Promise<Response>,
+  checkName: (body: {
+    name: string;
+    enterpriseKey: string;
+    excludeDepartmentId?: string;
+  }) => Response | Promise<Response> = () => jsonResponse({ duplicate: false }),
 ) {
   const calls: { url: string; body: unknown }[] = [];
   vi.stubGlobal(
@@ -416,6 +421,9 @@ function stubDepartmentDirectory(
           access: "none",
           nextCursor: null,
         });
+      if (url.includes("/check_department_name")) {
+        return checkName(JSON.parse(String(init.body)));
+      }
       if (url.includes("/manage_department")) {
         const body =
           init.body === undefined ? null : JSON.parse(String(init.body));
@@ -439,22 +447,36 @@ async function openDepartments() {
 }
 
 it("blocks creating a department whose name duplicates an existing one", async () => {
-  const calls = stubDepartmentDirectory([
-    {
-      departmentId: frontDeskId,
-      name: "前厅 Café",
-      status: "active",
-      version: "1",
-    },
-  ]);
+  const check = vi.fn(() => jsonResponse({ duplicate: true }));
+  const calls = stubDepartmentDirectory(
+    [
+      {
+        departmentId: frontDeskId,
+        name: "Ａ组",
+        status: "active",
+        version: "1",
+      },
+    ],
+    undefined,
+    check,
+  );
   renderApp({
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
   const input = await openDepartments();
-  fireEvent.change(input, { target: { value: "前厅 CAFE" } });
+  await screen.findByRole("row", { name: /Ａ组/ });
+  fireEvent.change(input, { target: { value: "Ａ组" } });
   expect(screen.getByText("该部门名称已存在")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+
+  fireEvent.change(input, { target: { value: "A组" } });
+  expect(await screen.findByText("该部门名称已存在")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(check).toHaveBeenCalledWith({
+    enterpriseKey: "enterprise-1",
+    name: "A组",
+  });
   expect(calls).toHaveLength(0);
 });
 
@@ -514,7 +536,9 @@ it("shows a duplicate-name error beside the name field when the server rejects a
   });
   const input = await openDepartments();
   fireEvent.change(input, { target: { value: "后厨" } });
-  fireEvent.click(screen.getByRole("button", { name: "新增部门" }));
+  const button = screen.getByRole("button", { name: "新增部门" });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
   expect(await screen.findByText("该部门名称已存在")).toBeInTheDocument();
   expect(input).toHaveValue("后厨");
   expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
@@ -535,6 +559,7 @@ it("keeps a new draft submittable when an older request reports a duplicate", as
   const input = await openDepartments();
   const button = screen.getByRole("button", { name: "新增部门" });
   fireEvent.change(input, { target: { value: "前厅" } });
+  await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
   await waitFor(() => expect(calls).toHaveLength(1));
   fireEvent.change(input, { target: { value: "后厨" } });
@@ -584,27 +609,36 @@ it("shows a duplicate-name error beside the name field when the server rejects a
   fireEvent.change(within(form).getByLabelText("新名称"), {
     target: { value: "后厨" },
   });
-  fireEvent.click(within(form).getByRole("button", { name: "保存" }));
+  const save = within(form).getByRole("button", { name: "保存" });
+  await waitFor(() => expect(save).toBeEnabled());
+  fireEvent.click(save);
   expect(await within(form).findByText("该部门名称已存在")).toBeInTheDocument();
   expect(within(form).getByLabelText("新名称")).toHaveValue("后厨");
   expect(screen.queryByText(/数据已变化，草稿保留/)).not.toBeInTheDocument();
 });
 
 it("checks rename duplicates against other departments but not itself", async () => {
-  const calls = stubDepartmentDirectory([
-    {
-      departmentId: frontDeskId,
-      name: "Front Desk",
-      status: "active",
-      version: "1",
-    },
-    {
-      departmentId: kitchenId,
-      name: "Kitchen",
-      status: "retired",
-      version: "1",
-    },
-  ]);
+  const check = vi.fn((body: { name: string }) =>
+    jsonResponse({ duplicate: body.name === "kitchen" }),
+  );
+  const calls = stubDepartmentDirectory(
+    [
+      {
+        departmentId: frontDeskId,
+        name: "Front Desk",
+        status: "active",
+        version: "1",
+      },
+      {
+        departmentId: kitchenId,
+        name: "Kitchen",
+        status: "retired",
+        version: "1",
+      },
+    ],
+    undefined,
+    check,
+  );
   renderApp({
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
@@ -622,12 +656,19 @@ it("checks rename duplicates against other departments but not itself", async ()
   ).toBeInTheDocument();
   expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
   fireEvent.change(input, { target: { value: "kitchen" } });
-  expect(within(form).getByText("该部门名称已存在")).toBeInTheDocument();
+  expect(await within(form).findByText("该部门名称已存在")).toBeInTheDocument();
   expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
   expect(calls).toHaveLength(0);
   fireEvent.change(input, { target: { value: "front desk" } });
   expect(within(form).queryByText("该部门名称已存在")).not.toBeInTheDocument();
-  expect(within(form).getByRole("button", { name: "保存" })).toBeEnabled();
+  await waitFor(() =>
+    expect(within(form).getByRole("button", { name: "保存" })).toBeEnabled(),
+  );
+  expect(check).toHaveBeenLastCalledWith({
+    enterpriseKey: "enterprise-1",
+    name: "front desk",
+    excludeDepartmentId: frontDeskId,
+  });
   fireEvent.click(within(form).getByRole("button", { name: "保存" }));
   await waitFor(() => expect(calls).toHaveLength(1));
   expect(calls[0]!.body).toEqual({
@@ -639,4 +680,30 @@ it("checks rename duplicates against other departments but not itself", async ()
       name: "front desk",
     },
   });
+});
+
+it("keeps submission disabled while the database check is unavailable and can retry", async () => {
+  const check = vi
+    .fn()
+    .mockReturnValueOnce(
+      jsonResponse(
+        { error: { code: "INTERNAL_ERROR", message: "Unavailable" } },
+        500,
+      ),
+    )
+    .mockReturnValue(jsonResponse({ duplicate: false }));
+  const calls = stubDepartmentDirectory([], undefined, check);
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  const input = await openDepartments();
+  fireEvent.change(input, { target: { value: "新部门" } });
+  const button = screen.getByRole("button", { name: "新增部门" });
+  expect(button).toBeDisabled();
+  const retry = await screen.findByRole("button", { name: "重试检查" });
+  expect(button).toBeDisabled();
+  fireEvent.click(retry);
+  await waitFor(() => expect(button).toBeEnabled());
+  expect(calls).toHaveLength(0);
 });

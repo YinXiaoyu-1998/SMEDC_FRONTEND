@@ -4626,6 +4626,45 @@ export const rWorkflowsSaveEnterpriseWorkflowSchema33Schema = z.enum([
   "dianping",
 ]);
 
+export const directoryCheckDepartmentNameBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  name: z.string().min(1).max(255),
+  excludeDepartmentId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    )
+    .optional(),
+});
+
+export type DirectoryCheckDepartmentNameBody = z.infer<
+  typeof directoryCheckDepartmentNameBodySchema
+>;
+
+export const directoryCheckDepartmentNameParamsSchema = z.strictObject({
+  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
+
+export type DirectoryCheckDepartmentNameParams = z.infer<
+  typeof directoryCheckDepartmentNameParamsSchema
+>;
+
+export const directoryCheckDepartmentNameQuerySchema = z.strictObject({});
+
+export type DirectoryCheckDepartmentNameQuery = z.infer<
+  typeof directoryCheckDepartmentNameQuerySchema
+>;
+
+export const directoryCheckDepartmentNameResponseSchema = z.strictObject({
+  duplicate: z.boolean(),
+});
+
+export type DirectoryCheckDepartmentNameResponse = z.infer<
+  typeof directoryCheckDepartmentNameResponseSchema
+>;
+
 export const directoryCreateEmployeeBodySchema = z.strictObject({
   enterpriseKey: z.string().min(1).max(128),
   name: z.string().min(1).max(255),
@@ -8013,6 +8052,23 @@ export type WorkflowsSaveEnterpriseWorkflowResponse = z.infer<
 // route id → 调用方需要的静态元数据；运行时校验以各自的 zod schema 为准
 
 export const webApiRoutes = {
+  "directory.checkDepartmentName": {
+    method: "POST",
+    path: "/api/web/v1/orgs/:orgId/directory/check_department_name",
+    auth: "session-write",
+    errors: [
+      "BROWSER_ACCESS_DENIED",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DIRECTORY_ACCESS_DENIED",
+      "DIRECTORY_CONFLICT",
+      "DIRECTORY_IN_USE",
+      "DIRECTORY_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "按数据库规则检查部门名称是否重复",
+  },
   "directory.createEmployee": {
     method: "POST",
     path: "/api/web/v1/orgs/:orgId/directory/create_employee",
