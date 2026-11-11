@@ -377,3 +377,238 @@ it("requires assignment changes to be saved separately from marking departure", 
   expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
   expect(within(form).getByText(/离职时保留原归属/)).toBeInTheDocument();
 });
+
+type DirectoryDepartment = {
+  departmentId: string;
+  name: string;
+  status: "active" | "retired";
+  version: string;
+};
+
+const frontDeskId = "11111111-1111-4111-8111-111111111111";
+const kitchenId = "22222222-2222-4222-8222-222222222222";
+
+function stubDepartmentDirectory(
+  departments: DirectoryDepartment[],
+  manageDepartment?: (body: unknown) => Response,
+) {
+  const calls: { url: string; body: unknown }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("/enterprises"))
+        return jsonResponse({
+          authorizationVersion: "1",
+          enterprises: [
+            { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
+          ],
+        });
+      if (url.includes("/list_directory"))
+        return jsonResponse({
+          enterpriseKey: "enterprise-1",
+          enterpriseName: "示例企业",
+          stores: [],
+          departments,
+        });
+      if (url.includes("/list_employees"))
+        return jsonResponse({
+          employees: [],
+          access: "none",
+          nextCursor: null,
+        });
+      if (url.includes("/manage_department")) {
+        const body =
+          init.body === undefined ? null : JSON.parse(String(init.body));
+        calls.push({ url, body });
+        return manageDepartment
+          ? manageDepartment(body)
+          : jsonResponse({
+              departmentId: "33333333-3333-4333-8333-333333333333",
+              version: "2",
+            });
+      }
+      return jsonResponse({});
+    }),
+  );
+  return calls;
+}
+
+async function openDepartments() {
+  fireEvent.click(await screen.findByRole("button", { name: "部门目录" }));
+  return await screen.findByLabelText("新部门名称");
+}
+
+it("blocks creating a department whose name duplicates an existing one", async () => {
+  const calls = stubDepartmentDirectory([
+    {
+      departmentId: frontDeskId,
+      name: "Front Desk",
+      status: "active",
+      version: "1",
+    },
+  ]);
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  const input = await openDepartments();
+  fireEvent.change(input, { target: { value: "front desk" } });
+  expect(screen.getByText("该部门名称已存在")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(calls).toHaveLength(0);
+});
+
+it("blocks creating a department whose name has leading or trailing whitespace", async () => {
+  const calls = stubDepartmentDirectory([
+    {
+      departmentId: frontDeskId,
+      name: "前厅",
+      status: "active",
+      version: "1",
+    },
+  ]);
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  const input = await openDepartments();
+  fireEvent.change(input, { target: { value: " 后厨 " } });
+  expect(screen.getByText("部门名称不能以空白开头或结尾")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(calls).toHaveLength(0);
+});
+
+it("blocks creating a department with a blank name", async () => {
+  const calls = stubDepartmentDirectory([]);
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  const input = await openDepartments();
+  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  fireEvent.change(input, { target: { value: "   " } });
+  expect(screen.getByText("请输入部门名称")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(calls).toHaveLength(0);
+});
+
+it("shows a duplicate-name error beside the name field when the server rejects a create", async () => {
+  const calls = stubDepartmentDirectory(
+    [
+      {
+        departmentId: frontDeskId,
+        name: "前厅",
+        status: "active",
+        version: "1",
+      },
+    ],
+    () =>
+      jsonResponse(
+        { error: { code: "DIRECTORY_DUPLICATE_NAME", message: "duplicate" } },
+        409,
+      ),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  const input = await openDepartments();
+  fireEvent.change(input, { target: { value: "后厨" } });
+  fireEvent.click(screen.getByRole("button", { name: "新增部门" }));
+  expect(await screen.findByText("该部门名称已存在")).toBeInTheDocument();
+  expect(input).toHaveValue("后厨");
+  expect(screen.queryByText(/数据已变化，草稿保留/)).not.toBeInTheDocument();
+  expect(calls).toHaveLength(1);
+});
+
+it("shows a duplicate-name error beside the name field when the server rejects a rename", async () => {
+  stubDepartmentDirectory(
+    [
+      {
+        departmentId: frontDeskId,
+        name: "前厅",
+        status: "active",
+        version: "1",
+      },
+      {
+        departmentId: kitchenId,
+        name: "后厨",
+        status: "active",
+        version: "1",
+      },
+    ],
+    () =>
+      jsonResponse(
+        { error: { code: "DIRECTORY_DUPLICATE_NAME", message: "duplicate" } },
+        409,
+      ),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  await openDepartments();
+  const row = await screen.findByRole("row", { name: /前厅/ });
+  fireEvent.click(within(row).getByRole("button", { name: "改名" }));
+  const form = screen
+    .getByRole("heading", { name: "修改名称" })
+    .closest("section")!;
+  fireEvent.change(within(form).getByLabelText("新名称"), {
+    target: { value: "后厨" },
+  });
+  fireEvent.click(within(form).getByRole("button", { name: "保存" }));
+  expect(await within(form).findByText("该部门名称已存在")).toBeInTheDocument();
+  expect(within(form).getByLabelText("新名称")).toHaveValue("后厨");
+  expect(screen.queryByText(/数据已变化，草稿保留/)).not.toBeInTheDocument();
+});
+
+it("checks rename duplicates against other departments but not itself", async () => {
+  const calls = stubDepartmentDirectory([
+    {
+      departmentId: frontDeskId,
+      name: "Front Desk",
+      status: "active",
+      version: "1",
+    },
+    {
+      departmentId: kitchenId,
+      name: "Kitchen",
+      status: "retired",
+      version: "1",
+    },
+  ]);
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  await openDepartments();
+  const row = await screen.findByRole("row", { name: /Front Desk/ });
+  fireEvent.click(within(row).getByRole("button", { name: "改名" }));
+  const form = screen
+    .getByRole("heading", { name: "修改名称" })
+    .closest("section")!;
+  const input = within(form).getByLabelText("新名称");
+  fireEvent.change(input, { target: { value: "  Kitchen" } });
+  expect(
+    within(form).getByText("部门名称不能以空白开头或结尾"),
+  ).toBeInTheDocument();
+  expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
+  fireEvent.change(input, { target: { value: "kitchen" } });
+  expect(within(form).getByText("该部门名称已存在")).toBeInTheDocument();
+  expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
+  expect(calls).toHaveLength(0);
+  fireEvent.change(input, { target: { value: "front desk" } });
+  expect(within(form).queryByText("该部门名称已存在")).not.toBeInTheDocument();
+  expect(within(form).getByRole("button", { name: "保存" })).toBeEnabled();
+  fireEvent.click(within(form).getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(calls).toHaveLength(1));
+  expect(calls[0]!.body).toEqual({
+    enterpriseKey: "enterprise-1",
+    operation: {
+      kind: "rename",
+      departmentId: frontDeskId,
+      expectedVersion: "1",
+      name: "front desk",
+    },
+  });
+});
