@@ -7,6 +7,7 @@ import {
   directoryUpdateEmployeeResponseSchema,
   directoryManageStoreResponseSchema,
   directoryManageDepartmentResponseSchema,
+  directoryCheckDepartmentNameResponseSchema,
 } from "@/api/generated/contract";
 import type {
   DirectoryListDirectoryBody,
@@ -15,14 +16,16 @@ import type {
   DirectoryUpdateEmployeeBody,
   DirectoryManageStoreBody,
   DirectoryManageDepartmentBody,
+  DirectoryCheckDepartmentNameBody,
 } from "@/api/generated/contract";
 
-type Client = { orgId: string; csrfToken: string };
+export type DirectoryApiClient = { orgId: string; csrfToken: string };
 function post<T>(
-  client: Client,
+  client: DirectoryApiClient,
   route: { path: string },
   body: unknown,
   schema: import("zod").ZodType<T>,
+  signal?: AbortSignal,
 ) {
   return requestWebApi(
     {
@@ -31,47 +34,60 @@ function post<T>(
       params: { orgId: client.orgId },
       csrfToken: client.csrfToken,
       body,
+      ...(signal ? { signal } : {}),
     },
     schema,
   );
 }
 export const directoryApi = {
-  directory: (c: Client, b: DirectoryListDirectoryBody) =>
+  checkDepartmentName: (
+    c: DirectoryApiClient,
+    b: DirectoryCheckDepartmentNameBody,
+    signal: AbortSignal,
+  ) =>
+    post(
+      c,
+      webApiRoutes["directory.checkDepartmentName"],
+      b,
+      directoryCheckDepartmentNameResponseSchema,
+      signal,
+    ),
+  directory: (c: DirectoryApiClient, b: DirectoryListDirectoryBody) =>
     post(
       c,
       webApiRoutes["directory.listDirectory"],
       b,
       directoryListDirectoryResponseSchema,
     ),
-  employees: (c: Client, b: DirectoryListEmployeesBody) =>
+  employees: (c: DirectoryApiClient, b: DirectoryListEmployeesBody) =>
     post(
       c,
       webApiRoutes["directory.listEmployees"],
       b,
       directoryListEmployeesResponseSchema,
     ),
-  create: (c: Client, b: DirectoryCreateEmployeeBody) =>
+  create: (c: DirectoryApiClient, b: DirectoryCreateEmployeeBody) =>
     post(
       c,
       webApiRoutes["directory.createEmployee"],
       b,
       directoryCreateEmployeeResponseSchema,
     ),
-  update: (c: Client, b: DirectoryUpdateEmployeeBody) =>
+  update: (c: DirectoryApiClient, b: DirectoryUpdateEmployeeBody) =>
     post(
       c,
       webApiRoutes["directory.updateEmployee"],
       b,
       directoryUpdateEmployeeResponseSchema,
     ),
-  store: (c: Client, b: DirectoryManageStoreBody) =>
+  store: (c: DirectoryApiClient, b: DirectoryManageStoreBody) =>
     post(
       c,
       webApiRoutes["directory.manageStore"],
       b,
       directoryManageStoreResponseSchema,
     ),
-  department: (c: Client, b: DirectoryManageDepartmentBody) =>
+  department: (c: DirectoryApiClient, b: DirectoryManageDepartmentBody) =>
     post(
       c,
       webApiRoutes["directory.manageDepartment"],

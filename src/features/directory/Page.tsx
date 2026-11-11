@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { WebApiError } from "@/api/client";
@@ -7,7 +7,7 @@ import { PageFrame } from "@/app/PageFrame";
 import { listEnterprises } from "@/features/workflows/api";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
-import { directoryApi } from "./api";
+import { directoryApi, type DirectoryApiClient } from "./api";
 import styles from "./Page.module.css";
 import type {
   DirectoryListEmployeesResponse,
@@ -31,7 +31,7 @@ const blank: Draft = {
   status: "active",
 };
 type Tab = "employees" | "stores" | "departments";
-type DepartmentNameIssue = "empty" | "whitespace" | "duplicate";
+type DepartmentNameIssue = "empty" | "whitespace" | "tooLong" | "duplicate";
 
 type DepartmentNameConflict = {
   orgId: string;
@@ -40,33 +40,60 @@ type DepartmentNameConflict = {
   name: string;
 };
 
-function departmentNameKey(name: string): string {
-  // MySQL ignores trailing ASCII spaces. Preserve leading spaces in legacy names.
-  const stored = name.replace(/ +$/u, "");
-  // Fold common Latin case and accents, including in names that also contain
-  // other scripts. MySQL checks the remaining collation rules on submission.
-  return stored.replace(/\p{Script=Latin}[\u0300-\u036f]*/gu, (letter) => {
-    const latin = letter.normalize("NFD").replace(/[\u0300-\u036f]/gu, "");
-    return /^[a-z]$/iu.test(latin) ? latin.toLowerCase() : letter;
-  });
+function departmentNameInputIssue(name: string): DepartmentNameIssue | null {
+  const trimmed = name.trim();
+  if (!trimmed) return "empty";
+  if (name !== trimmed) return "whitespace";
+  if (name.length > 255) return "tooLong";
+  return null;
 }
 
-function departmentNameIssue(
-  name: string,
-  departments: readonly { departmentId: string; name: string }[],
-  excludeId: string | null,
-): DepartmentNameIssue | null {
-  const trimmed = name.trim();
-  if (trimmed === "") return "empty";
-  if (name !== trimmed) return "whitespace";
-  const key = departmentNameKey(name);
-  return departments.some(
-    (department) =>
-      department.departmentId !== excludeId &&
-      departmentNameKey(department.name) === key,
-  )
-    ? "duplicate"
-    : null;
+function useDepartmentNameCheck(
+  client: DirectoryApiClient,
+  enterprise: string,
+  name: string | null,
+  directoryUpdatedAt: number,
+  excludeDepartmentId?: string,
+) {
+  const [settledName, setSettledName] = useState<string | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledName(name), 200);
+    return () => clearTimeout(timer);
+  }, [name]);
+
+  const enabled = !!enterprise && name !== null && name === settledName;
+  const check = useQuery({
+    queryKey: [
+      "department-name-check",
+      client.orgId,
+      enterprise,
+      name,
+      excludeDepartmentId,
+      directoryUpdatedAt,
+    ],
+    queryFn: ({ signal }) =>
+      directoryApi.checkDepartmentName(
+        client,
+        {
+          enterpriseKey: enterprise,
+          name: name!,
+          ...(excludeDepartmentId ? { excludeDepartmentId } : {}),
+        },
+        signal,
+      ),
+    enabled,
+    retry: false,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  return {
+    available:
+      enabled && check.isSuccess && !check.isFetching && !check.data.duplicate,
+    duplicate: enabled && check.isSuccess && check.data.duplicate,
+    checking: name !== null && (!enabled || check.isFetching),
+    error: enabled && check.isError,
+    retry: check.refetch,
+  };
 }
 
 export function DirectoryPage() {
@@ -153,6 +180,32 @@ export function DirectoryPage() {
     enabled: !!session && !!enterprise && tab === "employees",
     retry: false,
   });
+  const createInputIssue = departmentNameInputIssue(departmentNameDraft);
+  const createNameCheck = useDepartmentNameCheck(
+    client,
+    enterprise,
+    session && enterprise && tab === "departments" && createInputIssue === null
+      ? departmentNameDraft
+      : null,
+    directory.dataUpdatedAt,
+  );
+  const renameInputIssue =
+    rename?.kind === "department"
+      ? departmentNameInputIssue(rename.name)
+      : null;
+  const renameNameCheck = useDepartmentNameCheck(
+    client,
+    enterprise,
+    session &&
+      enterprise &&
+      rename?.kind === "department" &&
+      rename.name !== rename.original &&
+      renameInputIssue === null
+      ? rename.name
+      : null,
+    directory.dataUpdatedAt,
+    rename?.kind === "department" ? rename.id : undefined,
+  );
   if (!session) return null;
   const reload = async () => {
     await Promise.all([directory.refetch(), employees.refetch()]);
@@ -296,36 +349,74 @@ export function DirectoryPage() {
       (e) => e.employeeUid === editing.employeeUid,
     );
   const departments = directory.data?.departments ?? [];
-  const departmentNameMessage = (issue: DepartmentNameIssue) =>
-    issue === "empty"
-      ? L(["请输入部门名称", "Enter a department name"])
-      : issue === "whitespace"
-        ? L([
-            "部门名称不能以空白开头或结尾",
-            "Department name cannot start or end with whitespace",
-          ])
-        : L(["该部门名称已存在", "This department name already exists"]);
-  const nameIssue = (
-    name: string,
-    departmentId: string | null,
-  ): DepartmentNameIssue | null =>
-    departmentNameIssue(name, departments, departmentId) ??
-    (duplicateNameError?.orgId === orgId &&
+  const departmentNameMessage = (issue: DepartmentNameIssue) => {
+    switch (issue) {
+      case "empty":
+        return L(["请输入部门名称", "Enter a department name"]);
+      case "whitespace":
+        return L([
+          "部门名称不能以空白开头或结尾",
+          "Department name cannot start or end with whitespace",
+        ]);
+      case "tooLong":
+        return L([
+          "部门名称不能超过 255 个字符",
+          "Department name cannot exceed 255 characters",
+        ]);
+      case "duplicate":
+        return L(["该部门名称已存在", "This department name already exists"]);
+    }
+  };
+  const nameConflict = (name: string, departmentId: string | null) =>
+    duplicateNameError?.orgId === orgId &&
     duplicateNameError.enterprise === enterprise &&
     duplicateNameError.name === name &&
-    duplicateNameError.departmentId === departmentId
+    duplicateNameError.departmentId === departmentId;
+  const isDuplicateName = (
+    name: string,
+    departmentId: string | null,
+    check: ReturnType<typeof useDepartmentNameCheck>,
+  ) =>
+    nameConflict(name, departmentId) ||
+    check.duplicate ||
+    (!check.available &&
+      departments.some(
+        (d) => d.departmentId !== departmentId && d.name === name,
+      ));
+  const createNameIssue =
+    createInputIssue ??
+    (isDuplicateName(departmentNameDraft, null, createNameCheck)
       ? "duplicate"
       : null);
-  const createNameIssue =
-    tab === "departments" ? nameIssue(newName, null) : null;
+  const renameNameIssue =
+    rename?.kind === "department"
+      ? (renameInputIssue ??
+        (isDuplicateName(rename.name, rename.id, renameNameCheck)
+          ? "duplicate"
+          : null))
+      : null;
   const createNameError =
-    newName !== "" && createNameIssue !== null
+    departmentNameDraft && createNameIssue
       ? departmentNameMessage(createNameIssue)
       : null;
-  const renameNameIssue =
-    rename?.kind === "department" ? nameIssue(rename.name, rename.id) : null;
-  const renameNameError =
-    renameNameIssue === null ? null : departmentNameMessage(renameNameIssue);
+  const renameNameError = renameNameIssue
+    ? departmentNameMessage(renameNameIssue)
+    : null;
+  const canCreateDepartment =
+    createNameIssue === null && createNameCheck.available;
+  const canRenameDepartment =
+    renameNameIssue === null && renameNameCheck.available;
+  const nameCheckFailure = (check: ReturnType<typeof useDepartmentNameCheck>) =>
+    check.error && (
+      <div>
+        <p role="alert" className={styles.error}>
+          {L(["无法检查部门名称。", "Unable to check the department name."])}
+        </p>
+        <button type="button" onClick={() => void check.retry()}>
+          {L(["重试检查", "Retry name check"])}
+        </button>
+      </div>
+    );
   const changeStore = (operation: DirectoryManageStoreBody["operation"]) =>
     void run(
       () =>
@@ -467,6 +558,8 @@ export function DirectoryPage() {
                     {renameNameError}
                   </p>
                 )}
+                {rename.kind === "department" &&
+                  nameCheckFailure(renameNameCheck)}
                 {conflict && (
                   <div>
                     <p>
@@ -496,17 +589,21 @@ export function DirectoryPage() {
                 <div className={styles.row}>
                   <ActionButton
                     label={L(["保存", "Save"])}
-                    busy={pendingAction === "rename-save"}
+                    busy={
+                      pendingAction === "rename-save" ||
+                      renameNameCheck.checking
+                    }
                     disabled={
                       busy ||
                       conflict ||
                       (rename.kind === "department"
-                        ? renameNameIssue !== null
+                        ? !canRenameDepartment
                         : !rename.name.trim()) ||
                       rename.name === rename.original
                     }
                     onRun={() => {
-                      if (renameNameError !== null) return;
+                      if (rename.kind === "department" && !canRenameDepartment)
+                        return;
                       setDuplicateNameError(null);
                       const operation =
                         rename.kind === "store"
@@ -1043,12 +1140,16 @@ export function DirectoryPage() {
                 {createNameError}
               </p>
             )}
+            {nameCheckFailure(createNameCheck)}
             <ActionButton
               label={L(["新增部门", "Add department"])}
-              busy={pendingAction === "department-create"}
-              disabled={busy || createNameIssue !== null}
+              busy={
+                pendingAction === "department-create" ||
+                createNameCheck.checking
+              }
+              disabled={busy || !canCreateDepartment}
               onRun={() => {
-                if (createNameIssue !== null) return;
+                if (!canCreateDepartment) return;
                 setDuplicateNameError(null);
                 const name = newName;
                 void run(
