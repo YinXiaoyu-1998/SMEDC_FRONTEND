@@ -288,6 +288,29 @@ describe("账号授权差异与提交载荷", () => {
     if (second.kind !== "merged") return;
     expect(second.draft.grants[0]?.stores).toEqual({ kind: "all" });
   });
+
+  it("服务端撤销了本地正在编辑的授权时要求显式选择", () => {
+    const baseline: AccountDraft = { clearance: 2, grants: [grant()] };
+    const draft: AccountDraft = {
+      ...baseline,
+      grants: [{ ...baseline.grants[0]!, stores: { kind: "all" } }],
+    };
+    const server: AccountDraft = { ...baseline, grants: [] };
+    expect(
+      rebaseAccount(t, data, { baseline, draft, server, decisions: {} }),
+    ).toMatchObject({
+      kind: "choice",
+      choices: [{ key: "grant:grant-1" }],
+    });
+    expect(
+      rebaseAccount(t, data, {
+        baseline,
+        draft,
+        server,
+        decisions: { "grant:grant-1": "server" },
+      }),
+    ).toMatchObject({ kind: "merged", draft: { grants: [] } });
+  });
 });
 
 describe("文档范围", () => {
@@ -391,13 +414,54 @@ describe("文档范围", () => {
   it("类别两边都改时冲突面板要求选择", () => {
     const server: DocumentDraft = { ...baseline, categoryId: "cat-policy" };
     const draft: DocumentDraft = { ...baseline, fileConfidentialityLevel: 1 };
-    const outcome = rebaseDocument(t, {
-      draft,
-      baseline,
-      server,
-      decisions: {},
-    });
+    const outcome = rebaseDocument(
+      t,
+      {
+        draft,
+        baseline,
+        server,
+        decisions: {},
+      },
+      data,
+    );
     expect(outcome.kind).toBe("merged");
+  });
+
+  it("双方编辑同一文档范围时要求选择一侧，不合并成额外的范围", () => {
+    const [first, second] = baseline.scopes;
+    const server = {
+      ...baseline,
+      scopes: [{ ...first!, id: "remote", storeName: "远端门店" }, second!],
+    };
+    const draft = {
+      ...baseline,
+      scopes: [{ ...first!, storeName: "本地门店" }, second!],
+    };
+    expect(
+      rebaseDocument(t, { baseline, server, draft, decisions: {} }, data),
+    ).toMatchObject({ kind: "choice", choices: [{ key: "scopes" }] });
+    expect(
+      rebaseDocument(
+        t,
+        { baseline, server, draft, decisions: { scopes: "draft" } },
+        data,
+      ),
+    ).toMatchObject({ kind: "merged", draft: { scopes: draft.scopes } });
+  });
+
+  it("文档改用同名类别时仍显示对应身份的变更", () => {
+    const original = categories[1]!;
+    const duplicate = { ...original, id: "another" };
+    expect(
+      documentDiff(
+        t,
+        { ...data, categories: [...categories, duplicate] },
+        { ...baseline, categoryId: duplicate.id },
+        { ...baseline, categoryId: original.id },
+      ),
+    ).toMatchObject([
+      { kind: "changed", label: "permissions.documentCategory" },
+    ]);
   });
 
   it("规范化元组忽略 id 与维度顺序", () => {

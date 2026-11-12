@@ -7,6 +7,7 @@ import type {
   PermissionsCategoriesUpdateResponse,
 } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { DataTable } from "@/ui/DataTable";
@@ -38,7 +39,6 @@ import {
   type Translate,
 } from "./labels";
 import {
-  ConfirmAction,
   DraftConflict,
   ListHeader,
   ObjectRow,
@@ -268,264 +268,298 @@ export function CategoriesSection({ active }: { readonly active: boolean }) {
 
   return (
     <>
-      <ListHeader
-        title={t(
-          segment === "fixed"
-            ? "permissions.segmented.fixed"
-            : "permissions.segmented.document",
-        )}
-        description={t(
-          segment === "fixed"
-            ? "permissions.fixedListHint"
-            : "permissions.docCategoryHint",
-        )}
-        action={
-          <div
-            className={styles.segmented}
-            role="group"
-            aria-label={t("permissions.tabs.categories")}
-          >
-            <button
-              ref={documentSegment}
-              type="button"
-              className={
-                segment === "document"
-                  ? `${styles.segmentedOption} ${styles.segmentedOptionActive}`
-                  : styles.segmentedOption
-              }
-              aria-pressed={segment === "document"}
-              onClick={() => {
-                chooseSegment("document");
-              }}
-            >
-              {t("permissions.segmented.document")}
-            </button>
-            <button
-              type="button"
-              className={
-                segment === "fixed"
-                  ? `${styles.segmentedOption} ${styles.segmentedOptionActive}`
-                  : styles.segmentedOption
-              }
-              aria-pressed={segment === "fixed"}
-              onClick={() => {
-                chooseSegment("fixed");
-              }}
-            >
-              {t("permissions.segmented.fixed")}
-            </button>
-          </div>
-        }
-      />
-
-      <div className={styles.toolbar}>
-        <SearchInput
-          label={t("permissions.searchCategory")}
-          value={search}
-          onChange={setSearch}
-        />
-        {segment === "fixed" && missingFixed.length > 0 ? (
-          <InitializeCategories missingKeys={missingFixed} />
-        ) : null}
-      </div>
-
-      {segment === "fixed" ? (
-        <>
-          <DataTable<PermissionCategory>
-            columns={[
-              {
-                id: "name",
-                header: t("permissions.categoryFields"),
-                cell: (category) => (
-                  <strong>{categoryLabel(t, category)}</strong>
-                ),
-              },
-              {
-                id: "level",
-                header: t("permissions.level"),
-                cell: (category) => (
-                  <span className={styles.levelBadge}>
-                    {levelLabel(t, category.confidentialityLevel)}
-                  </span>
-                ),
-              },
-              {
-                id: "ownership",
-                header: t("permissions.ownership"),
-                cell: (category) =>
-                  ownershipFlagsText(
-                    t,
-                    category.allowStore,
-                    category.allowGroup,
-                  ),
-              },
-              {
-                id: "status",
-                header: t("permissions.statusLabel"),
-                cell: (category) => (
-                  <span className={styles.chip}>
-                    {statusText(t, category.retired)}
-                  </span>
-                ),
-              },
-              {
-                id: "actions",
-                header: t("permissions.actions"),
-                align: "end",
-                cell: (category) => (
-                  <ActionButton
-                    label={t("permissions.edit")}
-                    variant="secondary"
-                    onRun={() => {
-                      openEditor({ kind: "fixed", category });
-                    }}
-                  />
-                ),
-              },
-            ]}
-            rows={fixedRows}
-            getRowId={(category) => category.id}
-            label={t("permissions.segmented.fixed")}
-            emptyLabel={t("permissions.empty")}
-          />
-          <div className={styles.tableFoot}>
-            <span className={styles.countText}>
-              {`${t("permissions.rowCount")} ${fixedRows.length} ${t("permissions.count")}`}
-            </span>
-          </div>
-        </>
-      ) : (
-        <>
-          <DataTable<PermissionCategory>
-            columns={[
-              {
-                id: "name",
-                header: t("permissions.categoryFields"),
-                cell: (category) => <strong>{category.name}</strong>,
-              },
-              {
-                id: "ownership",
-                header: t("permissions.ownership"),
-                cell: (category) =>
-                  ownershipFlagsText(
-                    t,
-                    category.allowStore,
-                    category.allowGroup,
-                  ),
-              },
-              {
-                id: "conditions",
-                header: t("permissions.requiredConditions"),
-                cell: (category) =>
-                  category.dimensions.length === 0 ? (
-                    <span className={styles.muted}>
-                      {t("permissions.none")}
-                    </span>
-                  ) : (
-                    category.dimensions
-                      .map((item) => ({
-                        id: item.dimensionId,
-                        name: dimensionName(t, scope.bundle, item.dimensionId),
-                      }))
-                      .sort((left, right) =>
-                        left.name.localeCompare(right.name, "zh"),
-                      )
-                      .map((item) => (
-                        <span className={styles.chip} key={item.id}>
-                          {item.name}
-                        </span>
-                      ))
-                  ),
-              },
-              {
-                id: "status",
-                header: t("permissions.statusLabel"),
-                cell: () => (
-                  <span className={styles.chip}>
-                    {t("permissions.status.active")}
-                  </span>
-                ),
-              },
-              {
-                id: "actions",
-                header: t("permissions.actions"),
-                align: "end",
-                cell: (category) => (
-                  <ActionButton
-                    label={t("permissions.edit")}
-                    variant="secondary"
-                    onRun={() => {
-                      openEditor({ kind: "evidence", category });
-                    }}
-                  />
-                ),
-              },
-            ]}
-            rows={documentRows}
-            getRowId={(category) => category.id}
-            label={t("permissions.segmented.document")}
-            emptyLabel={
-              needle === ""
-                ? retired.length > 0
-                  ? t("permissions.noActiveItems")
-                  : t("permissions.noCategories")
-                : t("permissions.empty")
-            }
-          />
-          <div className={styles.tableFoot}>
-            <span className={styles.countText}>
-              {`${t("permissions.rowCount")} ${documentRows.length} ${t("permissions.count")}`}
-            </span>
-          </div>
-
-          {retired.length === 0 ? null : (
-            <>
-              <button
-                ref={archiveDisclosure}
-                type="button"
-                className={styles.retiredDisclosure}
-                aria-expanded={archive.expanded}
-                onClick={archive.toggle}
-              >
-                <span aria-hidden="true">{archive.expanded ? "▾" : "▸"}</span>
-                {t("permissions.archivedCategories")} ({retired.length})
-              </button>
-              {archive.expanded ? (
-                <div className={styles.archiveList}>
-                  {retired.map((category) => (
-                    <ObjectRow
-                      key={category.id}
-                      title={category.name}
-                      description={`${ownershipFlagsText(
-                        t,
-                        category.allowStore,
-                        category.allowGroup,
-                      )} · ${conditionsText(
-                        t,
-                        scope.bundle,
-                        category.dimensions.map((item) => item.dimensionId),
-                      )}`}
-                      actions={
-                        <>
-                          <span className={styles.chip}>
-                            {t("permissions.retired")}
-                          </span>
-                          <ActionButton
-                            label={t("permissions.edit")}
-                            variant="ghost"
-                            onRun={() => {
-                              openEditor({ kind: "evidence", category });
-                            }}
-                          />
-                        </>
-                      }
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </>
+      <section className={styles.catalogCard}>
+        <ListHeader
+          title={t(
+            segment === "fixed"
+              ? "permissions.segmented.fixed"
+              : "permissions.segmented.document",
           )}
-        </>
+          description={t(
+            segment === "fixed"
+              ? "permissions.fixedListHint"
+              : "permissions.docCategoryHint",
+          )}
+          action={
+            <div
+              className={styles.segmented}
+              role="group"
+              aria-label={t("permissions.tabs.categories")}
+            >
+              <button
+                ref={documentSegment}
+                type="button"
+                className={
+                  segment === "document"
+                    ? `${styles.segmentedOption} ${styles.segmentedOptionActive}`
+                    : styles.segmentedOption
+                }
+                aria-pressed={segment === "document"}
+                onClick={() => {
+                  chooseSegment("document");
+                }}
+              >
+                {t("permissions.segmented.document")}
+              </button>
+              <button
+                type="button"
+                className={
+                  segment === "fixed"
+                    ? `${styles.segmentedOption} ${styles.segmentedOptionActive}`
+                    : styles.segmentedOption
+                }
+                aria-pressed={segment === "fixed"}
+                onClick={() => {
+                  chooseSegment("fixed");
+                }}
+              >
+                {t("permissions.segmented.fixed")}
+              </button>
+            </div>
+          }
+        />
+
+        <div className={styles.toolbar}>
+          <SearchInput
+            label={t("permissions.searchCategory")}
+            value={search}
+            onChange={setSearch}
+          />
+          {segment === "fixed" && missingFixed.length > 0 ? (
+            <InitializeCategories missingKeys={missingFixed} />
+          ) : null}
+        </div>
+
+        {segment === "fixed" ? (
+          <>
+            <DataTable<PermissionCategory>
+              className={styles.catalogTable}
+              columns={[
+                {
+                  id: "name",
+                  header: t("permissions.categoryFields"),
+                  cell: (category) => (
+                    <div className={styles.rowName}>
+                      <span className={styles.rowIcon}>
+                        <AdminIcon name="document" />
+                      </span>
+                      <strong>{categoryLabel(t, category)}</strong>
+                    </div>
+                  ),
+                },
+                {
+                  id: "level",
+                  header: t("permissions.level"),
+                  cell: (category) => (
+                    <span className={styles.levelBadge}>
+                      {levelLabel(t, category.confidentialityLevel)}
+                    </span>
+                  ),
+                },
+                {
+                  id: "ownership",
+                  header: t("permissions.ownership"),
+                  cell: (category) =>
+                    ownershipFlagsText(
+                      t,
+                      category.allowStore,
+                      category.allowGroup,
+                    ),
+                },
+                {
+                  id: "status",
+                  header: t("permissions.statusLabel"),
+                  cell: (category) => (
+                    <span
+                      className={
+                        category.retired ? styles.chip : styles.activeStatus
+                      }
+                    >
+                      {statusText(t, category.retired)}
+                    </span>
+                  ),
+                },
+                {
+                  id: "actions",
+                  header: t("permissions.actions"),
+                  align: "end",
+                  cell: (category) => (
+                    <ActionButton
+                      label={t("permissions.edit")}
+                      variant="ghost"
+                      className={styles.rowAction}
+                      icon={<AdminIcon name="edit" />}
+                      onRun={() => {
+                        openEditor({ kind: "fixed", category });
+                      }}
+                    />
+                  ),
+                },
+              ]}
+              rows={fixedRows}
+              getRowId={(category) => category.id}
+              label={t("permissions.segmented.fixed")}
+              emptyLabel={t("permissions.empty")}
+            />
+            <div className={styles.tableFoot}>
+              <span className={styles.countText}>
+                {`${t("permissions.rowCount")} ${fixedRows.length} ${t("permissions.count")}`}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <DataTable<PermissionCategory>
+              className={styles.catalogTable}
+              columns={[
+                {
+                  id: "name",
+                  header: t("permissions.categoryFields"),
+                  cell: (category) => (
+                    <div className={styles.rowName}>
+                      <span className={styles.rowIcon}>
+                        <AdminIcon name="document" />
+                      </span>
+                      <strong>{category.name}</strong>
+                    </div>
+                  ),
+                },
+                {
+                  id: "ownership",
+                  header: t("permissions.ownership"),
+                  cell: (category) =>
+                    ownershipFlagsText(
+                      t,
+                      category.allowStore,
+                      category.allowGroup,
+                    ),
+                },
+                {
+                  id: "conditions",
+                  header: t("permissions.requiredConditions"),
+                  cell: (category) =>
+                    category.dimensions.length === 0 ? (
+                      <span className={styles.muted}>
+                        {t("permissions.none")}
+                      </span>
+                    ) : (
+                      category.dimensions
+                        .map((item) => ({
+                          id: item.dimensionId,
+                          name: dimensionName(
+                            t,
+                            scope.bundle,
+                            item.dimensionId,
+                          ),
+                        }))
+                        .sort((left, right) =>
+                          left.name.localeCompare(right.name, "zh"),
+                        )
+                        .map((item) => (
+                          <span className={styles.chip} key={item.id}>
+                            {item.name}
+                          </span>
+                        ))
+                    ),
+                },
+                {
+                  id: "status",
+                  header: t("permissions.statusLabel"),
+                  cell: () => (
+                    <span className={styles.activeStatus}>
+                      {t("permissions.status.active")}
+                    </span>
+                  ),
+                },
+                {
+                  id: "actions",
+                  header: t("permissions.actions"),
+                  align: "end",
+                  cell: (category) => (
+                    <ActionButton
+                      label={t("permissions.edit")}
+                      variant="ghost"
+                      className={styles.rowAction}
+                      icon={<AdminIcon name="edit" />}
+                      onRun={() => {
+                        openEditor({ kind: "evidence", category });
+                      }}
+                    />
+                  ),
+                },
+              ]}
+              rows={documentRows}
+              getRowId={(category) => category.id}
+              label={t("permissions.segmented.document")}
+              emptyLabel={
+                needle === ""
+                  ? retired.length > 0
+                    ? t("permissions.noActiveItems")
+                    : t("permissions.noCategories")
+                  : t("permissions.empty")
+              }
+            />
+            <div className={styles.tableFoot}>
+              <span className={styles.countText}>
+                {`${t("permissions.rowCount")} ${documentRows.length} ${t("permissions.count")}`}
+              </span>
+            </div>
+          </>
+        )}
+      </section>
+      {segment !== "document" || retired.length === 0 ? null : (
+        <div className={styles.archiveCard}>
+          <button
+            ref={archiveDisclosure}
+            type="button"
+            className={styles.retiredDisclosure}
+            aria-expanded={archive.expanded}
+            onClick={archive.toggle}
+          >
+            <span className={styles.archiveIcon}>
+              <AdminIcon name="archive" />
+            </span>
+            {t("permissions.archivedCategories")} ({retired.length})
+            <span className={styles.archiveChevron}>
+              <AdminIcon name="chevron" />
+            </span>
+          </button>
+          {archive.expanded ? (
+            <div className={styles.archiveList}>
+              {retired.map((category) => (
+                <ObjectRow
+                  key={category.id}
+                  title={category.name}
+                  description={`${ownershipFlagsText(
+                    t,
+                    category.allowStore,
+                    category.allowGroup,
+                  )} · ${conditionsText(
+                    t,
+                    scope.bundle,
+                    category.dimensions.map((item) => item.dimensionId),
+                  )}`}
+                  actions={
+                    <>
+                      <span className={styles.chip}>
+                        {t("permissions.retired")}
+                      </span>
+                      <ActionButton
+                        label={t("permissions.edit")}
+                        variant="ghost"
+                        className={styles.rowAction}
+                        icon={<AdminIcon name="edit" />}
+                        onRun={() => {
+                          openEditor({ kind: "evidence", category });
+                        }}
+                      />
+                    </>
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       )}
 
       {editor === null ? null : editor.kind === "fixed" ? (
@@ -561,54 +595,70 @@ function InitializeCategories({
   const { t } = useText();
   const scope = usePermissionsScope();
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<unknown>(null);
-  const blocked = scope.busy || scope.hasDrafts || running;
-  const blockedReason = scope.hasDrafts
-    ? t("permissions.initializeDrafts")
-    : undefined;
-
-  const run = async () => {
+  const [needsRead, setNeedsRead] = useState(false);
+  const [readError, setReadError] = useState<unknown>(null);
+  const reload = async () => {
     setRunning(true);
-    setError(null);
+    setReadError(null);
     try {
-      await scope.writes.initializeCategories();
       await scope.reload();
+      setNeedsRead(false);
     } catch (caught) {
-      setError(caught);
+      setReadError(caught);
     } finally {
       setRunning(false);
     }
   };
+  const flow = useConfirmFlow<
+    { confirmation: Confirmation; version: string },
+    void
+  >({
+    prepare: () => ({
+      version: scope.bundle.version,
+      confirmation: {
+        subject: t("permissions.initializeCategories"),
+        diff: missingKeys.map((key) => ({
+          kind: "added",
+          label: t("permissions.panel.fixedCategories"),
+          after: t("permissions.category." + key),
+        })),
+        impact: t("permissions.initializeCategoriesHelp"),
+      },
+    }),
+    submit: async ({ version }) => {
+      await scope.writes.initializeCategories(version);
+      setNeedsRead(true);
+      await reload();
+    },
+  });
 
   return (
     <>
-      <ConfirmAction
-        label={t("permissions.addFixedMissing")}
+      {needsRead ? (
+        <ActionButton
+          label={t("permissions.reload")}
+          variant="secondary"
+          busy={running}
+          onRun={() => void reload()}
+        />
+      ) : (
+        <ActionButton
+          label={t("permissions.addFixedMissing")}
+          variant="secondary"
+          disabled={scope.busy || scope.hasDrafts}
+          {...(scope.hasDrafts
+            ? { disabledReason: t("permissions.initializeDrafts") }
+            : {})}
+          onRun={() => void flow.request()}
+        />
+      )}
+      <InlineError error={readError} />
+      <PermissionConfirmDialog
+        flow={flow}
         title={t("permissions.initializeCategories")}
         confirmLabel={t("permissions.confirm.action")}
-        disabled={blocked}
-        {...(blockedReason === undefined
-          ? {}
-          : { disabledReason: blockedReason })}
-        prepare={(): Confirmation => ({
-          subject: t("permissions.initializeCategories"),
-          diff: missingKeys.map((key) => ({
-            kind: "added",
-            label: t("permissions.panel.fixedCategories"),
-            after: t(`permissions.category.${key}`),
-          })),
-          impact: t("permissions.initializeCategoriesHelp"),
-        })}
-        onConfirm={() => {
-          void run();
-        }}
+        cancelLabel={t("permissions.cancel")}
       />
-      {running ? (
-        <p className={styles.status} role="status">
-          {t("permissions.saving")}
-        </p>
-      ) : null}
-      <InlineError error={error} />
     </>
   );
 }

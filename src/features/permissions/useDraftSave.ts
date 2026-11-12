@@ -114,7 +114,6 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
 
   const draftRef = useRef(draftState);
   const baselineRef = useRef(baseline);
-  const overrideRef = useRef<Draft | null>(null);
   const notesRef = useRef<readonly string[]>([]);
 
   const applyDraft = (next: Draft) => {
@@ -151,8 +150,7 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
 
   const flow = useConfirmFlow<PreparedSave<Draft>, Result | null>({
     prepare: () => {
-      const draft = overrideRef.current ?? draftRef.current;
-      overrideRef.current = null;
+      const draft = draftRef.current;
       const base = baselineRef.current;
       return {
         confirmation: buildConfirmation(draft, base.snapshot),
@@ -191,6 +189,7 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
           return null;
         }
         setConflictPending(true);
+        setConflictServer(null);
         setConflictChoices([]);
         setConflictDecisions({});
         setConflictError(null);
@@ -230,6 +229,9 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
 
   const readLatest = async () => {
     setConflictReloading(true);
+    setConflictServer(null);
+    setConflictChoices([]);
+    setConflictDecisions({});
     setConflictError(null);
     try {
       const server = await optionsRef.current.reload();
@@ -267,46 +269,34 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
 
   const applyMine = () => {
     const server = conflictServer;
-    if (server === null) return;
-    if (optionsRef.current.rebase === undefined) {
-      applyBaseline(server);
-      setConflictPending(false);
-      setConflictServer(null);
-      setConflictChoices([]);
-      setConflictDecisions({});
-      notesRef.current = [];
-      overrideRef.current = draftRef.current;
-      void flow.request();
-      return;
-    }
-    const outcome = optionsRef.current.rebase({
+    if (server === null || conflictReloading || flow.status !== "idle") return;
+    const outcome = optionsRef.current.rebase?.({
       draft: draftRef.current,
       baseline: baselineRef.current.snapshot,
       server: server.snapshot,
       decisions: conflictDecisions,
     });
-    if (outcome.kind === "choice") {
+    if (outcome?.kind === "choice") {
       setConflictChoices(outcome.choices);
       return;
     }
+    const draft = outcome?.draft ?? draftRef.current;
     applyBaseline(server);
-    applyDraft(outcome.draft);
+    applyDraft(draft);
     setConflictPending(false);
     setConflictServer(null);
     setConflictChoices([]);
     setConflictDecisions({});
     setConflictError(null);
-    notesRef.current = outcome.notes;
-    const merged = optionsRef.current.confirmation(
-      outcome.draft,
-      server.snapshot,
-    );
-    if (merged.diff.length === 0) {
+    notesRef.current = outcome?.notes ?? [];
+    if (
+      optionsRef.current.confirmation(draft, server.snapshot).diff.length === 0
+    ) {
       notesRef.current = [];
       setSavedNotice(t("permissions.conflict.nothingApplied"));
       return;
     }
-    overrideRef.current = outcome.draft;
+    if (optionsRef.current.validate(draft, server.snapshot) !== null) return;
     void flow.request();
   };
 

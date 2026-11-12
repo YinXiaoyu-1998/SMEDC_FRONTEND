@@ -1,0 +1,15 @@
+@font-face {
+  font-family: "SMEDC Admin Icons";
+  src: url("../assets/bootstrap-icons-subset.woff2") format("woff2");
+  font-display: block;
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1em;
+  font-family: "SMEDC Admin Icons";
+  font-weight: normal;
+  line-height: 1;
+}

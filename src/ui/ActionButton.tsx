@@ -1,5 +1,5 @@
 import { useContext, useId } from "react";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 import { TextContext } from "@/i18n/text";
 import { Button, type ButtonVariant } from "@/ui/Button";
@@ -16,6 +16,7 @@ export interface ActionButtonProps extends Omit<
   | "aria-describedby"
 > {
   readonly label: ActionLabel;
+  readonly icon?: ReactNode;
   readonly busy?: boolean;
   readonly disabled?: boolean;
   readonly disabledReason?: ActionLabel;
@@ -30,6 +31,7 @@ export interface ActionButtonProps extends Omit<
  */
 export function ActionButton({
   label,
+  icon,
   busy = false,
   disabled = false,
   disabledReason,
@@ -63,6 +65,7 @@ export function ActionButton({
         aria-describedby={reason === undefined ? undefined : reasonId}
         onClick={handleClick}
       >
+        {busy ? null : icon}
         {text}
       </Button>
       {reason === undefined ? null : (

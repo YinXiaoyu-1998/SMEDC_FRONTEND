@@ -70,3 +70,29 @@
     margin-left: var(--space-1);
   }
 }
+
+.consoleNav {
+  position: static;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.consoleNav .link {
+  gap: 12px;
+  min-height: 43px;
+  font-size: 0.8125rem;
+}
+
+.consoleNav .link > span {
+  font-size: 1rem;
+}
+
+@media (max-width: 48rem) {
+  .consoleNav .link {
+    min-height: 36px;
+    gap: var(--space-2);
+    padding-inline: var(--space-2);
+  }
+}

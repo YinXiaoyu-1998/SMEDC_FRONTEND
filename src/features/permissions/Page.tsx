@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
-import { useParams } from "react-router";
+import { useBlocker, useParams } from "react-router";
 
 import { WebApiError } from "@/api/client";
 import {
@@ -13,6 +13,7 @@ import {
 import { useSession } from "@/api/session";
 import { PageFrame } from "@/app/PageFrame";
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { PageSection } from "@/ui/PageSection";
@@ -40,7 +41,7 @@ export function PermissionsPage() {
   }
 
   return (
-    <PageFrame orgId={orgId}>
+    <PageFrame>
       <PermissionsContent orgId={orgId} csrfToken={session.csrfToken} />
     </PageFrame>
   );
@@ -54,12 +55,22 @@ function PageHeader({
   const { t } = useText();
   return (
     <header className={styles.titlebar}>
-      <div>
-        <h1 className={styles.pageTitle}>{t("pages.permissions.title")}</h1>
-        <p className={styles.subtitle}>{t("permissions.subtitle")}</p>
+      <div className={styles.pageHeading}>
+        <span className={styles.pageIcon}>
+          <AdminIcon name="shield" />
+        </span>
+        <div>
+          <h1 className={styles.pageTitle}>{t("pages.permissions.title")}</h1>
+          <p className={styles.subtitle}>{t("permissions.subtitle")}</p>
+        </div>
       </div>
       {action === undefined ? null : (
-        <ActionButton label={action.label} onRun={action.run} />
+        <ActionButton
+          label={action.label}
+          icon={<AdminIcon name="plus" />}
+          className={styles.primaryAction}
+          onRun={action.run}
+        />
       )}
     </header>
   );
@@ -112,7 +123,7 @@ function PermissionsContent({
     );
   }
 
-  if (query.isError || query.data === undefined) {
+  if (query.data === undefined) {
     return (
       <>
         <PageHeader />
@@ -141,6 +152,7 @@ function PermissionsContent({
       reload={reload}
       readCutover={readCutoverValue}
       orgId={orgId}
+      readError={query.error}
     />
   );
 }
@@ -157,7 +169,9 @@ function PermissionsReady({
   reload,
   readCutover: readCutoverValue,
   orgId,
+  readError,
 }: {
+  readonly readError: unknown;
   readonly bundle: PermissionsBundle;
   readonly writes: ReturnType<typeof usePermissionsWrites>;
   readonly reload: () => Promise<PermissionsBundle>;
@@ -206,6 +220,18 @@ function PermissionsReady({
       if (target !== null) setActive(target);
     },
   });
+
+  const blocker = useBlocker(hasDrafts);
+  const leaveFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      if (blocker.state === "blocked") blocker.proceed();
+    },
+  });
+  const { request: requestLeave } = leaveFlow;
+  useEffect(() => {
+    if (blocker.state === "blocked") void requestLeave();
+  }, [blocker.state, requestLeave]);
 
   const navigate = useCallback(
     (section: SectionKey) => {
@@ -308,18 +334,28 @@ function PermissionsReady({
         className={styles.banner}
         aria-label={t("permissions.banner.label")}
       >
+        <span className={styles.bannerIcon}>
+          <AdminIcon name="status" />
+        </span>
         <div className={styles.bannerBody}>
           <strong>{t(`permissions.mode.${bundle.me.mode}`)}</strong>
           <p>{t(`permissions.banner.${bundle.me.mode}`)}</p>
         </div>
         <ActionButton
           label={t("permissions.viewReadiness")}
+          icon={<AdminIcon name="arrow" />}
+          className={styles.bannerAction}
           variant="secondary"
           onRun={() => {
             navigate("readiness");
           }}
         />
       </section>
+      {readError === null ? null : (
+        <p className={styles.error} role="alert">
+          {t(permissionsErrorKey(readError))}
+        </p>
+      )}
       {notice === null ? null : (
         <p className={styles.notice} role="status">
           {t(notice)}
@@ -367,6 +403,19 @@ function PermissionsReady({
           {section.node}
         </div>
       ))}
+      <ConfirmDialog
+        flow={{
+          ...leaveFlow,
+          cancel: () => {
+            leaveFlow.cancel();
+            if (blocker.state === "blocked") blocker.reset();
+          },
+        }}
+        title={t("permissions.discard.title")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discard.action")}
+        cancelLabel={t("permissions.discard.keep")}
+      />
       <ConfirmDialog
         flow={discardFlow}
         title={t("permissions.discard.title")}

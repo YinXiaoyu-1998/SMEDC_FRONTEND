@@ -96,7 +96,10 @@ function EnterpriseDirectory() {
   const enterprises = scope.bundle.enterprises;
 
   return (
-    <section aria-label={t("permissions.enterpriseSection")}>
+    <section
+      className={styles.catalogCard}
+      aria-label={t("permissions.enterpriseSection")}
+    >
       <ListHeader
         title={t("permissions.enterpriseSection")}
         description={t("permissions.enterpriseSectionHint")}
@@ -107,6 +110,7 @@ function EnterpriseDirectory() {
         }
       />
       <DataTable
+        className={styles.catalogTable}
         columns={[
           {
             id: "name",
@@ -147,7 +151,10 @@ function StoreDirectory() {
   });
 
   return (
-    <section aria-label={t("permissions.storeDirectory")}>
+    <section
+      className={styles.catalogCard}
+      aria-label={t("permissions.storeDirectory")}
+    >
       <ListHeader
         title={t("permissions.storeDirectory")}
         description={t("permissions.storeDirectoryHint")}
@@ -160,6 +167,7 @@ function StoreDirectory() {
         />
       </div>
       <DataTable
+        className={styles.catalogTable}
         columns={[
           {
             id: "store",

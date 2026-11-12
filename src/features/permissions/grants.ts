@@ -223,14 +223,84 @@ export function validateGrant(
   return null;
 }
 
+function addsRetiredReference(
+  grant: GrantDraft,
+  previous: GrantDraft | undefined,
+  data: GrantData,
+): boolean {
+  if (
+    grant.categoryIds.some(
+      (id) =>
+        data.categories.some(
+          (category) => category.id === id && category.retired,
+        ) &&
+        !(
+          previous?.categoryIds.includes(id) &&
+          previous.enterpriseKey === grant.enterpriseKey &&
+          previous.ownership === grant.ownership
+        ),
+    )
+  )
+    return true;
+
+  const stores = grant.stores?.kind === "fixed" ? grant.stores.values : [];
+  const previousStores =
+    previous?.enterpriseKey === grant.enterpriseKey &&
+    previous.stores?.kind === "fixed"
+      ? previous.stores.values
+      : [];
+  if (
+    stores.some(
+      (name) =>
+        !previousStores.includes(name) &&
+        data.stores.some(
+          (store) =>
+            store.enterpriseKey === grant.enterpriseKey &&
+            store.name === name &&
+            (store.retired || store.confirmation === "historical"),
+        ),
+    )
+  )
+    return true;
+
+  return Object.entries(grant.dimensions).some(([id, selection]) => {
+    const dimension = data.dimensions.find((item) => item.id === id);
+    const before =
+      previous?.enterpriseKey === grant.enterpriseKey &&
+      previous.ownership === grant.ownership
+        ? previous.dimensions[id]
+        : undefined;
+    if (dimension?.retired && !sameSelection(before, selection)) return true;
+    return (
+      selection.kind === "fixed" &&
+      selection.values.some(
+        (value) =>
+          dimension?.values.some((item) => item.id === value && item.retired) &&
+          !(before?.kind === "fixed" && before.values.includes(value)),
+      )
+    );
+  });
+}
+
 export function validateAccountDraft(
   draft: AccountDraft,
   data: GrantData,
+  baseline?: AccountDraft,
 ): string | null {
   if (draft.clearance === null) return "permissions.required";
   for (const grant of draft.grants) {
     const result = validateGrant(grant, data);
     if (result !== null) return result;
+    if (
+      baseline !== undefined &&
+      addsRetiredReference(
+        grant,
+        baseline.grants.find((item) => item.id === grant.id),
+        data,
+      )
+    ) {
+      return "permissions.grantRetiredReference";
+    }
   }
   return null;
 }
@@ -476,14 +546,19 @@ export function rebaseAccount(
     }
 
     if (theirs === undefined) {
-      // 服务端删除了这条；用户的改动无法再应用，显示说明而不是静默恢复。
       if (mine !== undefined && !sameGrant(mine, base)) {
-        notes.push(
-          t("permissions.conflict.serverRemoved").replace(
-            "{grant}",
-            grantTitle(t, data, base),
-          ),
-        );
+        const decision = decisions[key];
+        if (decision === undefined) {
+          choices.push(
+            conflictChoice(
+              key,
+              t("permissions.grant"),
+              t("permissions.conflict.removed"),
+              grantDescription(t, data, mine),
+            ),
+          );
+        }
+        if (decision === "draft") grants.push(mine);
       }
       continue;
     }

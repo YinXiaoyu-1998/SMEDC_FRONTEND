@@ -63,6 +63,10 @@ export const permissionsMessages = {
     "所选类别的业务条件不一致，请拆成不同授权条目。",
     "These categories require different conditions. Use separate grants.",
   ],
+  "permissions.grantRetiredReference": [
+    "这条授权新增了已停用的目录项，请修改选择。",
+    "This grant adds a retired directory item. Update the selection.",
+  ],
   "permissions.invalidGrant": [
     "请核对授权条目的类别、归属、门店和完整业务条件。",
     "Check the grant's categories, ownership, stores and complete conditions.",

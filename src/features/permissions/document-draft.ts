@@ -53,17 +53,17 @@ export function documentToDraft(document: PermissionDocument): DocumentDraft {
   return {
     categoryId: document.categoryId ?? "",
     fileConfidentialityLevel: document.fileConfidentialityLevel,
-    scopes: document.scopes.map((scope, index) =>
+    scopes: document.scopes.map((scope) =>
       scope.ownership === "store"
         ? {
-            id: `scope-${index}`,
+            id: createId(),
             enterpriseKey: scope.enterpriseKey,
             ownership: "store",
             storeName: scope.storeName,
             dimensions: { ...scope.dimensions },
           }
         : {
-            id: `scope-${index}`,
+            id: createId(),
             enterpriseKey: scope.enterpriseKey,
             ownership: "group",
             dimensions: { ...scope.dimensions },
@@ -189,6 +189,37 @@ function conditionsText(
     .join("; ");
 }
 
+function identityDiff(
+  label: string,
+  before: string,
+  after: string,
+  beforeLabel: string,
+  afterLabel: string,
+): DiffEntry[] {
+  if (before === after) return [];
+  return [
+    {
+      kind: "changed",
+      label,
+      before:
+        beforeLabel === afterLabel
+          ? beforeLabel + " (" + before + ")"
+          : beforeLabel,
+      after:
+        beforeLabel === afterLabel
+          ? afterLabel + " (" + after + ")"
+          : afterLabel,
+    },
+  ];
+}
+
+const dimensionTuple = (scope: DocumentScopeDraft) =>
+  JSON.stringify(
+    Object.entries(scope.dimensions).sort(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+  );
+
 function scopeFieldDiff(
   t: Translate,
   data: LabelData,
@@ -196,8 +227,10 @@ function scopeFieldDiff(
   after: DocumentScopeDraft,
 ): DiffEntry[] {
   return [
-    ...diffField(
+    ...identityDiff(
       t("permissions.enterprise"),
+      before.enterpriseKey,
+      after.enterpriseKey,
       enterpriseName(t, data, before.enterpriseKey),
       enterpriseName(t, data, after.enterpriseKey),
     ),
@@ -219,8 +252,10 @@ function scopeFieldDiff(
       before.storeName ?? t("permissions.none"),
       after.storeName ?? t("permissions.none"),
     ),
-    ...diffField(
-      t("permissions.scopes"),
+    ...identityDiff(
+      t("permissions.requiredConditions"),
+      dimensionTuple(before),
+      dimensionTuple(after),
       conditionsText(t, data, before),
       conditionsText(t, data, after),
     ),
@@ -239,8 +274,10 @@ export function documentDiff(
 ): DiffEntry[] {
   const entries: DiffEntry[] = [];
   entries.push(
-    ...diffField(
+    ...identityDiff(
       t("permissions.documentCategory"),
+      baseline.categoryId,
+      draft.categoryId,
       baseline.categoryId === ""
         ? t("permissions.unset")
         : categoryName(t, data, baseline.categoryId),
@@ -310,24 +347,37 @@ export function touchesRetiredCatalog(
   baseline: DocumentDraft,
   data: LabelData,
 ): boolean {
-  const isChanged = (scope: DocumentScopeDraft): boolean => {
-    const paired = baseline.scopes.find((item) => item.id === scope.id);
-    return paired === undefined || !sameScopeTuple(paired, scope);
-  };
-  for (const scope of draft.scopes) {
-    if (!isChanged(scope)) continue;
-    for (const [dimensionId, valueId] of Object.entries(scope.dimensions)) {
-      const dimension = data.dimensions.find((item) => item.id === dimensionId);
-      if (dimension === undefined || dimension.retired) return true;
-      const value = dimension.values.find((item) => item.id === valueId);
-      if (value === undefined || value.retired) return true;
-    }
-  }
-  const category = data.categories.find((item) => item.id === draft.categoryId);
-  if (category?.retired === true && draft.categoryId !== baseline.categoryId) {
+  if (
+    baseline.categoryId === draft.categoryId &&
+    sameScopes(baseline.scopes, draft.scopes)
+  )
+    return false;
+  if (
+    data.categories.some((item) => item.id === draft.categoryId && item.retired)
+  )
     return true;
-  }
-  return false;
+  return draft.scopes.some(
+    (scope) =>
+      (scope.ownership === "store" &&
+        data.stores.some(
+          (store) =>
+            store.enterpriseKey === scope.enterpriseKey &&
+            store.name === scope.storeName &&
+            (store.retired || store.confirmation === "historical"),
+        )) ||
+      Object.entries(scope.dimensions).some(([dimensionId, valueId]) => {
+        const dimension = data.dimensions.find(
+          (item) => item.id === dimensionId,
+        );
+        return (
+          dimension === undefined ||
+          dimension.retired ||
+          !dimension.values.some(
+            (value) => value.id === valueId && !value.retired,
+          )
+        );
+      }),
+  );
 }
 
 export function validateDocumentDraft(
@@ -414,61 +464,25 @@ export function documentUpdateBody(
   };
 }
 
-function mergeScopes(
-  t: Translate,
-  draft: DocumentDraft,
-  baseline: DocumentDraft,
-  server: DocumentDraft,
-): {
-  readonly scopes: readonly DocumentScopeDraft[];
-  readonly notes: string[];
-} {
-  const notes: string[] = [];
-  const result: DocumentScopeDraft[] = [];
-
-  for (const scope of draft.scopes) {
-    const original = baseline.scopes.find((item) => item.id === scope.id);
-    if (original === undefined) {
-      result.push(scope);
-      continue;
-    }
-    if (sameScopeTuple(original, scope)) {
-      const stillThere = server.scopes.some((item) =>
-        sameScopeTuple(item, original),
-      );
-      if (!stillThere) {
-        notes.push(t("permissions.conflict.scopeServerRemoved"));
-        continue;
-      }
-      result.push(scope);
-      continue;
-    }
-    const stillThere = server.scopes.some((item) =>
-      sameScopeTuple(item, original),
-    );
-    if (!stillThere) {
-      notes.push(t("permissions.conflict.scopeNeedsReview"));
-    }
-    result.push(scope);
-  }
-
-  for (const scope of server.scopes) {
-    if (baseline.scopes.some((item) => sameScopeTuple(item, scope))) continue;
-    if (result.some((item) => sameScopeTuple(item, scope))) continue;
-    result.push({ ...scope, id: createId() });
-  }
-
-  return { scopes: result, notes };
+function sameScopes(
+  left: readonly DocumentScopeDraft[],
+  right: readonly DocumentScopeDraft[],
+): boolean {
+  if (left.length !== right.length) return false;
+  const unmatched = [...right];
+  return left.every((scope) => {
+    const index = unmatched.findIndex((item) => sameScopeTuple(scope, item));
+    if (index < 0) return false;
+    unmatched.splice(index, 1);
+    return true;
+  });
 }
 
-/**
- * 以服务器最新快照为新基线重新应用文档改动。
- * 类别与密级两边都改时要求显式选择；范围按规范化元组合并，
- * 无法唯一配对的范围保留草稿并在重新确认的摘要里提示核对。
- */
+/** 文档范围没有持久 ID。两侧都修改时明确选择要保留的完整范围。 */
 export function rebaseDocument(
   t: Translate,
   input: RebaseInput<DocumentDraft>,
+  data: LabelData,
 ): RebaseOutcome<DocumentDraft> {
   const { draft, baseline, server, decisions } = input;
   const choices: RebaseChoice[] = [];
@@ -519,16 +533,33 @@ export function rebaseDocument(
     },
   );
 
-  const merged = mergeScopes(t, draft, baseline, server);
+  let scopes = server.scopes;
+  const mineChangedScopes = !sameScopes(draft.scopes, baseline.scopes);
+  const theirsChangedScopes = !sameScopes(server.scopes, baseline.scopes);
+  if (mineChangedScopes && !sameScopes(draft.scopes, server.scopes)) {
+    if (!theirsChangedScopes || decisions.scopes === "draft") {
+      scopes = draft.scopes;
+    } else if (decisions.scopes === undefined) {
+      const summarize = (items: readonly DocumentScopeDraft[]) =>
+        items.map((item) => describeScope(t, data, item)).join("\n") ||
+        t("permissions.none");
+      choices.push({
+        key: "scopes",
+        label: t("permissions.scopes"),
+        serverValue: summarize(server.scopes),
+        draftValue: summarize(draft.scopes),
+      });
+    }
+  }
   if (choices.length > 0) return { kind: "choice", choices };
   return {
     kind: "merged",
     draft: {
       categoryId,
       fileConfidentialityLevel: level,
-      scopes: merged.scopes,
+      scopes,
       historicalSupplementReason: draft.historicalSupplementReason,
     },
-    notes: merged.notes,
+    notes: [],
   };
 }

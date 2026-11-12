@@ -10,6 +10,7 @@ import {
   type PermissionsDocumentsListResponse,
 } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { DataTable } from "@/ui/DataTable";
@@ -159,8 +160,9 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
   const reloadDocument = async (
     id: string,
   ): Promise<DraftBaseline<DocumentDraft> | null> => {
-    const result = await listDocuments(scope.orgId, appliedSearch, cursor);
-    if (result.authorizationVersion !== scope.bundle.version) {
+    const bundle = await scope.reload();
+    const result = await listDocuments(scope.orgId, id, null);
+    if (result.authorizationVersion !== bundle.version) {
       throw new WebApiError({
         status: 409,
         code: VERSION_CONFLICT_CODE,
@@ -185,113 +187,120 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
 
   return (
     <>
-      <ListHeader
-        title={t("permissions.tabs.documents")}
-        description={t("permissions.documentListHint")}
-      />
-      <form
-        className={styles.toolbar}
-        onSubmit={(event) => {
-          event.preventDefault();
-          applySearch();
-        }}
-      >
-        <Field label={t("permissions.searchDocument")}>
-          <input
-            type="search"
-            maxLength={256}
-            value={searchText}
-            autoComplete="off"
-            onChange={(event) => {
-              setSearchText(event.target.value);
-            }}
-          />
-        </Field>
-        <ActionButton
-          label={t("permissions.search")}
-          variant="secondary"
-          onRun={applySearch}
+      <section className={styles.catalogCard}>
+        <ListHeader
+          title={t("permissions.tabs.documents")}
+          description={t("permissions.documentListHint")}
         />
-      </form>
-
-      <DataTable<PermissionDocument>
-        columns={[
-          {
-            id: "document",
-            header: t("permissions.document"),
-            cell: (document) => (
-              <>
-                <strong>{document.title}</strong>
-                <br />
-                <span className={styles.muted}>{document.id}</span>
-              </>
-            ),
-          },
-          {
-            id: "status",
-            header: t("permissions.documentStatus"),
-            cell: (document) => documentStatusLabel(t, document.status),
-          },
-          {
-            id: "category",
-            header: t("permissions.documentCategory"),
-            cell: (document) =>
-              document.categoryId === null
-                ? t("permissions.unset")
-                : categoryName(t, scope.bundle, document.categoryId),
-          },
-          {
-            id: "level",
-            header: t("permissions.level"),
-            cell: (document) => (
-              <span className={styles.levelBadge}>
-                {levelLabel(t, document.fileConfidentialityLevel)}
-              </span>
-            ),
-          },
-          {
-            id: "actions",
-            header: t("permissions.actions"),
-            align: "end",
-            cell: (document) => (
-              <ActionButton
-                label={t("permissions.edit")}
-                variant="secondary"
-                busy={documentsQuery.isFetching}
-                onRun={() => {
-                  openDocument(document);
-                }}
-              />
-            ),
-          },
-        ]}
-        rows={documents}
-        getRowId={(document) => document.id}
-        label={t("permissions.tabs.documents")}
-        loading={documentsQuery.isFetching}
-        emptyLabel={t("permissions.documentNoResults")}
-      />
-
-      <div className={styles.tableFoot}>
-        <span className={styles.countText}>
-          {t("permissions.page")}: {page}
-        </span>
-        <div className={styles.pager}>
+        <form
+          className={styles.toolbar}
+          onSubmit={(event) => {
+            event.preventDefault();
+            applySearch();
+          }}
+        >
+          <label className={styles.searchField}>
+            <AdminIcon name="search" />
+            <input
+              aria-label={t("permissions.searchDocument")}
+              placeholder={t("permissions.searchDocument")}
+              type="search"
+              maxLength={256}
+              value={searchText}
+              autoComplete="off"
+              onChange={(event) => {
+                setSearchText(event.target.value);
+              }}
+            />
+          </label>
           <ActionButton
-            label={t("ui.table.previous")}
+            label={t("permissions.search")}
             variant="secondary"
-            disabled={stack.length === 0 || documentsQuery.isFetching}
-            onRun={goPrevious}
+            onRun={applySearch}
           />
-          <ActionButton
-            label={t("ui.table.next")}
-            variant="secondary"
-            disabled={nextCursor === null || documentsQuery.isFetching}
-            onRun={goNext}
-          />
+        </form>
+
+        <DataTable<PermissionDocument>
+          className={styles.catalogTable}
+          columns={[
+            {
+              id: "document",
+              header: t("permissions.document"),
+              cell: (document) => (
+                <>
+                  <strong>{document.title}</strong>
+                  <br />
+                  <span className={styles.muted}>{document.id}</span>
+                </>
+              ),
+            },
+            {
+              id: "status",
+              header: t("permissions.documentStatus"),
+              cell: (document) => documentStatusLabel(t, document.status),
+            },
+            {
+              id: "category",
+              header: t("permissions.documentCategory"),
+              cell: (document) =>
+                document.categoryId === null
+                  ? t("permissions.unset")
+                  : categoryName(t, scope.bundle, document.categoryId),
+            },
+            {
+              id: "level",
+              header: t("permissions.level"),
+              cell: (document) => (
+                <span className={styles.levelBadge}>
+                  {levelLabel(t, document.fileConfidentialityLevel)}
+                </span>
+              ),
+            },
+            {
+              id: "actions",
+              header: t("permissions.actions"),
+              align: "end",
+              cell: (document) => (
+                <ActionButton
+                  label={t("permissions.edit")}
+                  variant="ghost"
+                  className={styles.rowAction}
+                  icon={<AdminIcon name="edit" />}
+                  busy={documentsQuery.isFetching}
+                  onRun={() => {
+                    openDocument(document);
+                  }}
+                />
+              ),
+            },
+          ]}
+          rows={documents}
+          getRowId={(document) => document.id}
+          label={t("permissions.tabs.documents")}
+          loading={documentsQuery.isFetching}
+          emptyLabel={t("permissions.documentNoResults")}
+        />
+
+        <div className={styles.tableFoot}>
+          <span className={styles.countText}>
+            {t("permissions.page")}: {page}
+          </span>
+          <div className={styles.pager}>
+            <ActionButton
+              label={t("ui.table.previous")}
+              variant="secondary"
+              disabled={stack.length === 0 || documentsQuery.isFetching}
+              onRun={goPrevious}
+            />
+            <ActionButton
+              label={t("ui.table.next")}
+              variant="secondary"
+              disabled={nextCursor === null || documentsQuery.isFetching}
+              onRun={goNext}
+            />
+          </div>
         </div>
-      </div>
-
+      </section>
       {error === null || error === undefined ? null : (
         <div className={styles.actions}>
           <p className={styles.error} role="alert">
@@ -413,7 +422,7 @@ function DocumentPanel({
       }
       return latest;
     },
-    rebase: (input) => rebaseDocument(t, input),
+    rebase: (input) => rebaseDocument(t, input, data),
     onSaved: (result) => {
       scope.setNotice("permissions.documentSaved");
       onSaved(result.document, result.authorizationVersion);
@@ -611,6 +620,8 @@ function DocumentPanel({
                     <ActionButton
                       label={t("permissions.edit")}
                       variant="ghost"
+                      className={styles.rowAction}
+                      icon={<AdminIcon name="edit" />}
                       disabled={save.saving}
                       onRun={() => {
                         setEditingScope(scopeDraft.id);

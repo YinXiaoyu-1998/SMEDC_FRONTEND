@@ -39,7 +39,7 @@ export interface DataTableProps<Row> {
   readonly emptyLabel?: string;
   readonly selection?: DataTableSelection<Row>;
   readonly pagination?: DataTablePagination;
-  readonly className?: string;
+  readonly className?: string | undefined;
 }
 
 /**

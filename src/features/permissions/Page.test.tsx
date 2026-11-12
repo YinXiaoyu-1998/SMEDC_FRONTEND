@@ -936,8 +936,7 @@ describe("权限设置页", () => {
     await screen.findByRole("heading", { name: "文档类别" });
     await openTab("账号授权");
 
-    const row = (await screen.findByText("张三")).closest("tr");
-    if (row === null) throw new Error("找不到账号行");
+    const row = await screen.findByRole("row", { name: /张三/ });
     fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
 
     const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
@@ -1066,8 +1065,7 @@ describe("权限设置页", () => {
 
     await screen.findByRole("heading", { name: "文档类别" });
     await openTab("账号授权");
-    const row = (await screen.findByText("张三")).closest("tr");
-    if (row === null) throw new Error("找不到账号行");
+    const row = await screen.findByRole("row", { name: /张三/ });
     fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
     const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
     fireEvent.change(within(panel).getByLabelText("账号密级"), {
@@ -1117,6 +1115,56 @@ describe("权限设置页", () => {
     );
   });
 
+  it("账号写入冲突后的回读失败保留草稿并可以重读", async () => {
+    const state = createState();
+    let failRead = false;
+    renderPermissions({
+      state,
+      overrides: {
+        "accounts.update": () => {
+          state.version = "8";
+          failRead = true;
+          return jsonResponse(
+            {
+              error: {
+                code: "AUTHORIZATION_VERSION_CONFLICT",
+                message: "conflict",
+              },
+            },
+            409,
+          );
+        },
+        "categories.list": (current, request) =>
+          failRead
+            ? jsonResponse(
+                { error: { code: "SERVER_ERROR", message: "offline" } },
+                503,
+              )
+            : handleRequest(current, request, "categories.list"),
+      },
+    });
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.change(within(panel).getByLabelText("账号密级"), {
+      target: { value: "3" },
+    });
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+
+    const retry = await within(panel).findByRole("button", {
+      name: "重新读取配置",
+    });
+    expect(within(panel).getByLabelText("账号密级")).toHaveValue("3");
+    failRead = false;
+    fireEvent.click(retry);
+    await within(panel).findByText("版本冲突");
+    expect(within(panel).getByLabelText("账号密级")).toHaveValue("3");
+  });
+
   it("版本冲突时载入服务器值会放弃草稿", async () => {
     const state = createState();
     const { fetchMock } = renderPermissions({
@@ -1138,8 +1186,7 @@ describe("权限设置页", () => {
     });
     await screen.findByRole("heading", { name: "文档类别" });
     await openTab("账号授权");
-    const row = (await screen.findByText("张三")).closest("tr");
-    if (row === null) throw new Error("找不到账号行");
+    const row = await screen.findByRole("row", { name: /张三/ });
     fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
     const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
     fireEvent.change(within(panel).getByLabelText("账号密级"), {
@@ -1296,8 +1343,7 @@ describe("权限设置页", () => {
     renderPermissions();
     await screen.findByRole("heading", { name: "文档类别" });
     await openTab("账号授权");
-    const row = (await screen.findByText("张三")).closest("tr");
-    if (row === null) throw new Error("找不到账号行");
+    const row = await screen.findByRole("row", { name: /张三/ });
     const edit = within(row).getByRole("button", { name: "编辑" });
     edit.focus();
     fireEvent.click(edit);

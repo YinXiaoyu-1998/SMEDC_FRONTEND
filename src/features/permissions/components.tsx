@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { Field } from "@/ui/Field";
 
@@ -153,20 +154,18 @@ export function SearchInput({
   placeholder,
 }: SearchInputProps) {
   return (
-    <div className={styles.searchField}>
-      <Field label={label}>
-        <input
-          type="search"
-          value={value}
-          maxLength={256}
-          autoComplete="off"
-          {...(placeholder === undefined ? {} : { placeholder })}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-        />
-      </Field>
-    </div>
+    <label className={styles.searchField}>
+      <AdminIcon name="search" />
+      <input
+        type="search"
+        aria-label={label}
+        placeholder={placeholder ?? label}
+        value={value}
+        maxLength={256}
+        autoComplete="off"
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
   );
 }
 

@@ -1,8 +1,4 @@
-import {
-  useQueryClient,
-  type QueryClient,
-  type QueryKey,
-} from "@tanstack/react-query";
+import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import * as permissionsApi from "@/api/permissions";
@@ -106,7 +102,9 @@ export interface PermissionsWrites {
   readonly createCategory: (
     body: PermissionsCategoriesCreateBody,
   ) => Promise<PermissionsCategoriesCreateResponse>;
-  readonly initializeCategories: () => Promise<PermissionsCategoriesInitializeResponse>;
+  readonly initializeCategories: (
+    expectedVersion: string,
+  ) => Promise<PermissionsCategoriesInitializeResponse>;
   readonly updateDimension: (
     id: string,
     body: PermissionsDimensionsUpdateBody,
@@ -169,10 +167,17 @@ export function usePermissionsWrites({
   const [pending, setPending] = useState(0);
 
   const update = useCallback(
-    (updater: (previous: PermissionsBundle) => PermissionsBundle) => {
+    async (updater: (previous: PermissionsBundle) => PermissionsBundle) => {
+      await queryClient.cancelQueries({ queryKey, exact: true });
       queryClient.setQueryData<PermissionsBundle | undefined>(
         queryKey,
-        (previous) => (previous === undefined ? undefined : updater(previous)),
+        (previous) => {
+          if (previous === undefined) return undefined;
+          const next = updater(previous);
+          return BigInt(next.version) < BigInt(previous.version)
+            ? previous
+            : next;
+        },
       );
     },
     [queryClient, queryKey],
@@ -208,15 +213,9 @@ export function usePermissionsWrites({
         categories: account.categories,
         authorizationVersion: account.authorizationVersion,
       };
-      update((previous) => ({
-        ...previous,
-        accounts: previous.accounts.map((item) =>
-          item.id === userAccountId ? merged : item,
-        ),
-      }));
       return merged;
     },
-    [orgId, queryClient, queryKey, update],
+    [orgId, queryClient, queryKey],
   );
 
   const previewEnterprise = useCallback(
@@ -233,7 +232,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           categories: replaceById(previous.categories, result.value),
@@ -251,7 +250,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           categories: replaceById(previous.categories, result.value),
@@ -262,20 +261,20 @@ export function usePermissionsWrites({
   );
 
   const initializeCategories = useCallback(
-    () =>
+    (expectedVersion: string) =>
       run(async () => {
         const result = await permissionsApi.initializeCategories(
           orgId,
-          currentVersion(queryClient, queryKey),
+          expectedVersion,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
         }));
         return result;
       }),
-    [csrfToken, orgId, queryClient, queryKey, run, update],
+    [csrfToken, orgId, run, update],
   );
 
   const updateDimension = useCallback(
@@ -287,7 +286,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           dimensions: previous.dimensions.map((dimension) =>
@@ -313,7 +312,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           dimensions: [
@@ -341,7 +340,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           dimensions: addDimensionValue(
@@ -370,7 +369,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           dimensions: addDimensionValue(
@@ -395,7 +394,7 @@ export function usePermissionsWrites({
           name: result.value.name,
           retired: result.value.retired,
         };
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           stores: mergeStoreList(previous.stores, saved),
@@ -418,7 +417,7 @@ export function usePermissionsWrites({
           expectedVersion,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           enterprises: upsertEnterprise(previous.enterprises, result.value),
@@ -437,7 +436,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           accounts: previous.accounts.map((account) =>
@@ -465,7 +464,7 @@ export function usePermissionsWrites({
           body,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
         }));
@@ -485,7 +484,7 @@ export function usePermissionsWrites({
           expectedVersion,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           me: { ...previous.me, mode: result.value.mode },
@@ -503,7 +502,7 @@ export function usePermissionsWrites({
           expectedVersion,
           csrfToken,
         );
-        update((previous) => ({
+        await update((previous) => ({
           ...previous,
           version: result.authorizationVersion,
           me: { ...previous.me, mode: result.value.mode },
@@ -531,16 +530,4 @@ export function usePermissionsWrites({
     activate,
     suspend,
   };
-}
-
-/**
- * expectedVersion 必须取快照里的真实版本。补齐类别、启用等动作没有表单版本字段，
- * 这里直接从查询缓存读取，避免把可能过期的渲染值当版本。
- */
-function currentVersion(queryClient: QueryClient, queryKey: QueryKey): string {
-  const bundle = queryClient.getQueryData<PermissionsBundle>(queryKey);
-  if (bundle === undefined) {
-    throw new Error("配置快照尚未加载");
-  }
-  return bundle.version;
 }

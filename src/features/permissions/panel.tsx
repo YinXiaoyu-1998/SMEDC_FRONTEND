@@ -1,7 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useId, type ReactNode, type RefObject } from "react";
+import { useId, useRef, type ReactNode, type RefObject } from "react";
 
 import { useText } from "@/i18n/useText";
+import theme from "@/styles/PermissionsTheme.module.css";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import type { ButtonVariant } from "@/ui/Button";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
@@ -45,10 +47,12 @@ export function Panel({
   const { t } = useText();
   useBodyScrollLock(open);
   const titleId = useId();
+  const opener = useRef<HTMLElement | null>(null);
 
   const handleCloseAutoFocus = (event: Event) => {
-    const target = returnFocusRef?.current;
-    if (target === null || target === undefined) return;
+    const explicit = returnFocusRef?.current;
+    const target = explicit?.isConnected ? explicit : opener.current;
+    if (!target?.isConnected) return;
     event.preventDefault();
     target.focus();
   };
@@ -65,10 +69,15 @@ export function Panel({
         <Dialog.Content
           className={
             variant === "modal"
-              ? `${styles.panel} ${styles.panelModal}`
-              : `${styles.panel} ${styles.panelDrawer}`
+              ? `${theme.theme} ${styles.panel} ${styles.panelModal}`
+              : `${theme.theme} ${styles.panel} ${styles.panelDrawer}`
           }
           aria-labelledby={titleId}
+          {...(subtitle === undefined ? { "aria-describedby": undefined } : {})}
+          onOpenAutoFocus={() => {
+            const active = document.activeElement;
+            opener.current = active instanceof HTMLElement ? active : null;
+          }}
           onCloseAutoFocus={handleCloseAutoFocus}
         >
           <div className={styles.panelHead}>
@@ -88,7 +97,7 @@ export function Panel({
               aria-label={t("permissions.closePanel")}
               onClick={onRequestClose}
             >
-              <span aria-hidden="true">×</span>
+              <AdminIcon name="close" />
             </button>
           </div>
           <div className={styles.panelBody}>{children}</div>
@@ -194,6 +203,7 @@ export function PermissionConfirmDialog<Prepared extends PreparedConfirmation>({
   return (
     <ConfirmDialog<Prepared>
       flow={flow}
+      className={theme.theme}
       title={title}
       description={confirmation?.subject ?? ""}
       confirmLabel={confirmLabel}

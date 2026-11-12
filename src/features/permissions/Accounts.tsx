@@ -5,7 +5,9 @@ import type {
   PermissionAccount,
   PermissionsAccountsUpdateResponse,
 } from "@/api/permissions";
+import { VERSION_CONFLICT_CODE } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { DataTable } from "@/ui/DataTable";
@@ -61,20 +63,6 @@ export function AccountsSection() {
   const pendingId = useRef<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
 
-  // 记录触发面板的按钮：部分浏览器点击不聚焦按钮，仅靠 activeElement 会丢失焦点来源。
-  useEffect(() => {
-    const remember = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const trigger = target.closest("button, a");
-      if (trigger instanceof HTMLElement) opener.current = trigger;
-    };
-    document.addEventListener("pointerdown", remember, true);
-    return () => {
-      document.removeEventListener("pointerdown", remember, true);
-    };
-  }, []);
-
   const discardFlow = useConfirmFlow<void, void>({
     prepare: () => undefined,
     submit: () => {
@@ -97,8 +85,15 @@ export function AccountsSection() {
     try {
       let account = await scope.writes.readAccount(id);
       if (account.authorizationVersion !== scope.bundle.version) {
-        await scope.reload();
+        const latest = await scope.reload();
         account = await scope.writes.readAccount(id);
+        if (account.authorizationVersion !== latest.version) {
+          throw new WebApiError({
+            status: 409,
+            code: VERSION_CONFLICT_CODE,
+            message: "配置版本不一致",
+          });
+        }
       }
       setSnapshot(account);
       setDirty(false);
@@ -111,10 +106,6 @@ export function AccountsSection() {
 
   const chooseAccount = (id: string) => {
     if (snapshot?.id === id) return;
-    const active = document.activeElement;
-    if (active instanceof HTMLElement && active !== document.body) {
-      opener.current = active;
-    }
     if (dirty) {
       pendingId.current = id;
       void discardFlow.request();
@@ -134,69 +125,91 @@ export function AccountsSection() {
 
   return (
     <>
-      <ListHeader
-        title={t("permissions.tabs.accounts")}
-        description={t("permissions.accountListHint")}
-      />
-      <div className={styles.toolbar}>
-        <SearchInput
-          label={t("permissions.searchAccount")}
-          value={search}
-          onChange={setSearch}
+      <section className={styles.catalogCard}>
+        <ListHeader
+          title={t("permissions.tabs.accounts")}
+          description={t("permissions.accountListHint")}
         />
-      </div>
-      <DataTable<PermissionAccount>
-        columns={[
-          {
-            id: "name",
-            header: t("permissions.account"),
-            cell: (account) => (
-              <>
-                <strong>{account.displayName}</strong>
-                <br />
-                <span className={styles.muted}>{account.email}</span>
-              </>
-            ),
-          },
-          {
-            id: "role",
-            header: t("permissions.role"),
-            cell: (account) => accountRoleLabel(t, account.role),
-          },
-          {
-            id: "clearance",
-            header: t("permissions.clearance"),
-            cell: (account) => (
-              <span className={styles.levelBadge}>{account.clearance}</span>
-            ),
-          },
-          {
-            id: "grants",
-            header: t("permissions.grantCount"),
-            cell: (account) => String(account.grants.length),
-          },
-          {
-            id: "actions",
-            header: t("permissions.actions"),
-            align: "end",
-            cell: (account) => (
-              <ActionButton
-                label={t("permissions.edit")}
-                variant="secondary"
-                busy={loadingId === account.id}
-                disabled={loadingId !== null && loadingId !== account.id}
-                onRun={() => {
-                  chooseAccount(account.id);
-                }}
-              />
-            ),
-          },
-        ]}
-        rows={accounts}
-        getRowId={(account) => account.id}
-        label={t("permissions.tabs.accounts")}
-        emptyLabel={t("permissions.empty")}
-      />
+        <div className={styles.toolbar}>
+          <SearchInput
+            label={t("permissions.searchAccount")}
+            value={search}
+            onChange={setSearch}
+          />
+        </div>
+        <DataTable<PermissionAccount>
+          className={styles.catalogTable}
+          columns={[
+            {
+              id: "name",
+              header: t("permissions.account"),
+              cell: (account) => (
+                <div className={styles.rowName}>
+                  <span className={styles.rowIcon}>
+                    <AdminIcon name="person" />
+                  </span>
+                  <div>
+                    <strong>{account.displayName}</strong>
+                    <span className={styles.rowDescription}>
+                      {account.email}
+                    </span>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              id: "role",
+              header: t("permissions.role"),
+              cell: (account) => accountRoleLabel(t, account.role),
+            },
+            {
+              id: "clearance",
+              header: t("permissions.clearance"),
+              cell: (account) => (
+                <span className={styles.levelBadge}>{account.clearance}</span>
+              ),
+            },
+            {
+              id: "grants",
+              header: t("permissions.grantCount"),
+              cell: (account) => String(account.grants.length),
+            },
+            {
+              id: "actions",
+              header: t("permissions.actions"),
+              align: "end",
+              cell: (account) => (
+                <ActionButton
+                  label={t("permissions.edit")}
+                  variant="ghost"
+                  className={styles.rowAction}
+                  icon={<AdminIcon name="edit" />}
+                  onPointerDown={(event) => {
+                    opener.current = event.currentTarget;
+                  }}
+                  onFocus={(event) => {
+                    opener.current = event.currentTarget;
+                  }}
+                  busy={loadingId === account.id}
+                  disabled={loadingId !== null && loadingId !== account.id}
+                  onRun={() => {
+                    chooseAccount(account.id);
+                  }}
+                />
+              ),
+            },
+          ]}
+          rows={accounts}
+          getRowId={(account) => account.id}
+          label={t("permissions.tabs.accounts")}
+          emptyLabel={t("permissions.empty")}
+        />
+        <div className={styles.tableFoot}>
+          <span
+            className={styles.countText}
+          >{`${t("permissions.rowCount")} ${accounts.length} ${t("permissions.count")}`}</span>
+        </div>
+      </section>
       <InlineError error={loadError} />
 
       {snapshot === null ? null : (
@@ -245,7 +258,7 @@ function AccountPanel({
 
   const save = useDraftSave<AccountDraft, PermissionsAccountsUpdateResponse>({
     baseline,
-    validate: (draft) => validateAccountDraft(draft, data),
+    validate: (draft, baseline) => validateAccountDraft(draft, data, baseline),
     confirmation: (draft, base) => ({
       subject: account.displayName,
       diff: accountDiff(t, data, draft, base),
@@ -430,7 +443,9 @@ function AccountPanel({
           action={
             <ActionButton
               label={t("permissions.addGrantEntry")}
-              variant="secondary"
+              variant="ghost"
+              className={styles.rowAction}
+              icon={<AdminIcon name="plus" />}
               disabled={save.saving || save.conflict}
               onRun={() => {
                 setEditingId(NEW_GRANT);
@@ -450,9 +465,14 @@ function AccountPanel({
                 <ObjectRow
                   key={grant.id}
                   highlight={!unchanged}
-                  title={`${enterpriseName(t, data, grant.enterpriseKey)} · ${grantCategoryLabels(t, data, grant.categoryIds)}`}
+                  title={`${grantLocationLabel(t, data, grant)} · ${grantCategoryLabels(t, data, grant.categoryIds)}`}
                   description={[
-                    grantLocationLabel(t, data, grant),
+                    enterpriseName(t, data, grant.enterpriseKey),
+                    t(
+                      grant.ownership === "store"
+                        ? "permissions.store"
+                        : "permissions.group",
+                    ),
                     grantConditionLabels(t, data, grant.dimensions),
                   ]
                     .filter((part) => part !== "")
@@ -462,6 +482,8 @@ function AccountPanel({
                       <ActionButton
                         label={t("permissions.edit")}
                         variant="ghost"
+                        className={styles.rowAction}
+                        icon={<AdminIcon name="edit" />}
                         disabled={save.saving}
                         onRun={() => {
                           setEditingId(grant.id);
@@ -470,6 +492,7 @@ function AccountPanel({
                       <ActionButton
                         label={t("permissions.remove")}
                         variant="ghost"
+                        className={styles.dangerAction}
                         disabled={save.saving}
                         onRun={() => {
                           requestRemove(grant.id);
