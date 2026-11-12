@@ -21,6 +21,7 @@ import { useRegisterDraft } from "./useRegisterDraft";
 import { createId } from "./ids";
 import { changeSummary, type Translate } from "./labels";
 import styles from "./Permissions.module.css";
+import { RetirableList, type RetiredControls } from "./RetirableList";
 import { usePermissionsScope } from "./scope";
 import { useDraftSave } from "./useDraftSave";
 
@@ -46,22 +47,35 @@ export function DimensionsSection() {
   return (
     <PageSection title={t("permissions.tabs.dimensions")}>
       <SectionNote>{t("permissions.dimensionHelp")}</SectionNote>
-      <div className={styles.stack}>
-        {scope.bundle.dimensions.map((dimension) => (
-          <DimensionCard key={dimension.id} dimension={dimension} />
-        ))}
-      </div>
+      <RetirableList
+        items={scope.bundle.dimensions}
+        renderItem={(dimension, retiredControls) => (
+          <DimensionCard
+            dimension={dimension}
+            retiredControls={retiredControls}
+          />
+        )}
+      />
       <DimensionCreateForm />
     </PageSection>
   );
 }
 
-function DimensionCard({ dimension }: { dimension: PermissionDimension }) {
+function DimensionCard({
+  dimension,
+  retiredControls,
+}: {
+  dimension: PermissionDimension;
+  retiredControls: RetiredControls;
+}) {
   const { t } = useText();
 
   return (
     <div className={styles.card}>
-      <DimensionEditForm dimension={dimension} />
+      <DimensionEditForm
+        dimension={dimension}
+        retiredControls={retiredControls}
+      />
       <h4 className={styles.subheading}>{t("permissions.values")}</h4>
       {dimension.values.length === 0 ? (
         <p className={styles.hint}>{t("permissions.empty")}</p>
@@ -81,7 +95,13 @@ function DimensionCard({ dimension }: { dimension: PermissionDimension }) {
   );
 }
 
-function DimensionEditForm({ dimension }: { dimension: PermissionDimension }) {
+function DimensionEditForm({
+  dimension,
+  retiredControls,
+}: {
+  dimension: PermissionDimension;
+  retiredControls: RetiredControls;
+}) {
   const { t } = useText();
   const scope = usePermissionsScope();
   const saved: NameDraft = { name: dimension.name, retired: dimension.retired };
@@ -108,9 +128,14 @@ function DimensionEditForm({ dimension }: { dimension: PermissionDimension }) {
       name: result.value.name,
       retired: result.value.retired,
     }),
+    onSaved: (result) => {
+      if (result.value.retired !== saved.retired)
+        retiredControls.onStatusSaved(result.value.retired);
+    },
     reload: async () => {
       const next = await scope.reload();
       const latest = next.dimensions.find((item) => item.id === dimension.id);
+      if (latest?.retired) retiredControls.reveal();
       return latest === undefined
         ? saved
         : { name: latest.name, retired: latest.retired };

@@ -895,6 +895,116 @@ describe("权限设置页", () => {
     }
   });
 
+  it.each([
+    { tab: "类别密级", item: "运营制度" },
+    { tab: "业务条件", item: "团队" },
+  ])(
+    "$item 保存停用后移入折叠区，恢复后回到默认列表",
+    async ({ tab, item }) => {
+      renderPermissions();
+      await openCategories();
+      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      const panel = screen.getByRole("tabpanel", { name: tab });
+      const heading = within(panel).getByRole("heading", { name: item });
+      const form = heading.closest("form")!;
+      const retired = within(form).getByRole("checkbox", {
+        name: "停用此项（保留历史引用）",
+      });
+      const save = within(form).getByRole("button", { name: "保存" });
+
+      fireEvent.click(retired);
+      expect(heading).toBeVisible();
+      fireEvent.click(save);
+      const retireDialog = await screen.findByRole("dialog");
+      fireEvent.click(
+        within(retireDialog).getByRole("button", { name: "确认变更" }),
+      );
+
+      const disclosure = await within(panel).findByRole("button", {
+        name: "已停用 (1)",
+      });
+      expect(disclosure).toHaveAttribute("aria-expanded", "false");
+      expect(heading).not.toBeVisible();
+      await waitFor(() => expect(disclosure).toHaveFocus());
+
+      fireEvent.click(disclosure);
+      expect(disclosure).toHaveAttribute("aria-expanded", "true");
+      expect(heading).toBeVisible();
+      expect(retired).toBeChecked();
+
+      fireEvent.click(retired);
+      fireEvent.click(save);
+      const restoreDialog = await screen.findByRole("dialog");
+      fireEvent.click(
+        within(restoreDialog).getByRole("button", { name: "确认变更" }),
+      );
+
+      await waitFor(() => expect(disclosure).not.toBeInTheDocument());
+      expect(heading).toBeVisible();
+      expect(retired).not.toBeChecked();
+    },
+  );
+
+  it("类别表单保留已绑定的停用条件，新类别不显示该条件", async () => {
+    const state = createState();
+    state.dimensions = state.dimensions.map((item) => ({
+      ...item,
+      retired: true,
+    }));
+    renderPermissions({ state });
+    await openCategories();
+
+    expect(
+      within(categoryForm("运营制度")).getByRole("checkbox", {
+        name: "团队（已停用）",
+      }),
+    ).toBeChecked();
+    expect(
+      within(categoryForm("新增普通文档类别")).queryByRole("checkbox", {
+        name: "团队（已停用）",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("服务器已停用正在编辑的类别时，展开已停用区并保留冲突草稿", async () => {
+    renderPermissions({
+      overrides: {
+        "categories.update": (state) => {
+          state.version = "8";
+          state.categories = state.categories.map((item) =>
+            item.id === "cat-policy" ? { ...item, retired: true } : item,
+          );
+          return jsonResponse(
+            {
+              error: {
+                code: "AUTHORIZATION_VERSION_CONFLICT",
+                message: "conflict",
+              },
+            },
+            409,
+          );
+        },
+      },
+    });
+    await openCategories();
+    const form = categoryForm("运营制度");
+    const name = within(form).getByRole("textbox", { name: "文档类别名称" });
+    fireEvent.change(name, { target: { value: "运营制度草稿" } });
+    fireEvent.click(within(form).getByRole("button", { name: "保存" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "确认变更",
+      }),
+    );
+
+    const disclosure = await screen.findByRole("button", {
+      name: "已停用 (1)",
+    });
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+    expect(within(form).getByRole("alert", { name: "版本冲突" })).toBeVisible();
+    expect(name).toHaveValue("运营制度草稿");
+  });
+
   it("空态：文档列表没有条目时显示空态而不是表格行", async () => {
     const state = createState();
     state.documents = [];

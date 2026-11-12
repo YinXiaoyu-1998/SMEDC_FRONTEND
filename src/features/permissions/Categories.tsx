@@ -36,6 +36,7 @@ import {
   type Translate,
 } from "./labels";
 import styles from "./Permissions.module.css";
+import { RetirableList, type RetiredControls } from "./RetirableList";
 import { usePermissionsScope } from "./scope";
 import { useDraftSave } from "./useDraftSave";
 
@@ -120,15 +121,16 @@ export function CategoriesSection() {
 
       <h3 className={styles.subheading}>{t("permissions.documentCategory")}</h3>
       <SectionNote>{t("permissions.evidenceHelp")}</SectionNote>
-      {evidence.length === 0 ? (
-        <p className={styles.hint}>{t("permissions.empty")}</p>
-      ) : (
-        <div className={styles.stack}>
-          {evidence.map((category) => (
-            <EvidenceCategoryForm key={category.id} category={category} />
-          ))}
-        </div>
-      )}
+      <RetirableList
+        items={evidence}
+        empty={<p className={styles.hint}>{t("permissions.empty")}</p>}
+        renderItem={(category, retiredControls) => (
+          <EvidenceCategoryForm
+            category={category}
+            retiredControls={retiredControls}
+          />
+        )}
+      />
       <EvidenceCategoryForm key="new-evidence-category" category={null} />
     </PageSection>
   );
@@ -253,8 +255,10 @@ function FixedCategoryForm({ category }: { category: PermissionCategory }) {
 
 function EvidenceCategoryForm({
   category,
+  retiredControls,
 }: {
   category: PermissionCategory | null;
+  retiredControls?: RetiredControls;
 }) {
   const { t } = useText();
   const scope = usePermissionsScope();
@@ -330,10 +334,15 @@ function EvidenceCategoryForm({
       },
       draftFromResult: (result) =>
         isNew ? EMPTY_EVIDENCE : evidenceFromCategory(result.value),
+      onSaved: (result) => {
+        if (result.value.retired !== saved.retired)
+          retiredControls?.onStatusSaved(result.value.retired);
+      },
       reload: async () => {
         const next = await scope.reload();
         if (category === null) return EMPTY_EVIDENCE;
         const latest = next.categories.find((item) => item.id === category.id);
+        if (latest?.retired) retiredControls?.reveal();
         return latest === undefined ? saved : evidenceFromCategory(latest);
       },
       conflictFields: (draft, current) => [
@@ -364,13 +373,20 @@ function EvidenceCategoryForm({
   );
   useRegisterDraft(save.isDirty || save.conflict);
 
-  const dimensionOptions = dimensions.map((dimension) => ({
-    value: dimension.id,
-    label: itemLabel(t, dimension.name, dimension.retired),
-    disabled:
-      dimension.retired &&
-      !save.draft.requiredDimensionIds.includes(dimension.id),
-  }));
+  const dimensionOptions = dimensions
+    .filter(
+      (dimension) =>
+        !dimension.retired ||
+        saved.requiredDimensionIds.includes(dimension.id) ||
+        save.draft.requiredDimensionIds.includes(dimension.id),
+    )
+    .map((dimension) => ({
+      value: dimension.id,
+      label: itemLabel(t, dimension.name, dimension.retired),
+      disabled:
+        dimension.retired &&
+        !save.draft.requiredDimensionIds.includes(dimension.id),
+    }));
   for (const id of save.draft.requiredDimensionIds) {
     if (!dimensionOptions.some((option) => option.value === id)) {
       dimensionOptions.push({

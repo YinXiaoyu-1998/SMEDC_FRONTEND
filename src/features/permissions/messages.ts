@@ -130,6 +130,7 @@ export const permissionsMessages = {
   ],
   "permissions.name": ["名称", "Name"],
   "permissions.retired": ["已停用", "Retired"],
+  "permissions.noActiveItems": ["暂无启用项。", "No active items."],
   "permissions.retiredLabel": ["（已停用）", " (retired)"],
   "permissions.retire": [
     "停用此项（保留历史引用）",
