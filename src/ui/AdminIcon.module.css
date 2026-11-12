@@ -1,6 +1,7 @@
 @font-face {
   font-family: "SMEDC Admin Icons";
-  src: url("../assets/bootstrap-icons-subset.woff2") format("woff2");
+  /* Production CSP allows same-origin fonts. Keep this asset out of data URLs. */
+  src: url("../assets/bootstrap-icons-subset.woff2?no-inline") format("woff2");
   font-display: block;
 }
 
