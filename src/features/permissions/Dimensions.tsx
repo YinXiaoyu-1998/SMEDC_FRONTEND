@@ -1,426 +1,617 @@
+import { useEffect, useRef, useState } from "react";
+
 import type {
   PermissionDimension,
   PermissionDimensionValue,
   PermissionsDimensionsCreateResponse,
   PermissionsDimensionsUpdateResponse,
-  PermissionsDimensionsValueCreateResponse,
-  PermissionsDimensionsValueUpdateResponse,
 } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
-import { PageSection } from "@/ui/PageSection";
+import { ActionButton } from "@/ui/ActionButton";
+import { ConfirmDialog } from "@/ui/ConfirmDialog";
+import { DataTable } from "@/ui/DataTable";
+import { InlineError } from "@/ui/InlineError";
+import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
-import {
-  DraftDialogs,
-  DraftFeedback,
-  NameField,
-  RetireCheckbox,
-  SaveButton,
-  SectionNote,
-} from "./components";
-import { useRegisterDraft } from "./useRegisterDraft";
+import { DraftFeedback, NameField, SearchInput } from "./components";
+import type { Confirmation } from "./diff";
 import { createId } from "./ids";
-import { changeSummary, type Translate } from "./labels";
+import {
+  DraftConflict,
+  ListHeader,
+  ObjectListHead,
+  ObjectRow,
+  Panel,
+  PermissionConfirmDialog,
+} from "./panel";
 import styles from "./Permissions.module.css";
-import { RetirableList, type RetiredControls } from "./RetirableList";
 import { usePermissionsScope } from "./scope";
 import { useDraftSave } from "./useDraftSave";
+import { useRegisterDraft } from "./useRegisterDraft";
+import { ValueEditor } from "./ValueEditor";
 
-interface NameDraft {
-  readonly name: string;
-  readonly retired: boolean;
-}
+const NEW_DIMENSION = "\u0000new";
 
-const EMPTY_NAME_DRAFT: NameDraft = { name: "", retired: false };
-
-function nameStateText(t: Translate, retired: boolean): string {
-  return t(retired ? "permissions.retired" : "permissions.active");
-}
-
-function describeName(t: Translate, draft: NameDraft): string {
-  return `${draft.name}${draft.retired ? ` · ${t("permissions.retired")}` : ""}`;
-}
-
-export function DimensionsSection() {
+export function DimensionsSection({ active }: { readonly active: boolean }) {
   const { t } = useText();
   const scope = usePermissionsScope();
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const signalRef = useRef(scope.createSignal);
 
-  return (
-    <PageSection title={t("permissions.tabs.dimensions")}>
-      <SectionNote>{t("permissions.dimensionHelp")}</SectionNote>
-      <RetirableList
-        items={scope.bundle.dimensions}
-        renderItem={(dimension, retiredControls) => (
-          <DimensionCard
-            dimension={dimension}
-            retiredControls={retiredControls}
-          />
-        )}
-      />
-      <DimensionCreateForm />
-    </PageSection>
+  const dimensions = scope.bundle.dimensions;
+  const editingDimension =
+    editing === null || editing === NEW_DIMENSION
+      ? null
+      : (dimensions.find((item) => item.id === editing) ?? null);
+
+  useEffect(() => {
+    if (!active) return;
+    if (signalRef.current === scope.createSignal) return;
+    signalRef.current = scope.createSignal;
+    setEditing(NEW_DIMENSION);
+  }, [active, scope.createSignal]);
+
+  const needle = search.trim().toLowerCase();
+  const activeRows = dimensions.filter(
+    (dimension) =>
+      !dimension.retired &&
+      (needle === "" || dimension.name.toLowerCase().includes(needle)),
   );
-}
-
-function DimensionCard({
-  dimension,
-  retiredControls,
-}: {
-  dimension: PermissionDimension;
-  retiredControls: RetiredControls;
-}) {
-  const { t } = useText();
-
-  return (
-    <div className={styles.card}>
-      <DimensionEditForm
-        dimension={dimension}
-        retiredControls={retiredControls}
-      />
-      <h4 className={styles.subheading}>{t("permissions.values")}</h4>
-      {dimension.values.length === 0 ? (
-        <p className={styles.hint}>{t("permissions.empty")}</p>
-      ) : (
-        <div className={styles.stack}>
-          {dimension.values.map((value) => (
-            <DimensionValueForm
-              key={value.id}
-              dimension={dimension}
-              value={value}
-            />
-          ))}
-        </div>
-      )}
-      <DimensionValueCreateForm dimension={dimension} />
-    </div>
+  const retiredRows = dimensions.filter(
+    (dimension) =>
+      dimension.retired &&
+      (needle === "" || dimension.name.toLowerCase().includes(needle)),
   );
-}
 
-function DimensionEditForm({
-  dimension,
-  retiredControls,
-}: {
-  dimension: PermissionDimension;
-  retiredControls: RetiredControls;
-}) {
-  const { t } = useText();
-  const scope = usePermissionsScope();
-  const saved: NameDraft = { name: dimension.name, retired: dimension.retired };
-  const save = useDraftSave<NameDraft, PermissionsDimensionsUpdateResponse>({
-    saved,
-    expectedVersion: scope.bundle.version,
-    normalize: (value) => value,
-    validate: (draft) =>
-      draft.name.trim() === "" ? "permissions.required" : null,
-    describe: (draft) =>
-      changeSummary(
-        t,
-        dimension.name,
-        describeName(t, saved),
-        describeName(t, draft),
-      ),
-    submit: (draft, expectedVersion) =>
-      scope.writes.updateDimension(dimension.id, {
-        expectedVersion,
-        name: draft.name,
-        retired: draft.retired,
-      }),
-    draftFromResult: (result) => ({
-      name: result.value.name,
-      retired: result.value.retired,
-    }),
-    onSaved: (result) => {
-      if (result.value.retired !== saved.retired)
-        retiredControls.onStatusSaved(result.value.retired);
-    },
-    reload: async () => {
-      const next = await scope.reload();
-      const latest = next.dimensions.find((item) => item.id === dimension.id);
-      if (latest?.retired) retiredControls.reveal();
-      return latest === undefined
-        ? saved
-        : { name: latest.name, retired: latest.retired };
-    },
-    conflictFields: (draft, current) => [
-      {
-        key: "name",
-        label: t("permissions.name"),
-        serverValue: current.name,
-        draftValue: draft.name,
-      },
-      {
-        key: "retired",
-        label: t("permissions.retired"),
-        serverValue: nameStateText(t, current.retired),
-        draftValue: nameStateText(t, draft.retired),
-      },
-    ],
-  });
-  useRegisterDraft(save.isDirty || save.conflict);
+  const openDimension = (id: string) => {
+    setEditing(id);
+  };
 
   return (
-    <form
-      className={styles.subcard}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h3 className={styles.cardTitle}>{dimension.name}</h3>
-      <NameField
-        label={t("permissions.name")}
-        required
-        value={save.draft.name}
-        disabled={save.saving}
-        onChange={(name) => {
-          save.setDraft({ ...save.draft, name });
-        }}
+    <>
+      <ListHeader
+        title={t("permissions.tabs.dimensions")}
+        description={t("permissions.conditionHint")}
       />
-      <RetireCheckbox
-        checked={save.draft.retired}
-        disabled={save.saving}
-        onChange={(retired) => {
-          save.setDraft({ ...save.draft, retired });
-        }}
-      />
-      <div className={styles.actions}>
-        <SaveButton save={save} />
+      <div className={styles.toolbar}>
+        <SearchInput
+          label={t("permissions.searchCondition")}
+          value={search}
+          onChange={setSearch}
+        />
       </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
+      <DataTable<PermissionDimension>
+        columns={[
+          {
+            id: "name",
+            header: t("permissions.conditionName"),
+            cell: (dimension) => <strong>{dimension.name}</strong>,
+          },
+          {
+            id: "values",
+            header: t("permissions.conditionValues"),
+            cell: (dimension) => {
+              const values = dimension.values.filter((value) => !value.retired);
+              return values.length === 0
+                ? t("permissions.emptyValues")
+                : values.map((value) => (
+                    <span className={styles.chip} key={value.id}>
+                      {value.name}
+                    </span>
+                  ));
+            },
+          },
+          {
+            id: "actions",
+            header: t("permissions.actions"),
+            align: "end",
+            cell: (dimension) => (
+              <ActionButton
+                label={t("permissions.edit")}
+                variant="secondary"
+                onRun={() => {
+                  openDimension(dimension.id);
+                }}
+              />
+            ),
+          },
+        ]}
+        rows={activeRows}
+        getRowId={(dimension) => dimension.id}
+        label={t("permissions.conditionList")}
+        emptyLabel={t("permissions.empty")}
+      />
+
+      {retiredRows.length === 0 ? null : (
+        <details className={styles.valueArchive}>
+          <summary>
+            {t("permissions.retired")} ({retiredRows.length})
+          </summary>
+          <div className={styles.archiveList}>
+            {retiredRows.map((dimension) => (
+              <ObjectRow
+                key={dimension.id}
+                title={dimension.name}
+                description={t("permissions.retired")}
+                actions={
+                  <ActionButton
+                    label={t("permissions.edit")}
+                    variant="ghost"
+                    onRun={() => {
+                      openDimension(dimension.id);
+                    }}
+                  />
+                }
+              />
+            ))}
+          </div>
+        </details>
+      )}
+
+      {editing === NEW_DIMENSION ? (
+        <ConditionCreatePanel
+          onClose={() => {
+            setEditing(null);
+          }}
+          onCreated={(id) => {
+            setEditing(id);
+          }}
+        />
+      ) : null}
+
+      {editingDimension === null ? null : (
+        <ConditionPanel
+          key={editingDimension.id}
+          dimension={editingDimension}
+          onClose={() => {
+            setEditing(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 
-function DimensionCreateForm() {
+function statusText(t: (key: string) => string, retired: boolean): string {
+  return t(retired ? "permissions.retired" : "permissions.status.active");
+}
+
+function ConditionCreatePanel({
+  onClose,
+  onCreated,
+}: {
+  readonly onClose: () => void;
+  readonly onCreated: (id: string) => void;
+}) {
   const { t } = useText();
   const scope = usePermissionsScope();
-  const save = useDraftSave<NameDraft, PermissionsDimensionsCreateResponse>({
-    saved: EMPTY_NAME_DRAFT,
-    expectedVersion: scope.bundle.version,
-    normalize: (value) => value,
+  const save = useDraftSave<
+    { readonly name: string },
+    PermissionsDimensionsCreateResponse
+  >({
+    baseline: { snapshot: { name: "" }, version: scope.bundle.version },
     validate: (draft) =>
       draft.name.trim() === "" ? "permissions.required" : null,
-    describe: (draft) =>
-      changeSummary(
-        t,
-        draft.name.trim() === "" ? t("permissions.addDimension") : draft.name,
-        t("permissions.notCreated"),
-        describeName(t, draft),
-      ),
+    confirmation: (draft) => ({
+      subject: t("permissions.addCondition"),
+      diff: [
+        {
+          kind: "added",
+          label: t("permissions.conditionName"),
+          after: draft.name.trim(),
+        },
+      ],
+      impact: t("permissions.conditionCreateImpact"),
+    }),
     submit: (draft, expectedVersion) =>
       scope.writes.createDimension({
         expectedVersion,
         id: createId(),
-        name: draft.name,
-        retired: draft.retired,
+        name: draft.name.trim(),
+        retired: false,
       }),
-    draftFromResult: () => EMPTY_NAME_DRAFT,
-    reload: async () => {
-      await scope.reload();
-      return EMPTY_NAME_DRAFT;
-    },
-    conflictFields: (draft) => [
-      {
-        key: "name",
-        label: t("permissions.name"),
-        serverValue: t("permissions.notCreated"),
-        draftValue: draft.name,
-      },
-    ],
-  });
-  useRegisterDraft(save.isDirty || save.conflict);
-
-  return (
-    <form
-      className={styles.card}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h3 className={styles.cardTitle}>{t("permissions.addDimension")}</h3>
-      <NameField
-        label={t("permissions.name")}
-        required
-        value={save.draft.name}
-        disabled={save.saving}
-        onChange={(name) => {
-          save.setDraft({ ...save.draft, name });
-        }}
-      />
-      <div className={styles.actions}>
-        <SaveButton save={save} />
-      </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
-  );
-}
-
-function DimensionValueForm({
-  dimension,
-  value,
-}: {
-  dimension: PermissionDimension;
-  value: PermissionDimensionValue;
-}) {
-  const { t } = useText();
-  const scope = usePermissionsScope();
-  const saved: NameDraft = { name: value.name, retired: value.retired };
-  const save = useDraftSave<
-    NameDraft,
-    PermissionsDimensionsValueUpdateResponse
-  >({
-    saved,
-    expectedVersion: scope.bundle.version,
-    normalize: (item) => item,
-    validate: (draft) =>
-      draft.name.trim() === "" ? "permissions.required" : null,
-    describe: (draft) =>
-      changeSummary(
-        t,
-        `${dimension.name} · ${value.name}`,
-        describeName(t, saved),
-        describeName(t, draft),
-      ),
-    submit: (draft, expectedVersion) =>
-      scope.writes.updateDimensionValue(dimension.id, value.id, {
-        expectedVersion,
-        name: draft.name,
-        retired: draft.retired,
-      }),
-    draftFromResult: (result) => ({
-      name: result.value.name,
-      retired: result.value.retired,
-    }),
+    nextBaseline: () => ({ name: "" }),
     reload: async () => {
       const next = await scope.reload();
-      const latest = next.dimensions
-        .find((item) => item.id === dimension.id)
-        ?.values.find((item) => item.id === value.id);
-      return latest === undefined
-        ? saved
-        : { name: latest.name, retired: latest.retired };
+      return { snapshot: { name: "" }, version: next.version };
     },
-    conflictFields: (draft, current) => [
-      {
-        key: "name",
-        label: t("permissions.name"),
-        serverValue: current.name,
-        draftValue: draft.name,
-      },
-      {
-        key: "retired",
-        label: t("permissions.retired"),
-        serverValue: nameStateText(t, current.retired),
-        draftValue: nameStateText(t, draft.retired),
-      },
-    ],
+    onSaved: (result) => {
+      scope.setNotice("permissions.conditionCreated");
+      onCreated(result.value.id);
+    },
   });
   useRegisterDraft(save.isDirty || save.conflict);
 
   return (
-    <form
-      className={styles.subcard}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
+    <Panel
+      open
+      variant="modal"
+      title={t("permissions.addCondition")}
+      onRequestClose={onClose}
+      footer={
+        <>
+          <ActionButton
+            label={t("permissions.cancel")}
+            variant="secondary"
+            onRun={onClose}
+          />
+          <ActionButton
+            label={t("permissions.save")}
+            busy={save.saving}
+            disabled={!save.canSave || scope.busy}
+            {...(save.disabledReason === undefined
+              ? {}
+              : { disabledReason: save.disabledReason })}
+            onRun={save.requestSave}
+          />
+        </>
+      }
     >
       <NameField
-        label={t("permissions.values")}
+        label={t("permissions.conditionName")}
         required
         value={save.draft.name}
         disabled={save.saving}
         onChange={(name) => {
-          save.setDraft({ ...save.draft, name });
+          save.setDraft({ name });
         }}
       />
-      <RetireCheckbox
-        checked={save.draft.retired}
-        disabled={save.saving}
-        onChange={(retired) => {
-          save.setDraft({ ...save.draft, retired });
-        }}
-      />
-      <div className={styles.actions}>
-        <SaveButton save={save} />
-      </div>
       <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
+      <PermissionConfirmDialog
+        flow={save.flow}
+        title={t("permissions.confirm.title")}
+        confirmLabel={t("permissions.confirm.action")}
+        cancelLabel={t("permissions.cancel")}
+      />
+    </Panel>
   );
 }
 
-function DimensionValueCreateForm({
+function ConditionPanel({
   dimension,
+  onClose,
 }: {
-  dimension: PermissionDimension;
+  readonly dimension: PermissionDimension;
+  readonly onClose: () => void;
 }) {
   const { t } = useText();
   const scope = usePermissionsScope();
   const save = useDraftSave<
-    NameDraft,
-    PermissionsDimensionsValueCreateResponse
+    { readonly name: string },
+    PermissionsDimensionsUpdateResponse
   >({
-    saved: EMPTY_NAME_DRAFT,
-    expectedVersion: scope.bundle.version,
-    normalize: (value) => value,
+    baseline: {
+      snapshot: { name: dimension.name },
+      version: scope.bundle.version,
+    },
     validate: (draft) =>
       draft.name.trim() === "" ? "permissions.required" : null,
-    describe: (draft) =>
-      changeSummary(
-        t,
-        `${dimension.name} · ${draft.name.trim() === "" ? t("permissions.addValue") : draft.name}`,
-        t("permissions.notCreated"),
-        describeName(t, draft),
-      ),
-    submit: (draft, expectedVersion) =>
-      scope.writes.createDimensionValue(dimension.id, {
-        expectedVersion,
-        id: createId(),
-        name: draft.name,
-        retired: draft.retired,
+    confirmation: (draft, base) => ({
+      subject: dimension.name,
+      diff:
+        base.name === draft.name.trim()
+          ? []
+          : [
+              {
+                kind: "changed",
+                label: t("permissions.conditionName"),
+                before: base.name,
+                after: draft.name.trim(),
+              },
+            ],
+      impact: t("permissions.conditionSaveImpact"),
+    }),
+    // 取值有独立的写接口，会推进配置版本；条件名称保存用提交时的当前版本，
+    // 避免「先加取值再改条件名」被误判成版本冲突。
+    submit: (draft) =>
+      scope.writes.updateDimension(dimension.id, {
+        expectedVersion: scope.bundle.version,
+        name: draft.name.trim(),
+        retired: dimension.retired,
       }),
-    draftFromResult: () => EMPTY_NAME_DRAFT,
+    nextBaseline: (result) => ({ name: result.value.name }),
     reload: async () => {
-      await scope.reload();
-      return EMPTY_NAME_DRAFT;
+      const next = await scope.reload();
+      const latest = next.dimensions.find((item) => item.id === dimension.id);
+      return {
+        snapshot: { name: latest?.name ?? dimension.name },
+        version: next.version,
+      };
     },
-    conflictFields: (draft) => [
-      {
-        key: "name",
-        label: t("permissions.name"),
-        serverValue: t("permissions.notCreated"),
-        draftValue: draft.name,
-      },
-    ],
+    onSaved: () => {
+      scope.setNotice("permissions.conditionWritten");
+    },
   });
   useRegisterDraft(save.isDirty || save.conflict);
 
+  const [editingValue, setEditingValue] = useState<string | null>(null);
+  const pendingValue = useRef<PermissionDimensionValue | null>(null);
+  const [pendingValueStatus, setPendingValueStatus] = useState<{
+    readonly name: string;
+    readonly retired: boolean;
+  } | null>(null);
+
+  const statusFlow = useConfirmFlow<{ confirmation: Confirmation }, void>({
+    prepare: () => {
+      const value = pendingValue.current;
+      return {
+        confirmation: {
+          subject: `${dimension.name} · ${value?.name ?? ""}`,
+          diff:
+            value === undefined || value === null
+              ? []
+              : [
+                  {
+                    kind: "changed",
+                    label: t("permissions.statusLabel"),
+                    before: statusText(t, value.retired),
+                    after: statusText(t, !value.retired),
+                  },
+                ],
+          impact: t("permissions.valueRetireImpact"),
+        },
+      };
+    },
+    submit: async () => {
+      const value = pendingValue.current;
+      if (value === null) return;
+      await scope.writes.updateDimensionValue(dimension.id, value.id, {
+        expectedVersion: scope.bundle.version,
+        name: value.name,
+        retired: !value.retired,
+      });
+      pendingValue.current = null;
+    },
+  });
+
+  const retireFlow = useConfirmFlow<{ confirmation: Confirmation }, void>({
+    prepare: () => ({
+      confirmation: {
+        subject: dimension.name,
+        diff: [
+          {
+            kind: "changed",
+            label: t("permissions.statusLabel"),
+            before: statusText(t, dimension.retired),
+            after: statusText(t, !dimension.retired),
+          },
+        ],
+        impact: dimension.retired
+          ? t("permissions.restoreImpact")
+          : t("permissions.retireImpact"),
+      },
+    }),
+    submit: async () => {
+      await scope.writes.updateDimension(dimension.id, {
+        expectedVersion: scope.bundle.version,
+        name: dimension.name,
+        retired: !dimension.retired,
+      });
+    },
+  });
+
+  const discardFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      save.reset();
+      onClose();
+    },
+  });
+  const requestClose = () => {
+    if (save.isDirty || save.conflict) {
+      void discardFlow.request();
+      return;
+    }
+    onClose();
+  };
+
+  const valuesBlocked = save.isDirty || save.conflict;
+  const valuesReason = valuesBlocked
+    ? t("permissions.conditionSaveFirst")
+    : undefined;
+
+  const activeValues = dimension.values.filter((value) => !value.retired);
+  const retiredValues = dimension.values.filter((value) => value.retired);
+
+  const valueRow = (value: PermissionDimensionValue) => (
+    <ObjectRow
+      key={value.id}
+      title={value.name}
+      description={statusText(t, value.retired)}
+      actions={
+        <>
+          <ActionButton
+            label={t("permissions.edit")}
+            variant="ghost"
+            disabled={valuesBlocked}
+            {...(valuesReason === undefined
+              ? {}
+              : { disabledReason: valuesReason })}
+            onRun={() => {
+              setEditingValue(value.id);
+            }}
+          />
+          <ActionButton
+            label={t(
+              value.retired
+                ? "permissions.restoreValue"
+                : "permissions.retireValue",
+            )}
+            variant="ghost"
+            disabled={valuesBlocked}
+            {...(valuesReason === undefined
+              ? {}
+              : { disabledReason: valuesReason })}
+            onRun={() => {
+              pendingValue.current = value;
+              setPendingValueStatus({
+                name: value.name,
+                retired: value.retired,
+              });
+              void statusFlow.request();
+            }}
+          />
+        </>
+      }
+    />
+  );
+
+  const editedValue =
+    editingValue === null
+      ? null
+      : (dimension.values.find((value) => value.id === editingValue) ?? null);
+
   return (
-    <form
-      className={styles.subcard}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h4 className={styles.cardTitle}>{t("permissions.addValue")}</h4>
-      <NameField
-        label={t("permissions.name")}
-        required
-        value={save.draft.name}
-        disabled={save.saving}
-        onChange={(name) => {
-          save.setDraft({ ...save.draft, name });
+    <>
+      <Panel
+        open
+        title={t("permissions.editCondition")}
+        subtitle={dimension.name}
+        onRequestClose={requestClose}
+        footer={
+          <>
+            <ActionButton
+              label={t(
+                dimension.retired
+                  ? "permissions.restoreCondition"
+                  : "permissions.retireCondition",
+              )}
+              variant="secondary"
+              disabled={save.isDirty || save.saving}
+              {...(save.isDirty
+                ? { disabledReason: t("permissions.conditionSaveFirst") }
+                : {})}
+              onRun={() => {
+                void retireFlow.request();
+              }}
+            />
+            <ActionButton
+              label={t("permissions.cancel")}
+              variant="secondary"
+              onRun={requestClose}
+            />
+            <ActionButton
+              label={t("permissions.save")}
+              busy={save.saving}
+              disabled={!save.canSave || scope.busy}
+              {...(save.disabledReason === undefined
+                ? {}
+                : { disabledReason: save.disabledReason })}
+              onRun={save.requestSave}
+            />
+          </>
+        }
+      >
+        <NameField
+          label={t("permissions.conditionName")}
+          required
+          value={save.draft.name}
+          disabled={save.saving}
+          onChange={(name) => {
+            save.setDraft({ name });
+          }}
+        />
+        <DraftFeedback save={save} />
+        {save.conflict && save.conflictConfirmation !== null ? (
+          <DraftConflict
+            confirmation={save.conflictConfirmation}
+            choices={save.conflictChoices}
+            selected={save.conflictDecisions}
+            onSelect={save.chooseConflict}
+            canApply={save.conflictCanApply}
+            {...(save.conflictApplyReason === undefined
+              ? {}
+              : { applyReason: save.conflictApplyReason })}
+            onLoadServer={save.loadServer}
+            onApplyMine={save.applyMine}
+            reloading={save.conflictReloading}
+            error={save.conflictError}
+          />
+        ) : null}
+
+        <ObjectListHead
+          title={t("permissions.conditionValues")}
+          action={
+            <ActionButton
+              label={t("permissions.addValue")}
+              variant="secondary"
+              disabled={valuesBlocked}
+              {...(valuesReason === undefined
+                ? {}
+                : { disabledReason: valuesReason })}
+              onRun={() => {
+                setEditingValue(NEW_DIMENSION);
+              }}
+            />
+          }
+        />
+        <p className={styles.hint}>{t("permissions.conditionValuesHint")}</p>
+        {activeValues.length === 0 ? (
+          <p className={styles.emptyEditor}>{t("permissions.emptyValues")}</p>
+        ) : (
+          <div className={styles.stack}>{activeValues.map(valueRow)}</div>
+        )}
+        {retiredValues.length === 0 ? null : (
+          <details className={styles.valueArchive}>
+            <summary>
+              {t("permissions.archivedValues")} ({retiredValues.length})
+            </summary>
+            <div className={styles.archiveList}>
+              {retiredValues.map(valueRow)}
+            </div>
+          </details>
+        )}
+        <InlineError error={retireFlow.error} />
+      </Panel>
+
+      <ValueEditor
+        key={editingValue ?? "closed"}
+        open={editingValue !== null}
+        dimension={dimension}
+        value={editingValue === NEW_DIMENSION ? null : editedValue}
+        onClose={() => {
+          setEditingValue(null);
         }}
       />
-      <div className={styles.actions}>
-        <SaveButton save={save} />
-      </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
+
+      <PermissionConfirmDialog
+        flow={retireFlow}
+        title={t(
+          dimension.retired
+            ? "permissions.restoreCondition"
+            : "permissions.retireCondition",
+        )}
+        confirmLabel={t(
+          dimension.retired
+            ? "permissions.restoreCondition"
+            : "permissions.retireCondition",
+        )}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <PermissionConfirmDialog
+        flow={statusFlow}
+        title={t(
+          pendingValueStatus?.retired
+            ? "permissions.restoreValue"
+            : "permissions.retireValue",
+        )}
+        confirmLabel={t("permissions.confirm.action")}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <PermissionConfirmDialog
+        flow={save.flow}
+        title={t("permissions.confirm.title")}
+        confirmLabel={t("permissions.confirm.action")}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <ConfirmDialog
+        flow={discardFlow}
+        title={t("permissions.discardTitle")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discardChanges")}
+        cancelLabel={t("permissions.discard.keep")}
+      />
+    </>
   );
 }

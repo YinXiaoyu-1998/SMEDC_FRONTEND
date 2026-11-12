@@ -2,11 +2,7 @@ import type { ReactNode } from "react";
 
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
-import type { ButtonVariant } from "@/ui/Button";
-import { ConfirmDialog } from "@/ui/ConfirmDialog";
-import { ConflictPanel } from "@/ui/ConflictPanel";
 import { Field } from "@/ui/Field";
-import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
 import styles from "./Permissions.module.css";
 import { usePermissionsScope } from "./scope";
@@ -71,6 +67,7 @@ export function Checklist({
   onChange,
   disabled = false,
 }: ChecklistProps) {
+  const { t } = useText();
   const toggle = (value: string, checked: boolean) => {
     onChange(
       checked
@@ -83,7 +80,7 @@ export function Checklist({
     <fieldset className={styles.fieldset} disabled={disabled}>
       <legend>{legend}</legend>
       {options.length === 0 ? (
-        <p className={styles.hint}>{legend}</p>
+        <p className={styles.hint}>{t("permissions.empty")}</p>
       ) : (
         options.map((option) => (
           <label className={styles.check} key={option.value}>
@@ -101,33 +98,6 @@ export function Checklist({
         ))
       )}
     </fieldset>
-  );
-}
-
-interface RetireCheckboxProps {
-  readonly checked: boolean;
-  readonly onChange: (next: boolean) => void;
-  readonly disabled?: boolean;
-}
-
-export function RetireCheckbox({
-  checked,
-  onChange,
-  disabled = false,
-}: RetireCheckboxProps) {
-  const { t } = useText();
-  return (
-    <label className={styles.check}>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => {
-          onChange(event.target.checked);
-        }}
-      />
-      <span>{t("permissions.retire")}</span>
-    </label>
   );
 }
 
@@ -169,6 +139,37 @@ export function NameField({
   );
 }
 
+interface SearchInputProps {
+  readonly label: string;
+  readonly value: string;
+  readonly onChange: (next: string) => void;
+  readonly placeholder?: string;
+}
+
+export function SearchInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: SearchInputProps) {
+  return (
+    <div className={styles.searchField}>
+      <Field label={label}>
+        <input
+          type="search"
+          value={value}
+          maxLength={256}
+          autoComplete="off"
+          {...(placeholder === undefined ? {} : { placeholder })}
+          onChange={(event) => {
+            onChange(event.target.value);
+          }}
+        />
+      </Field>
+    </div>
+  );
+}
+
 interface DraftFeedbackProps {
   readonly save: Pick<
     DraftSave<unknown>,
@@ -198,19 +199,17 @@ export function DraftFeedback({ save }: DraftFeedbackProps) {
   );
 }
 
-interface SaveButtonProps<Draft> {
-  readonly save: DraftSave<Draft>;
-  readonly label?: string;
-  readonly disabled?: boolean;
-  readonly disabledReason?: string;
-}
-
 export function SaveButton<Draft>({
   save,
   label,
   disabled = false,
   disabledReason,
-}: SaveButtonProps<Draft>) {
+}: {
+  readonly save: DraftSave<Draft>;
+  readonly label?: string;
+  readonly disabled?: boolean;
+  readonly disabledReason?: string;
+}) {
   const { t } = useText();
   const scope = usePermissionsScope();
   const reason = disabledReason ?? save.disabledReason;
@@ -225,89 +224,6 @@ export function SaveButton<Draft>({
   );
 }
 
-interface DraftDialogsProps<Draft> {
-  readonly save: DraftSave<Draft>;
-  readonly title?: string;
-}
-
-export function DraftDialogs<Draft>({ save, title }: DraftDialogsProps<Draft>) {
-  const { t } = useText();
-  return (
-    <>
-      <ConfirmDialog
-        flow={save.flow}
-        title={title ?? t("permissions.confirm.title")}
-        description={save.flow.prepared ?? ""}
-        confirmLabel={t("permissions.confirm.action")}
-        cancelLabel={t("permissions.cancel")}
-      />
-      {save.conflict ? (
-        <ConflictPanel
-          fields={save.conflictFields}
-          onReload={save.reloadFromServer}
-          onResubmit={save.resubmit}
-          reloading={save.conflictReloading}
-        />
-      ) : null}
-    </>
-  );
-}
-
-interface ConfirmActionProps {
-  readonly label: string;
-  readonly title: string;
-  readonly description: string;
-  readonly confirmLabel: string;
-  readonly onConfirm: () => void;
-  readonly variant?: ButtonVariant;
-  readonly disabled?: boolean;
-  readonly disabledReason?: string;
-  readonly className?: string;
-}
-
-/** 非保存类确认（撤权、删范围、切换文档）统一走同一套弹窗与焦点恢复。 */
-export function ConfirmAction({
-  label,
-  title,
-  description,
-  confirmLabel,
-  onConfirm,
-  variant = "secondary",
-  disabled = false,
-  disabledReason,
-  className,
-}: ConfirmActionProps) {
-  const { t } = useText();
-  const flow = useConfirmFlow<void, void>({
-    prepare: () => undefined,
-    submit: () => {
-      onConfirm();
-    },
-  });
-
-  return (
-    <>
-      <ActionButton
-        label={label}
-        variant={variant}
-        disabled={disabled}
-        {...(disabledReason === undefined ? {} : { disabledReason })}
-        {...(className === undefined ? {} : { className })}
-        onRun={() => {
-          void flow.request();
-        }}
-      />
-      <ConfirmDialog
-        flow={flow}
-        title={title}
-        description={description}
-        confirmLabel={confirmLabel}
-        cancelLabel={t("permissions.cancel")}
-      />
-    </>
-  );
-}
-
 export function SectionNote({ children }: { readonly children: ReactNode }) {
-  return <p className={styles.hint}>{children}</p>;
+  return <p className={styles.sectionNote}>{children}</p>;
 }

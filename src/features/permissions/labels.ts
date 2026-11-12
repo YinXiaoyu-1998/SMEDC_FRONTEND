@@ -2,6 +2,7 @@ import type {
   PermissionAccount,
   PermissionCategory,
   PermissionDimension,
+  PermissionDimensionValue,
   PermissionEnterprise,
   PermissionGrant,
   PermissionSelection,
@@ -9,7 +10,6 @@ import type {
 } from "@/api/permissions";
 
 import { isFixedCategoryKey } from "./constants";
-import type { GrantDraft } from "./grants";
 
 export type Translate = (key: string) => string;
 
@@ -18,6 +18,15 @@ export interface LabelData {
   readonly dimensions: readonly PermissionDimension[];
   readonly stores: readonly PermissionStore[];
   readonly enterprises: readonly PermissionEnterprise[];
+}
+
+/** 授权与范围的共同形状：服务端条目和本地草稿都能用它显示。 */
+interface GrantLike {
+  readonly enterpriseKey: string;
+  readonly categoryIds: readonly string[];
+  readonly ownership: "group" | "store" | "";
+  readonly stores?: PermissionSelection | undefined;
+  readonly dimensions: Readonly<Record<string, PermissionSelection>>;
 }
 
 export function itemLabel(
@@ -50,6 +59,14 @@ export function categoryName(
     : categoryLabel(t, category);
 }
 
+export function documentCategoryLabel(
+  t: Translate,
+  data: LabelData,
+  id: string | null,
+): string {
+  return id === null ? t("permissions.unset") : categoryName(t, data, id);
+}
+
 export function dimensionName(
   t: Translate,
   data: LabelData,
@@ -70,15 +87,46 @@ export function dimensionValueName(
   return value === undefined ? t("permissions.preserved") : value.name;
 }
 
+export function valueLabel(
+  t: Translate,
+  value: PermissionDimensionValue,
+): string {
+  return itemLabel(t, value.name, value.retired);
+}
+
 export function enterpriseName(
-  _t: Translate,
+  t: Translate,
   data: LabelData,
   enterpriseKey: string,
 ): string {
   const enterprise = data.enterprises.find(
     (item) => item.enterpriseKey === enterpriseKey,
   );
-  return enterprise === undefined ? enterpriseKey : enterprise.enterpriseName;
+  return enterprise === undefined
+    ? enterpriseKey === ""
+      ? t("permissions.choose")
+      : enterpriseKey
+    : enterprise.enterpriseName;
+}
+
+export function storeDisplayName(
+  t: Translate,
+  data: LabelData,
+  enterpriseKey: string,
+  name: string,
+): string {
+  const store = data.stores.find(
+    (item) => item.enterpriseKey === enterpriseKey && item.name === name,
+  );
+  if (store === undefined) return name;
+  return itemLabel(t, store.officialName ?? store.name, store.retired);
+}
+
+export function enterpriseStores(
+  data: LabelData,
+  enterpriseKey: string,
+): readonly PermissionStore[] {
+  return data.stores.filter((store) => store.enterpriseKey === enterpriseKey);
 }
 
 export function selectionLabel(
@@ -93,32 +141,101 @@ export function selectionLabel(
     : selection.values.join(", ");
 }
 
+export function dimensionSelectionLabel(
+  t: Translate,
+  data: LabelData,
+  dimensionId: string,
+  selection: PermissionSelection | undefined,
+): string {
+  if (selection === undefined) return t("permissions.choose");
+  if (selection.kind === "all") return t("permissions.allValues");
+  return selection.values.length === 0
+    ? t("permissions.choose")
+    : selection.values
+        .map((valueId) => dimensionValueName(t, data, dimensionId, valueId))
+        .join("、");
+}
+
+export function grantLocationLabel(
+  t: Translate,
+  data: LabelData,
+  grant: GrantLike,
+): string {
+  if (grant.ownership === "group") return t("permissions.group");
+  if (grant.ownership !== "store") return t("permissions.choose");
+  if (grant.stores === undefined) return t("permissions.choose");
+  if (grant.stores.kind === "all") return t("permissions.allStores");
+  if (grant.stores.values.length === 0) return t("permissions.choose");
+  // 授权里用精确门店名（企业已在同一行显示），避免正式店名重复企业前缀。
+  return grant.stores.values
+    .map((name) => {
+      const store = data.stores.find(
+        (item) =>
+          item.enterpriseKey === grant.enterpriseKey && item.name === name,
+      );
+      return store === undefined
+        ? name
+        : itemLabel(t, store.name, store.retired);
+    })
+    .join("、");
+}
+
+export function grantCategoryLabels(
+  t: Translate,
+  data: LabelData,
+  categoryIds: readonly string[],
+): string {
+  if (categoryIds.length === 0) return t("permissions.choose");
+  return categoryIds.map((id) => categoryName(t, data, id)).join("、");
+}
+
+export function grantConditionLabels(
+  t: Translate,
+  data: LabelData,
+  dimensions: Readonly<Record<string, PermissionSelection>>,
+): string {
+  const entries = Object.entries(dimensions);
+  if (entries.length === 0) return "";
+  return entries
+    .map(
+      ([dimensionId, selection]) =>
+        `${dimensionName(t, data, dimensionId)}: ${dimensionSelectionLabel(
+          t,
+          data,
+          dimensionId,
+          selection,
+        )}`,
+    )
+    .join(" / ");
+}
+
+/** 授权条目的短标题：面板列表里的一行。 */
+export function grantTitle(
+  t: Translate,
+  data: LabelData,
+  grant: GrantLike,
+): string {
+  return `${grantLocationLabel(t, data, grant)} · ${grantCategoryLabels(
+    t,
+    data,
+    grant.categoryIds,
+  )}`;
+}
+
+/** 授权条目的完整描述：确认摘要与冲突比较使用同一句话。 */
 export function grantDescription(
   t: Translate,
   data: LabelData,
-  grant: PermissionGrant | GrantDraft,
+  grant: GrantLike,
 ): string {
-  const stores =
-    grant.ownership === "group"
-      ? t("permissions.group")
-      : grant.stores?.kind === "all"
-        ? t("permissions.allStores")
-        : (grant.stores?.values ?? []).length === 0
-          ? t("permissions.noStoreRead")
-          : (grant.stores?.values ?? []).join(", ");
-  const dimensionsRecord: Readonly<Record<string, PermissionSelection>> =
-    grant.dimensions;
-  const dimensions = Object.entries(dimensionsRecord)
-    .map(
-      ([dimensionId, selection]) =>
-        `${dimensionName(t, data, dimensionId)}: ${selectionLabel(t, selection, "permissions.allValues")}`,
-    )
-    .join("; ");
-  const categories = grant.categoryIds
-    .map((id) => categoryName(t, data, id))
-    .join(", ");
-  const business = enterpriseName(t, data, grant.enterpriseKey);
-  return `${business} · ${categories} · ${stores}${dimensions === "" ? "" : ` · ${dimensions}`}`;
+  const parts = [
+    enterpriseName(t, data, grant.enterpriseKey),
+    grantLocationLabel(t, data, grant),
+    grantCategoryLabels(t, data, grant.categoryIds),
+  ];
+  const conditions = grantConditionLabels(t, data, grant.dimensions);
+  if (conditions !== "") parts.push(conditions);
+  return parts.join(" · ");
 }
 
 export function accountSummary(
@@ -127,14 +244,14 @@ export function accountSummary(
   account: {
     readonly displayName: string;
     readonly clearance: number;
-    readonly grants: readonly (PermissionGrant | GrantDraft)[];
+    readonly grants: readonly (PermissionGrant | GrantLike)[];
   },
 ): string {
   const grants =
     account.grants.length === 0
       ? t("permissions.noGrants")
       : account.grants
-          .map((grant) => grantDescription(t, data, grant))
+          .map((grant) => `• ${grantDescription(t, data, grant)}`)
           .join("\n");
   return `${account.displayName} · ${t("permissions.clearance")}: ${account.clearance}\n${grants}`;
 }
@@ -163,4 +280,8 @@ export function documentStatusLabel(t: Translate, status: string): string {
   const key = `permissions.status.${status}`;
   const label = t(key);
   return label === key ? t("permissions.attributesNotReady") : label;
+}
+
+export function levelLabel(t: Translate, value: number | null): string {
+  return value === null ? t("permissions.unset") : String(value);
 }

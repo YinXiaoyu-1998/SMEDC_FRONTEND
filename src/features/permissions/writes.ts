@@ -128,6 +128,7 @@ export interface PermissionsWrites {
   ) => Promise<PermissionsStoresUpsertResponse>;
   readonly declareEnterprise: (
     name: string,
+    expectedVersion: string,
   ) => Promise<PermissionsEnterprisesDeclareResponse>;
   readonly saveAccount: (
     userAccountId: string,
@@ -140,8 +141,13 @@ export interface PermissionsWrites {
     readonly document: PermissionDocument;
     readonly authorizationVersion: string;
   }>;
-  readonly activate: () => Promise<PermissionsCutoverActivateResponse>;
-  readonly suspend: () => Promise<PermissionsCutoverSuspendResponse>;
+  /** 启用必须绑定准备检查报告里的 authorizationVersion。 */
+  readonly activate: (
+    expectedVersion: string,
+  ) => Promise<PermissionsCutoverActivateResponse>;
+  readonly suspend: (
+    expectedVersion: string,
+  ) => Promise<PermissionsCutoverSuspendResponse>;
 }
 
 interface UsePermissionsWritesOptions {
@@ -404,12 +410,12 @@ export function usePermissionsWrites({
   );
 
   const declareEnterprise = useCallback(
-    (name: string) =>
+    (name: string, expectedVersion: string) =>
       run(async () => {
         const result = await permissionsApi.declareEnterprise(
           orgId,
           name,
-          currentVersion(queryClient, queryKey),
+          expectedVersion,
           csrfToken,
         );
         update((previous) => ({
@@ -419,7 +425,7 @@ export function usePermissionsWrites({
         }));
         return result;
       }),
-    [csrfToken, orgId, queryClient, queryKey, run, update],
+    [csrfToken, orgId, run, update],
   );
 
   const saveAccount = useCallback(
@@ -472,11 +478,11 @@ export function usePermissionsWrites({
   );
 
   const activate = useCallback(
-    () =>
+    (expectedVersion: string) =>
       run(async () => {
         const result = await permissionsApi.activateCutover(
           orgId,
-          currentVersion(queryClient, queryKey),
+          expectedVersion,
           csrfToken,
         );
         update((previous) => ({
@@ -486,15 +492,15 @@ export function usePermissionsWrites({
         }));
         return result;
       }),
-    [csrfToken, orgId, queryClient, queryKey, run, update],
+    [csrfToken, orgId, run, update],
   );
 
   const suspend = useCallback(
-    () =>
+    (expectedVersion: string) =>
       run(async () => {
         const result = await permissionsApi.suspendCutover(
           orgId,
-          currentVersion(queryClient, queryKey),
+          expectedVersion,
           csrfToken,
         );
         update((previous) => ({
@@ -504,7 +510,7 @@ export function usePermissionsWrites({
         }));
         return result;
       }),
-    [csrfToken, orgId, queryClient, queryKey, run, update],
+    [csrfToken, orgId, run, update],
   );
 
   return {

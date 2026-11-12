@@ -1,50 +1,74 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 import type {
   PermissionCategory,
+  PermissionsCategoriesCreateResponse,
   PermissionsCategoriesUpdateResponse,
 } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
+import { DataTable } from "@/ui/DataTable";
 import { Field } from "@/ui/Field";
 import { InlineError } from "@/ui/InlineError";
-import { PageSection } from "@/ui/PageSection";
-import { useConfirmFlow } from "@/ui/useConfirmFlow";
+import { useConfirmFlow, type ConfirmFlow } from "@/ui/useConfirmFlow";
 
 import {
   Checklist,
-  DraftDialogs,
   DraftFeedback,
   LevelSelect,
   NameField,
-  RetireCheckbox,
   SaveButton,
-  SectionNote,
+  SearchInput,
+  type ChecklistOption,
 } from "./components";
-import { useRegisterDraft } from "./useRegisterDraft";
 import {
   FIXED_BUSINESS_CATEGORY_KEYS,
   INTERNAL_CATEGORY_KEY,
 } from "./constants";
+import { diffField, diffSetField, type Confirmation } from "./diff";
 import { createId } from "./ids";
 import {
   categoryLabel,
-  changeSummary,
   dimensionName,
   itemLabel,
+  levelLabel,
+  type LabelData,
   type Translate,
 } from "./labels";
+import {
+  ConfirmAction,
+  DraftConflict,
+  ListHeader,
+  ObjectRow,
+  Panel,
+  PermissionConfirmDialog,
+} from "./panel";
 import styles from "./Permissions.module.css";
-import { RetirableList, type RetiredControls } from "./RetirableList";
+import { useRetiredDisclosure } from "./RetirableList";
 import { usePermissionsScope } from "./scope";
-import { useDraftSave } from "./useDraftSave";
+import { useDraftSave, type DraftSave } from "./useDraftSave";
+import { useRegisterDraft } from "./useRegisterDraft";
+
+type Segment = "document" | "fixed";
+type Ownership = "group" | "store";
+type CategorySaveResult =
+  PermissionsCategoriesCreateResponse | PermissionsCategoriesUpdateResponse;
 
 interface EvidenceDraft {
   readonly name: string;
-  readonly ownerships: readonly ("group" | "store")[];
+  readonly ownerships: readonly Ownership[];
   readonly requiredDimensionIds: readonly string[];
   readonly retired: boolean;
+}
+
+interface CategoryLike {
+  readonly name: string;
+  readonly allowStore: boolean;
+  readonly allowGroup: boolean;
+  readonly retired: boolean;
+  readonly dimensions: readonly { readonly dimensionId: string }[];
 }
 
 const EMPTY_EVIDENCE: EvidenceDraft = {
@@ -54,326 +78,810 @@ const EMPTY_EVIDENCE: EvidenceDraft = {
   retired: false,
 };
 
-function evidenceFromCategory(category: PermissionCategory): EvidenceDraft {
+type Editor =
+  | { readonly kind: "fixed"; readonly category: PermissionCategory }
+  | { readonly kind: "evidence"; readonly category: PermissionCategory | null };
+
+function evidenceFrom(category: CategoryLike): EvidenceDraft {
   return {
     name: category.name,
-    ownerships: [
-      ...(category.allowStore ? (["store"] as const) : []),
-      ...(category.allowGroup ? (["group"] as const) : []),
-    ],
+    ownerships: ownershipsFrom(category),
     requiredDimensionIds: category.dimensions.map((item) => item.dimensionId),
     retired: category.retired,
   };
 }
 
-function levelText(t: Translate, value: number | null): string {
-  return value === null ? t("permissions.unset") : String(value);
+function ownershipsFrom(category: CategoryLike): Ownership[] {
+  return [
+    ...(category.allowStore ? (["store"] as const) : []),
+    ...(category.allowGroup ? (["group"] as const) : []),
+  ];
 }
 
-function describeEvidence(
+function isOwnership(value: string): value is Ownership {
+  return value === "store" || value === "group";
+}
+
+function ownershipsText(t: Translate, values: readonly Ownership[]): string {
+  const labels: string[] = [];
+  if (values.includes("store")) labels.push(t("permissions.store"));
+  if (values.includes("group")) labels.push(t("permissions.group"));
+  return labels.length === 0 ? t("permissions.none") : labels.join("、");
+}
+
+function ownershipFlagsText(
   t: Translate,
-  draft: EvidenceDraft,
-  dimensionNames: readonly string[],
+  allowStore: boolean,
+  allowGroup: boolean,
 ): string {
-  const ownerships =
-    draft.ownerships.length === 0
-      ? t("permissions.choose")
-      : draft.ownerships
-          .map((value) =>
-            t(value === "store" ? "permissions.store" : "permissions.group"),
-          )
-          .join(", ");
-  const dimensions =
-    dimensionNames.length === 0
-      ? t("permissions.choose")
-      : dimensionNames.join(", ");
-  return `${draft.name} · ${ownerships} · ${dimensions}${draft.retired ? ` · ${t("permissions.retired")}` : ""}`;
+  const labels: string[] = [];
+  if (allowStore) labels.push(t("permissions.store"));
+  if (allowGroup) labels.push(t("permissions.group"));
+  return labels.length === 0 ? t("permissions.none") : labels.join("、");
 }
 
-export function CategoriesSection() {
+function conditionsText(
+  t: Translate,
+  data: LabelData,
+  ids: readonly string[],
+): string {
+  if (ids.length === 0) return t("permissions.none");
+  return ids
+    .map((id) => dimensionName(t, data, id))
+    .sort((left, right) => left.localeCompare(right, "zh"))
+    .join("、");
+}
+
+function statusText(t: Translate, retired: boolean): string {
+  return t(retired ? "permissions.status.off" : "permissions.status.active");
+}
+
+function fixedConfirmation(
+  t: Translate,
+  category: PermissionCategory,
+  draft: number | null,
+  baseline: number | null,
+): Confirmation {
+  return {
+    subject: categoryLabel(t, category),
+    diff: diffField(
+      t("permissions.level"),
+      levelLabel(t, baseline),
+      levelLabel(t, draft),
+    ),
+  };
+}
+
+function evidenceConfirmation(
+  t: Translate,
+  data: LabelData,
+  isNew: boolean,
+  category: PermissionCategory | null,
+  draft: EvidenceDraft,
+  baseline: EvidenceDraft,
+): Confirmation {
+  const name = draft.name.trim();
+  const subject = isNew
+    ? name === ""
+      ? t("permissions.addDocumentCategory")
+      : name
+    : (category?.name ?? baseline.name);
+  return {
+    subject,
+    diff: [
+      ...diffField(t("permissions.categoryFields"), baseline.name, name),
+      ...diffSetField(
+        t("permissions.ownership"),
+        baseline.ownerships,
+        draft.ownerships,
+        (values) => ownershipsText(t, values.filter(isOwnership)),
+      ),
+      ...diffSetField(
+        t("permissions.requiredConditions"),
+        baseline.requiredDimensionIds,
+        draft.requiredDimensionIds,
+        (ids) => conditionsText(t, data, ids),
+      ),
+      ...diffField(
+        t("permissions.statusLabel"),
+        statusText(t, baseline.retired),
+        statusText(t, draft.retired),
+      ),
+    ],
+  };
+}
+
+export function CategoriesSection({ active }: { readonly active: boolean }) {
   const { t } = useText();
   const scope = usePermissionsScope();
-  const categories = scope.bundle.categories;
-  const fixed = categories.filter(
+  const [segment, setSegment] = useState<Segment>("document");
+  const [search, setSearch] = useState("");
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+  const documentSegment = useRef<HTMLButtonElement | null>(null);
+  const archiveDisclosure = useRef<HTMLButtonElement | null>(null);
+  const lastCreateSignal = useRef(scope.createSignal);
+
+  const fixed = scope.bundle.categories.filter(
     (category) =>
       category.kind === "fixed" && category.key !== INTERNAL_CATEGORY_KEY,
   );
-  const evidence = categories.filter(
+  const evidence = scope.bundle.categories.filter(
     (category) => category.kind === "evidence",
   );
-  const missingFixed = FIXED_BUSINESS_CATEGORY_KEYS.some(
-    (key) =>
-      !categories.some(
-        (category) => category.kind === "fixed" && category.key === key,
-      ),
+  const retired = evidence.filter((category) => category.retired);
+  const archive = useRetiredDisclosure(retired.length, archiveDisclosure);
+  const missingFixed = FIXED_BUSINESS_CATEGORY_KEYS.filter(
+    (key) => !scope.bundle.categories.some((category) => category.key === key),
+  );
+
+  const openEditor = useCallback((next: Editor) => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) opener.current = activeElement;
+    setEditor(next);
+  }, []);
+
+  useEffect(() => {
+    if (!active || editor !== null) {
+      lastCreateSignal.current = scope.createSignal;
+      return;
+    }
+    if (scope.createSignal === lastCreateSignal.current) return;
+    lastCreateSignal.current = scope.createSignal;
+    setSegment("document");
+    setSearch("");
+    openEditor({ kind: "evidence", category: null });
+  }, [active, editor, openEditor, scope.createSignal]);
+
+  const chooseSegment = (next: Segment) => {
+    if (next === segment) return;
+    setSegment(next);
+    setSearch("");
+  };
+
+  const handleEditorSaved = (change: {
+    readonly created: boolean;
+    readonly statusChange: "retired" | "restored" | null;
+  }) => {
+    setEditor(null);
+    if (change.created) setSearch("");
+    if (change.statusChange === "retired") {
+      archive.onRetired();
+      return;
+    }
+    if (change.statusChange === "restored") {
+      archive.onRestored();
+      requestAnimationFrame(() => {
+        documentSegment.current?.focus();
+      });
+    }
+  };
+
+  const needle = search.trim().toLowerCase();
+  const fixedRows = fixed.filter((category) =>
+    categoryLabel(t, category).toLowerCase().includes(needle),
+  );
+  const documentRows = evidence.filter(
+    (category) =>
+      !category.retired && category.name.toLowerCase().includes(needle),
   );
 
   return (
-    <PageSection title={t("permissions.tabs.categories")}>
-      <SectionNote>{t("permissions.fixedHelp")}</SectionNote>
-      <SectionNote>{t("permissions.levelHelp")}</SectionNote>
-      {missingFixed ? <InitializeCategories /> : null}
-      <div className={styles.stack}>
-        {fixed.map((category) => (
-          <FixedCategoryForm key={category.id} category={category} />
-        ))}
+    <>
+      <ListHeader
+        title={t(
+          segment === "fixed"
+            ? "permissions.segmented.fixed"
+            : "permissions.segmented.document",
+        )}
+        description={t(
+          segment === "fixed"
+            ? "permissions.fixedListHint"
+            : "permissions.docCategoryHint",
+        )}
+        action={
+          <div
+            className={styles.segmented}
+            role="group"
+            aria-label={t("permissions.tabs.categories")}
+          >
+            <button
+              ref={documentSegment}
+              type="button"
+              className={
+                segment === "document"
+                  ? `${styles.segmentedOption} ${styles.segmentedOptionActive}`
+                  : styles.segmentedOption
+              }
+              aria-pressed={segment === "document"}
+              onClick={() => {
+                chooseSegment("document");
+              }}
+            >
+              {t("permissions.segmented.document")}
+            </button>
+            <button
+              type="button"
+              className={
+                segment === "fixed"
+                  ? `${styles.segmentedOption} ${styles.segmentedOptionActive}`
+                  : styles.segmentedOption
+              }
+              aria-pressed={segment === "fixed"}
+              onClick={() => {
+                chooseSegment("fixed");
+              }}
+            >
+              {t("permissions.segmented.fixed")}
+            </button>
+          </div>
+        }
+      />
+
+      <div className={styles.toolbar}>
+        <SearchInput
+          label={t("permissions.searchCategory")}
+          value={search}
+          onChange={setSearch}
+        />
+        {segment === "fixed" && missingFixed.length > 0 ? (
+          <InitializeCategories missingKeys={missingFixed} />
+        ) : null}
       </div>
 
-      <h3 className={styles.subheading}>{t("permissions.documentCategory")}</h3>
-      <SectionNote>{t("permissions.evidenceHelp")}</SectionNote>
-      <RetirableList
-        items={evidence}
-        empty={<p className={styles.hint}>{t("permissions.empty")}</p>}
-        renderItem={(category, retiredControls) => (
-          <EvidenceCategoryForm
-            category={category}
-            retiredControls={retiredControls}
+      {segment === "fixed" ? (
+        <>
+          <DataTable<PermissionCategory>
+            columns={[
+              {
+                id: "name",
+                header: t("permissions.categoryFields"),
+                cell: (category) => (
+                  <strong>{categoryLabel(t, category)}</strong>
+                ),
+              },
+              {
+                id: "level",
+                header: t("permissions.level"),
+                cell: (category) => (
+                  <span className={styles.levelBadge}>
+                    {levelLabel(t, category.confidentialityLevel)}
+                  </span>
+                ),
+              },
+              {
+                id: "ownership",
+                header: t("permissions.ownership"),
+                cell: (category) =>
+                  ownershipFlagsText(
+                    t,
+                    category.allowStore,
+                    category.allowGroup,
+                  ),
+              },
+              {
+                id: "status",
+                header: t("permissions.statusLabel"),
+                cell: (category) => (
+                  <span className={styles.chip}>
+                    {statusText(t, category.retired)}
+                  </span>
+                ),
+              },
+              {
+                id: "actions",
+                header: t("permissions.actions"),
+                align: "end",
+                cell: (category) => (
+                  <ActionButton
+                    label={t("permissions.edit")}
+                    variant="secondary"
+                    onRun={() => {
+                      openEditor({ kind: "fixed", category });
+                    }}
+                  />
+                ),
+              },
+            ]}
+            rows={fixedRows}
+            getRowId={(category) => category.id}
+            label={t("permissions.segmented.fixed")}
+            emptyLabel={t("permissions.empty")}
           />
-        )}
-      />
-      <EvidenceCategoryForm key="new-evidence-category" category={null} />
-    </PageSection>
+          <div className={styles.tableFoot}>
+            <span className={styles.countText}>
+              {`${t("permissions.rowCount")} ${fixedRows.length} ${t("permissions.count")}`}
+            </span>
+          </div>
+        </>
+      ) : (
+        <>
+          <DataTable<PermissionCategory>
+            columns={[
+              {
+                id: "name",
+                header: t("permissions.categoryFields"),
+                cell: (category) => <strong>{category.name}</strong>,
+              },
+              {
+                id: "ownership",
+                header: t("permissions.ownership"),
+                cell: (category) =>
+                  ownershipFlagsText(
+                    t,
+                    category.allowStore,
+                    category.allowGroup,
+                  ),
+              },
+              {
+                id: "conditions",
+                header: t("permissions.requiredConditions"),
+                cell: (category) =>
+                  category.dimensions.length === 0 ? (
+                    <span className={styles.muted}>
+                      {t("permissions.none")}
+                    </span>
+                  ) : (
+                    category.dimensions
+                      .map((item) => ({
+                        id: item.dimensionId,
+                        name: dimensionName(t, scope.bundle, item.dimensionId),
+                      }))
+                      .sort((left, right) =>
+                        left.name.localeCompare(right.name, "zh"),
+                      )
+                      .map((item) => (
+                        <span className={styles.chip} key={item.id}>
+                          {item.name}
+                        </span>
+                      ))
+                  ),
+              },
+              {
+                id: "status",
+                header: t("permissions.statusLabel"),
+                cell: () => (
+                  <span className={styles.chip}>
+                    {t("permissions.status.active")}
+                  </span>
+                ),
+              },
+              {
+                id: "actions",
+                header: t("permissions.actions"),
+                align: "end",
+                cell: (category) => (
+                  <ActionButton
+                    label={t("permissions.edit")}
+                    variant="secondary"
+                    onRun={() => {
+                      openEditor({ kind: "evidence", category });
+                    }}
+                  />
+                ),
+              },
+            ]}
+            rows={documentRows}
+            getRowId={(category) => category.id}
+            label={t("permissions.segmented.document")}
+            emptyLabel={
+              needle === ""
+                ? retired.length > 0
+                  ? t("permissions.noActiveItems")
+                  : t("permissions.noCategories")
+                : t("permissions.empty")
+            }
+          />
+          <div className={styles.tableFoot}>
+            <span className={styles.countText}>
+              {`${t("permissions.rowCount")} ${documentRows.length} ${t("permissions.count")}`}
+            </span>
+          </div>
+
+          {retired.length === 0 ? null : (
+            <>
+              <button
+                ref={archiveDisclosure}
+                type="button"
+                className={styles.retiredDisclosure}
+                aria-expanded={archive.expanded}
+                onClick={archive.toggle}
+              >
+                <span aria-hidden="true">{archive.expanded ? "▾" : "▸"}</span>
+                {t("permissions.archivedCategories")} ({retired.length})
+              </button>
+              {archive.expanded ? (
+                <div className={styles.archiveList}>
+                  {retired.map((category) => (
+                    <ObjectRow
+                      key={category.id}
+                      title={category.name}
+                      description={`${ownershipFlagsText(
+                        t,
+                        category.allowStore,
+                        category.allowGroup,
+                      )} · ${conditionsText(
+                        t,
+                        scope.bundle,
+                        category.dimensions.map((item) => item.dimensionId),
+                      )}`}
+                      actions={
+                        <>
+                          <span className={styles.chip}>
+                            {t("permissions.retired")}
+                          </span>
+                          <ActionButton
+                            label={t("permissions.edit")}
+                            variant="ghost"
+                            onRun={() => {
+                              openEditor({ kind: "evidence", category });
+                            }}
+                          />
+                        </>
+                      }
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </>
+      )}
+
+      {editor === null ? null : editor.kind === "fixed" ? (
+        <FixedCategoryPanel
+          key={`fixed:${editor.category.id}`}
+          category={editor.category}
+          onRequestClose={() => {
+            setEditor(null);
+          }}
+          returnFocusRef={opener}
+        />
+      ) : (
+        <EvidenceCategoryPanel
+          key={`evidence:${editor.category?.id ?? "new"}`}
+          category={editor.category}
+          onRequestClose={() => {
+            setEditor(null);
+          }}
+          onReveal={archive.reveal}
+          onSaved={handleEditorSaved}
+          returnFocusRef={opener}
+        />
+      )}
+    </>
   );
 }
 
-function InitializeCategories() {
+function InitializeCategories({
+  missingKeys,
+}: {
+  readonly missingKeys: readonly string[];
+}) {
   const { t } = useText();
   const scope = usePermissionsScope();
+  const [running, setRunning] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const flow = useConfirmFlow<void, void>({
-    prepare: () => undefined,
-    submit: async () => {
-      setError(null);
-      try {
-        await scope.writes.initializeCategories();
-        await scope.reload();
-      } catch (caught) {
-        setError(caught);
-      }
-    },
-  });
-  const blocked = scope.busy || scope.hasDrafts;
-  const reason = scope.hasDrafts
+  const blocked = scope.busy || scope.hasDrafts || running;
+  const blockedReason = scope.hasDrafts
     ? t("permissions.initializeDrafts")
-    : t("permissions.noChange");
+    : undefined;
+
+  const run = async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      await scope.writes.initializeCategories();
+      await scope.reload();
+    } catch (caught) {
+      setError(caught);
+    } finally {
+      setRunning(false);
+    }
+  };
 
   return (
-    <div className={styles.card}>
-      <SectionNote>{t("permissions.initializeCategoriesHelp")}</SectionNote>
-      <ActionButton
-        label={t("permissions.initializeCategories")}
-        variant="secondary"
+    <>
+      <ConfirmAction
+        label={t("permissions.addFixedMissing")}
+        title={t("permissions.initializeCategories")}
+        confirmLabel={t("permissions.confirm.action")}
         disabled={blocked}
-        {...(blocked ? { disabledReason: reason } : {})}
-        onRun={() => {
-          void flow.request();
+        {...(blockedReason === undefined
+          ? {}
+          : { disabledReason: blockedReason })}
+        prepare={(): Confirmation => ({
+          subject: t("permissions.initializeCategories"),
+          diff: missingKeys.map((key) => ({
+            kind: "added",
+            label: t("permissions.panel.fixedCategories"),
+            after: t(`permissions.category.${key}`),
+          })),
+          impact: t("permissions.initializeCategoriesHelp"),
+        })}
+        onConfirm={() => {
+          void run();
         }}
       />
+      {running ? (
+        <p className={styles.status} role="status">
+          {t("permissions.saving")}
+        </p>
+      ) : null}
       <InlineError error={error} />
-      <ConfirmDialog
-        flow={flow}
-        title={t("permissions.initializeCategories")}
-        description={t("permissions.initializeCategoriesHelp")}
+    </>
+  );
+}
+
+function usePanelClose<Draft>(
+  save: DraftSave<Draft>,
+  onRequestClose: () => void,
+) {
+  const discardFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      save.reset();
+      onRequestClose();
+    },
+  });
+  const requestClose = () => {
+    if (save.isDirty || save.conflict) {
+      void discardFlow.request();
+      return;
+    }
+    onRequestClose();
+  };
+  return { discardFlow, requestClose };
+}
+
+function PanelDialogs<Draft>({
+  save,
+  discardFlow,
+}: {
+  readonly save: DraftSave<Draft>;
+  readonly discardFlow: ConfirmFlow<void>;
+}) {
+  const { t } = useText();
+  return (
+    <>
+      <PermissionConfirmDialog
+        flow={save.flow}
+        title={t("permissions.confirm.title")}
         confirmLabel={t("permissions.confirm.action")}
         cancelLabel={t("permissions.cancel")}
       />
+      <ConfirmDialog
+        flow={discardFlow}
+        title={t("permissions.discardTitle")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discardChanges")}
+        cancelLabel={t("permissions.discard.keep")}
+      />
+    </>
+  );
+}
+
+function ConflictNotice<Draft>({ save }: { readonly save: DraftSave<Draft> }) {
+  const { t } = useText();
+  if (save.conflict && save.conflictConfirmation !== null) {
+    return (
+      <DraftConflict
+        confirmation={save.conflictConfirmation}
+        choices={save.conflictChoices}
+        selected={save.conflictDecisions}
+        onSelect={save.chooseConflict}
+        canApply={save.conflictCanApply}
+        {...(save.conflictApplyReason === undefined
+          ? {}
+          : { applyReason: save.conflictApplyReason })}
+        onLoadServer={save.loadServer}
+        onApplyMine={save.applyMine}
+        reloading={save.conflictReloading}
+        error={save.conflictError}
+      />
+    );
+  }
+  if (!save.conflict) return null;
+  return (
+    <div className={styles.conflict} role="alert">
+      <h3 className={styles.conflictTitle}>{t("ui.conflict.title")}</h3>
+      <InlineError error={save.conflictError} />
+      <div className={styles.actions}>
+        <ActionButton
+          label={t("permissions.reload")}
+          busy={save.conflictReloading}
+          onRun={save.retryConflict}
+        />
+      </div>
     </div>
   );
 }
 
-function FixedCategoryForm({ category }: { category: PermissionCategory }) {
+function FixedCategoryPanel({
+  category,
+  onRequestClose,
+  returnFocusRef,
+}: {
+  readonly category: PermissionCategory;
+  readonly onRequestClose: () => void;
+  readonly returnFocusRef: RefObject<HTMLElement | null>;
+}) {
   const { t } = useText();
   const scope = usePermissionsScope();
-  const baseline = category.confidentialityLevel;
   const save = useDraftSave<number | null, PermissionsCategoriesUpdateResponse>(
     {
-      saved: baseline,
-      expectedVersion: scope.bundle.version,
-      normalize: (value) => value,
-      validate: (value) => (value === null ? "permissions.required" : null),
-      describe: (value) =>
-        changeSummary(
-          t,
-          categoryLabel(t, category),
-          levelText(t, baseline),
-          levelText(t, value),
-        ),
-      submit: (value, expectedVersion) => {
-        if (value === null) {
-          throw new Error("密级不能为空");
+      baseline: {
+        snapshot: category.confidentialityLevel,
+        version: scope.bundle.version,
+      },
+      validate: (draft) => (draft === null ? "permissions.required" : null),
+      confirmation: (draft, baseline) =>
+        fixedConfirmation(t, category, draft, baseline),
+      submit: (draft, expectedVersion) => {
+        if (draft === null) {
+          throw new Error("category confidentiality level is required");
         }
+        const latest = scope.bundle.categories.find(
+          (item) => item.id === category.id,
+        );
         return scope.writes.updateCategory(category.id, {
           expectedVersion,
-          name: category.name,
-          confidentialityLevel: value,
+          name: latest?.name ?? category.name,
+          confidentialityLevel: draft,
         });
       },
-      draftFromResult: (result) => result.value.confidentialityLevel,
+      nextBaseline: (result) => result.value.confidentialityLevel,
       reload: async () => {
         const next = await scope.reload();
-        return (
-          next.categories.find((item) => item.id === category.id)
-            ?.confidentialityLevel ?? baseline
-        );
+        const latest = next.categories.find((item) => item.id === category.id);
+        return {
+          snapshot:
+            latest === undefined
+              ? category.confidentialityLevel
+              : latest.confidentialityLevel,
+          version: next.version,
+        };
       },
-      conflictFields: (draft, saved) => [
-        {
-          key: "level",
-          label: t("permissions.level"),
-          serverValue: levelText(t, saved),
-          draftValue: levelText(t, draft),
-        },
-      ],
+      onSaved: () => {
+        scope.setNotice("permissions.saved");
+        onRequestClose();
+      },
     },
   );
   useRegisterDraft(save.isDirty || save.conflict);
+  const { discardFlow, requestClose } = usePanelClose(save, onRequestClose);
 
   return (
-    <form
-      className={styles.card}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h3 className={styles.cardTitle}>{categoryLabel(t, category)}</h3>
-      <Field label={t("permissions.level")}>
-        <LevelSelect
-          value={save.draft}
-          onChange={save.setDraft}
-          disabled={save.saving}
-        />
-      </Field>
-      <div className={styles.actions}>
-        <SaveButton save={save} />
-      </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
+    <>
+      <Panel
+        open
+        title={t("permissions.panel.fixedCategories")}
+        subtitle={categoryLabel(t, category)}
+        onRequestClose={requestClose}
+        returnFocusRef={returnFocusRef}
+        footer={
+          <>
+            <ActionButton
+              label={t("permissions.cancel")}
+              variant="secondary"
+              onRun={requestClose}
+            />
+            <SaveButton save={save} />
+          </>
+        }
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.requestSave();
+          }}
+        >
+          <Field
+            label={t("permissions.level")}
+            hint={t("permissions.levelHelp")}
+          >
+            <LevelSelect
+              value={save.draft}
+              onChange={save.setDraft}
+              disabled={save.saving}
+            />
+          </Field>
+        </form>
+        <ConflictNotice save={save} />
+        <DraftFeedback save={save} />
+      </Panel>
+      <PanelDialogs save={save} discardFlow={discardFlow} />
+    </>
   );
 }
 
-function EvidenceCategoryForm({
+function EvidenceCategoryPanel({
   category,
-  retiredControls,
+  onRequestClose,
+  onReveal,
+  onSaved,
+  returnFocusRef,
 }: {
-  category: PermissionCategory | null;
-  retiredControls?: RetiredControls;
+  readonly category: PermissionCategory | null;
+  readonly onRequestClose: () => void;
+  readonly onReveal: () => void;
+  readonly onSaved: (change: {
+    readonly created: boolean;
+    readonly statusChange: "retired" | "restored" | null;
+  }) => void;
+  readonly returnFocusRef: RefObject<HTMLElement | null>;
 }) {
   const { t } = useText();
   const scope = usePermissionsScope();
   const isNew = category === null;
-  const saved =
-    category === null ? EMPTY_EVIDENCE : evidenceFromCategory(category);
-  const dimensions = scope.bundle.dimensions;
-  const save = useDraftSave<EvidenceDraft, PermissionsCategoriesUpdateResponse>(
-    {
-      saved,
-      expectedVersion: scope.bundle.version,
-      normalize: (value) => ({
-        ...value,
-        requiredDimensionIds: [...value.requiredDimensionIds].sort(),
-      }),
-      validate: (draft) => {
-        if (draft.name.trim() === "") return "permissions.required";
-        if (draft.ownerships.length === 0) return "permissions.required";
-        const unavailable = draft.requiredDimensionIds.some((id) => {
-          const dimension = dimensions.find((item) => item.id === id);
-          if (dimension === undefined) return true;
-          return dimension.retired && !saved.requiredDimensionIds.includes(id);
-        });
-        return unavailable ? "permissions.dimensionUnavailable" : null;
-      },
-      describe: (draft) => {
-        const dimensionNames = draft.requiredDimensionIds.map((id) =>
-          dimensionName(
-            t,
-            { ...scope.bundle, categories: scope.bundle.categories },
-            id,
-          ),
+  const [newId] = useState(() => createId());
+  const saved = isNew ? EMPTY_EVIDENCE : evidenceFrom(category);
+  const save = useDraftSave<EvidenceDraft, CategorySaveResult>({
+    baseline: { snapshot: saved, version: scope.bundle.version },
+    validate: (draft, baseline) => {
+      if (draft.name.trim() === "") return "permissions.required";
+      if (draft.ownerships.length === 0) return "permissions.required";
+      const unavailable = draft.requiredDimensionIds.some((id) => {
+        const dimension = scope.bundle.dimensions.find(
+          (item) => item.id === id,
         );
-        const after = describeEvidence(t, draft, dimensionNames);
-        const before = isNew
-          ? t("permissions.empty")
-          : describeEvidence(
-              t,
-              saved,
-              saved.requiredDimensionIds.map((id) =>
-                dimensionName(t, scope.bundle, id),
-              ),
-            );
-        return changeSummary(
-          t,
-          draft.name.trim() === "" ? t("permissions.addCategory") : draft.name,
-          before,
-          after,
-        );
-      },
-      submit: (draft, expectedVersion) => {
-        if (isNew) {
-          return scope.writes.createCategory({
-            expectedVersion,
-            id: createId(),
-            name: draft.name,
-            kind: "evidence",
-            ownerships: [...draft.ownerships],
-            requiredDimensionIds: [...draft.requiredDimensionIds],
-            retired: draft.retired,
-          });
-        }
-        if (category === null) {
-          throw new Error("缺少类别标识");
-        }
-        return scope.writes.updateCategory(category.id, {
+        if (dimension === undefined) return true;
+        return dimension.retired && !baseline.requiredDimensionIds.includes(id);
+      });
+      return unavailable ? "permissions.dimensionUnavailable" : null;
+    },
+    confirmation: (draft, baseline) =>
+      evidenceConfirmation(t, scope.bundle, isNew, category, draft, baseline),
+    submit: (draft, expectedVersion) => {
+      const name = draft.name.trim();
+      if (category === null) {
+        return scope.writes.createCategory({
           expectedVersion,
-          name: draft.name,
+          id: newId,
+          name,
+          kind: "evidence",
           ownerships: [...draft.ownerships],
           requiredDimensionIds: [...draft.requiredDimensionIds],
           retired: draft.retired,
         });
-      },
-      draftFromResult: (result) =>
-        isNew ? EMPTY_EVIDENCE : evidenceFromCategory(result.value),
-      onSaved: (result) => {
-        if (result.value.retired !== saved.retired)
-          retiredControls?.onStatusSaved(result.value.retired);
-      },
-      reload: async () => {
-        const next = await scope.reload();
-        if (category === null) return EMPTY_EVIDENCE;
-        const latest = next.categories.find((item) => item.id === category.id);
-        if (latest?.retired) retiredControls?.reveal();
-        return latest === undefined ? saved : evidenceFromCategory(latest);
-      },
-      conflictFields: (draft, current) => [
-        {
-          key: "name",
-          label: t("permissions.name"),
-          serverValue: current.name,
-          draftValue: draft.name,
-        },
-        {
-          key: "ownerships",
-          label: t("permissions.ownership"),
-          serverValue: describeEvidence(t, { ...current, name: "" }, []),
-          draftValue: describeEvidence(t, { ...draft, name: "" }, []),
-        },
-        {
-          key: "retired",
-          label: t("permissions.retired"),
-          serverValue: t(
-            current.retired ? "permissions.retired" : "permissions.active",
-          ),
-          draftValue: t(
-            draft.retired ? "permissions.retired" : "permissions.active",
-          ),
-        },
-      ],
+      }
+      return scope.writes.updateCategory(category.id, {
+        expectedVersion,
+        name,
+        ownerships: [...draft.ownerships],
+        requiredDimensionIds: [...draft.requiredDimensionIds],
+        retired: draft.retired,
+      });
     },
-  );
+    nextBaseline: (result) =>
+      isNew ? EMPTY_EVIDENCE : evidenceFrom(result.value),
+    reload: async () => {
+      const next = await scope.reload();
+      const id = category === null ? newId : category.id;
+      const latest = next.categories.find((item) => item.id === id);
+      if (latest?.retired) onReveal();
+      return {
+        snapshot: latest === undefined ? saved : evidenceFrom(latest),
+        version: next.version,
+      };
+    },
+    onSaved: (result) => {
+      scope.setNotice("permissions.saved");
+      onSaved({
+        created: isNew,
+        statusChange:
+          result.value.retired === saved.retired
+            ? null
+            : result.value.retired
+              ? "retired"
+              : "restored",
+      });
+    },
+  });
   useRegisterDraft(save.isDirty || save.conflict);
+  const { discardFlow, requestClose } = usePanelClose(save, onRequestClose);
 
-  const dimensionOptions = dimensions
+  const dimensionOptions: ChecklistOption[] = scope.bundle.dimensions
     .filter(
       (dimension) =>
         !dimension.retired ||
@@ -392,71 +900,110 @@ function EvidenceCategoryForm({
       dimensionOptions.push({
         value: id,
         label: t("permissions.preserved"),
-        disabled: false,
       });
     }
   }
 
+  const requestStatusChange = () => {
+    save.setDraft({ ...save.draft, retired: !save.draft.retired });
+    if (
+      save.validationError !== null ||
+      save.conflict ||
+      save.flow.status !== "idle" ||
+      scope.busy
+    ) {
+      return;
+    }
+    void save.flow.request();
+  };
+
   return (
-    <form
-      className={styles.card}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h3 className={styles.cardTitle}>
-        {isNew ? t("permissions.addCategory") : category.name}
-      </h3>
-      <NameField
-        label={t("permissions.categoryName")}
-        hint={t("permissions.categoryNameHelp")}
-        required
-        value={save.draft.name}
-        disabled={save.saving}
-        onChange={(name) => {
-          save.setDraft({ ...save.draft, name });
-        }}
-      />
-      <Checklist
-        legend={t("permissions.ownership")}
-        options={[
-          { value: "store", label: t("permissions.store") },
-          { value: "group", label: t("permissions.group") },
-        ]}
-        selected={save.draft.ownerships}
-        disabled={save.saving}
-        onChange={(ownerships) => {
-          save.setDraft({
-            ...save.draft,
-            ownerships: ownerships.filter(
-              (value): value is "group" | "store" =>
-                value === "group" || value === "store",
-            ),
-          });
-        }}
-      />
-      <Checklist
-        legend={t("permissions.requiredConditions")}
-        options={dimensionOptions}
-        selected={save.draft.requiredDimensionIds}
-        disabled={save.saving}
-        onChange={(requiredDimensionIds) => {
-          save.setDraft({ ...save.draft, requiredDimensionIds });
-        }}
-      />
-      <RetireCheckbox
-        checked={save.draft.retired}
-        disabled={save.saving}
-        onChange={(retired) => {
-          save.setDraft({ ...save.draft, retired });
-        }}
-      />
-      <div className={styles.actions}>
-        <SaveButton save={save} />
-      </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
+    <>
+      <Panel
+        open
+        title={t(
+          isNew
+            ? "permissions.addDocumentCategory"
+            : "permissions.editCategory",
+        )}
+        subtitle={isNew ? t("permissions.docCategoryHint") : category.name}
+        onRequestClose={requestClose}
+        returnFocusRef={returnFocusRef}
+        footer={
+          <>
+            <ActionButton
+              label={t("permissions.cancel")}
+              variant="secondary"
+              onRun={requestClose}
+            />
+            <SaveButton save={save} />
+          </>
+        }
+      >
+        <form
+          className={styles.stack}
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.requestSave();
+          }}
+        >
+          <NameField
+            label={t("permissions.categoryName")}
+            hint={t("permissions.categoryNameHelp")}
+            required
+            maxLength={255}
+            value={save.draft.name}
+            disabled={save.saving}
+            onChange={(name) => {
+              save.setDraft({ ...save.draft, name });
+            }}
+          />
+          <Checklist
+            legend={t("permissions.ownership")}
+            options={[
+              { value: "store", label: t("permissions.store") },
+              { value: "group", label: t("permissions.group") },
+            ]}
+            selected={save.draft.ownerships}
+            disabled={save.saving}
+            onChange={(values) => {
+              save.setDraft({
+                ...save.draft,
+                ownerships: values.filter(isOwnership),
+              });
+            }}
+          />
+          <Checklist
+            legend={t("permissions.requiredConditions")}
+            options={dimensionOptions}
+            selected={save.draft.requiredDimensionIds}
+            disabled={save.saving}
+            onChange={(requiredDimensionIds) => {
+              save.setDraft({ ...save.draft, requiredDimensionIds });
+            }}
+          />
+        </form>
+        <div className={styles.subcard}>
+          <p className={styles.inlineNote}>
+            {t("permissions.statusLabel")}: {statusText(t, save.draft.retired)}
+          </p>
+          <div className={styles.actions}>
+            <ActionButton
+              label={t(
+                save.draft.retired
+                  ? "permissions.restoreCategory"
+                  : "permissions.retireCategory",
+              )}
+              variant="secondary"
+              disabled={save.saving || save.conflict}
+              onRun={requestStatusChange}
+            />
+          </div>
+        </div>
+        <ConflictNotice save={save} />
+        <DraftFeedback save={save} />
+      </Panel>
+      <PanelDialogs save={save} discardFlow={discardFlow} />
+    </>
   );
 }

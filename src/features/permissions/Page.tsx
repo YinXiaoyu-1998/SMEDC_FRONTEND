@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { useParams } from "react-router";
 
 import { WebApiError } from "@/api/client";
@@ -15,15 +15,14 @@ import { PageFrame } from "@/app/PageFrame";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
-import { InlineError } from "@/ui/InlineError";
 import { PageSection } from "@/ui/PageSection";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
 import { AccountsSection } from "./Accounts";
 import { CategoriesSection } from "./Categories";
 import { sectionKeys, type SectionKey } from "./constants";
-import { DocumentsSection } from "./Documents";
 import { DimensionsSection } from "./Dimensions";
+import { DocumentsSection } from "./Documents";
 import { permissionsErrorKey } from "./errorKeys";
 import styles from "./Permissions.module.css";
 import { ReadinessSection } from "./Readiness";
@@ -32,7 +31,6 @@ import { StoresSection } from "./Stores";
 import { usePermissionsWrites } from "./writes";
 
 export function PermissionsPage() {
-  const { t } = useText();
   const params = useParams<"orgId">();
   const session = useSession().data;
   const orgId = params.orgId ?? session?.identity.orgId ?? "";
@@ -42,9 +40,28 @@ export function PermissionsPage() {
   }
 
   return (
-    <PageFrame title={t("pages.permissions.title")} orgId={orgId}>
+    <PageFrame orgId={orgId}>
       <PermissionsContent orgId={orgId} csrfToken={session.csrfToken} />
     </PageFrame>
+  );
+}
+
+function PageHeader({
+  action,
+}: {
+  readonly action?: { readonly label: string; readonly run: () => void };
+}) {
+  const { t } = useText();
+  return (
+    <header className={styles.titlebar}>
+      <div>
+        <h1 className={styles.pageTitle}>{t("pages.permissions.title")}</h1>
+        <p className={styles.subtitle}>{t("permissions.subtitle")}</p>
+      </div>
+      {action === undefined ? null : (
+        <ActionButton label={action.label} onRun={action.run} />
+      )}
+    </header>
   );
 }
 
@@ -84,30 +101,36 @@ function PermissionsContent({
 
   if (query.isPending) {
     return (
-      <PageSection title={t("permissions.tabs.categories")}>
-        <p role="status" className={styles.status}>
-          {t("permissions.loading")}
-        </p>
-      </PageSection>
+      <>
+        <PageHeader />
+        <PageSection title={t("permissions.tabs.categories")}>
+          <p role="status" className={styles.status}>
+            {t("permissions.loading")}
+          </p>
+        </PageSection>
+      </>
     );
   }
 
   if (query.isError || query.data === undefined) {
     return (
-      <PageSection title={t("permissions.reload")}>
-        <p role="alert" className={styles.error}>
-          {t(permissionsErrorKey(query.error))}
-        </p>
-        <div className={styles.actions}>
-          <ActionButton
-            label={t("permissions.reload")}
-            busy={query.isFetching}
-            onRun={() => {
-              void refetch();
-            }}
-          />
-        </div>
-      </PageSection>
+      <>
+        <PageHeader />
+        <PageSection title={t("permissions.reload")}>
+          <p role="alert" className={styles.error}>
+            {t(permissionsErrorKey(query.error))}
+          </p>
+          <div className={styles.actions}>
+            <ActionButton
+              label={t("permissions.reload")}
+              busy={query.isFetching}
+              onRun={() => {
+                void refetch();
+              }}
+            />
+          </div>
+        </PageSection>
+      </>
     );
   }
 
@@ -121,6 +144,12 @@ function PermissionsContent({
     />
   );
 }
+
+const primaryActionKeys: Partial<Record<SectionKey, string>> = {
+  categories: "permissions.addCategory",
+  dimensions: "permissions.addDimension",
+  stores: "permissions.declareEnterprise",
+};
 
 function PermissionsReady({
   bundle,
@@ -138,11 +167,12 @@ function PermissionsReady({
   const { t } = useText();
   const [active, setActive] = useState<SectionKey>("categories");
   const [notice, setNotice] = useState<string | null>(null);
+  const [draftEpoch, setDraftEpoch] = useState(0);
+  const [createSignal, setCreateSignal] = useState(0);
   const [dirtyIds, setDirtyIds] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
   );
-  const [reloading, setReloading] = useState(false);
-  const [reloadError, setReloadError] = useState<unknown>(null);
+  const pendingSection = useRef<SectionKey | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const registerDraft = useCallback((id: string, dirty: boolean) => {
@@ -156,38 +186,40 @@ function PermissionsReady({
     });
   }, []);
 
-  const navigate = useCallback((section: SectionKey) => {
-    setActive(section);
-  }, []);
-
   const hasDrafts = dirtyIds.size > 0;
 
-  const runReload = async () => {
-    setReloading(true);
-    setReloadError(null);
-    try {
-      await reload();
-    } catch (caught) {
-      setReloadError(caught);
-    } finally {
-      setReloading(false);
-    }
-  };
+  const discardDrafts = useCallback(() => {
+    setDraftEpoch((epoch) => epoch + 1);
+    setDirtyIds(new Set<string>());
+  }, []);
 
-  const reloadFlow = useConfirmFlow<void, void>({
+  const requestCreate = useCallback(() => {
+    setCreateSignal((signal) => signal + 1);
+  }, []);
+
+  const discardFlow = useConfirmFlow<void, void>({
     prepare: () => undefined,
-    submit: async () => {
-      await reload();
+    submit: () => {
+      const target = pendingSection.current;
+      pendingSection.current = null;
+      discardDrafts();
+      if (target !== null) setActive(target);
     },
   });
 
-  const requestReload = () => {
-    if (hasDrafts) {
-      void reloadFlow.request();
-      return;
-    }
-    void runReload();
-  };
+  const navigate = useCallback(
+    (section: SectionKey) => {
+      if (section === active) return;
+      if (hasDrafts) {
+        pendingSection.current = section;
+        void discardFlow.request();
+        return;
+      }
+      setActive(section);
+      setNotice(null);
+    },
+    [active, discardFlow, hasDrafts],
+  );
 
   const handleTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -202,7 +234,7 @@ function PermissionsReady({
     if (next < 0) return;
     event.preventDefault();
     const target = sectionKeys[next];
-    if (target !== undefined) setActive(target);
+    if (target !== undefined) navigate(target);
     tabRefs.current[next]?.focus();
   };
 
@@ -218,6 +250,10 @@ function PermissionsReady({
       registerDraft,
       setNotice,
       navigate,
+      draftEpoch,
+      discardDrafts,
+      createSignal,
+      requestCreate,
     }),
     [
       orgId,
@@ -228,33 +264,67 @@ function PermissionsReady({
       readCutoverValue,
       registerDraft,
       navigate,
+      draftEpoch,
+      discardDrafts,
+      createSignal,
+      requestCreate,
     ],
   );
 
+  const primaryKey = primaryActionKeys[active];
+
+  const sections: ReadonlyArray<{
+    readonly key: SectionKey;
+    readonly node: ReactNode;
+  }> = [
+    {
+      key: "categories",
+      node: <CategoriesSection active={active === "categories"} />,
+    },
+    { key: "stores", node: <StoresSection active={active === "stores"} /> },
+    {
+      key: "dimensions",
+      node: <DimensionsSection active={active === "dimensions"} />,
+    },
+    { key: "accounts", node: <AccountsSection /> },
+    {
+      key: "documents",
+      node: <DocumentsSection active={active === "documents"} />,
+    },
+    {
+      key: "readiness",
+      node: <ReadinessSection active={active === "readiness"} />,
+    },
+  ];
+
   return (
     <PermissionsScopeContext.Provider value={scopeValue}>
-      <div className={styles.pageHeader}>
-        <span className={styles.mode}>
-          {t(`permissions.mode.${bundle.me.mode}`)}
-        </span>
-        <span className={styles.version}>
-          {t("permissions.version")}: {bundle.version}
-        </span>
+      <PageHeader
+        {...(primaryKey === undefined
+          ? {}
+          : { action: { label: t(primaryKey), run: requestCreate } })}
+      />
+      <section
+        className={styles.banner}
+        aria-label={t("permissions.banner.label")}
+      >
+        <div className={styles.bannerBody}>
+          <strong>{t(`permissions.mode.${bundle.me.mode}`)}</strong>
+          <p>{t(`permissions.banner.${bundle.me.mode}`)}</p>
+        </div>
         <ActionButton
-          label={t("permissions.reload")}
+          label={t("permissions.viewReadiness")}
           variant="secondary"
-          busy={reloading || reloadFlow.isSubmitting}
-          onRun={requestReload}
+          onRun={() => {
+            navigate("readiness");
+          }}
         />
-      </div>
-      <p className={styles.intro}>{t("permissions.intro")}</p>
+      </section>
       {notice === null ? null : (
-        <p className={styles.notice} role="alert">
+        <p className={styles.notice} role="status">
           {t(notice)}
         </p>
       )}
-      <InlineError error={reloadError} />
-
       <nav
         className={styles.tabs}
         role="tablist"
@@ -279,67 +349,28 @@ function PermissionsReady({
               handleTabKeyDown(event, index);
             }}
             onClick={() => {
-              setActive(key);
+              navigate(key);
             }}
           >
             {t(`permissions.tabs.${key}`)}
           </button>
         ))}
       </nav>
-
-      <div
-        id="permissions-panel-categories"
-        role="tabpanel"
-        aria-labelledby="permissions-tab-categories"
-        hidden={active !== "categories"}
-      >
-        <CategoriesSection />
-      </div>
-      <div
-        id="permissions-panel-stores"
-        role="tabpanel"
-        aria-labelledby="permissions-tab-stores"
-        hidden={active !== "stores"}
-      >
-        <StoresSection />
-      </div>
-      <div
-        id="permissions-panel-dimensions"
-        role="tabpanel"
-        aria-labelledby="permissions-tab-dimensions"
-        hidden={active !== "dimensions"}
-      >
-        <DimensionsSection />
-      </div>
-      <div
-        id="permissions-panel-accounts"
-        role="tabpanel"
-        aria-labelledby="permissions-tab-accounts"
-        hidden={active !== "accounts"}
-      >
-        <AccountsSection />
-      </div>
-      <div
-        id="permissions-panel-documents"
-        role="tabpanel"
-        aria-labelledby="permissions-tab-documents"
-        hidden={active !== "documents"}
-      >
-        <DocumentsSection active={active === "documents"} />
-      </div>
-      <div
-        id="permissions-panel-readiness"
-        role="tabpanel"
-        aria-labelledby="permissions-tab-readiness"
-        hidden={active !== "readiness"}
-      >
-        <ReadinessSection />
-      </div>
-
+      {sections.map((section) => (
+        <div
+          key={`${section.key}-${draftEpoch}`}
+          id={`permissions-panel-${section.key}`}
+          role="tabpanel"
+          aria-labelledby={`permissions-tab-${section.key}`}
+          hidden={active !== section.key}
+        >
+          {section.node}
+        </div>
+      ))}
       <ConfirmDialog
-        flow={reloadFlow}
+        flow={discardFlow}
         title={t("permissions.discard.title")}
-        description={t("permissions.discard.description")}
+        description={t("permissions.discardDescription")}
         confirmLabel={t("permissions.discard.action")}
         cancelLabel={t("permissions.discard.keep")}
       />
