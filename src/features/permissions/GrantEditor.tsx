@@ -126,24 +126,14 @@ export function GrantEditor({
     .filter(
       (category) =>
         category.key !== INTERNAL_CATEGORY_KEY &&
-        (draft.ownership === "" ||
-          ownershipAllowed(draft, data, category.id) ||
-          draft.categoryIds.includes(category.id)),
+        !category.retired &&
+        (draft.categoryIds.includes(category.id) ||
+          ownershipAllowed(draft, data, category.id)),
     )
     .map((category) => ({
       value: category.id,
-      label: itemLabel(t, categoryLabel(t, category), category.retired),
-      disabled: category.retired && !draft.categoryIds.includes(category.id),
+      label: categoryLabel(t, category),
     }));
-  for (const categoryId of draft.categoryIds) {
-    if (!categoryOptions.some((option) => option.value === categoryId)) {
-      categoryOptions.push({
-        value: categoryId,
-        label: t("permissions.preserved"),
-        disabled: false,
-      });
-    }
-  }
 
   const selectedStoreNames =
     draft.stores !== undefined && draft.stores.kind === "fixed"

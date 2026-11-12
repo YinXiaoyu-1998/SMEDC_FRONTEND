@@ -931,6 +931,75 @@ describe("权限设置页", () => {
     });
   });
 
+  it("授权类别候选隐藏所有停用项，修改其他类别时保留历史引用", async () => {
+    const state = createState();
+    const retiredCategory = {
+      ...state.categories[0]!,
+      id: "retired-unselected",
+      key: null,
+      kind: "evidence" as const,
+      name: "停用演示类别",
+      retired: true,
+    };
+    const history = {
+      ...retiredCategory,
+      id: "retired-selected",
+      name: "历史文档类别",
+    };
+    state.categories.push(retiredCategory, history);
+    const account = state.accounts[0]!;
+    const grant = account.grants[0]!;
+    state.accounts[0] = {
+      ...account,
+      grants: [{ ...grant, categoryIds: [...grant.categoryIds, history.id] }],
+    };
+    const { fetchMock } = renderPermissions({ state });
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.click(within(panel).getByRole("button", { name: "编辑" }));
+    const editor = await screen.findByRole("dialog", { name: "编辑授权条目" });
+    expect(
+      within(editor).queryByRole("checkbox", {
+        name: /历史文档类别|停用演示类别/,
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(editor).getByRole("checkbox", { name: "菜品销售" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "完成条目" }));
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "新增授权条目" }),
+    );
+    const newEditor = await screen.findByRole("dialog", {
+      name: "新增授权条目",
+    });
+    expect(
+      within(newEditor).queryByRole("checkbox", { name: /（已停用）/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(newEditor).getByRole("button", { name: "取消" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+    await waitFor(() => {
+      expect(
+        bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+      ).toEqual([
+        expect.objectContaining({
+          grants: [
+            expect.objectContaining({
+              categoryIds: expect.arrayContaining([
+                history.id,
+                "cat-business",
+                "cat-dishes",
+              ]),
+            }),
+          ],
+        }),
+      ]);
+    });
+  });
+
   it("账号逐条新增与删除授权只在最后提交一次完整载荷", async () => {
     const { fetchMock } = renderPermissions();
     await screen.findByRole("heading", { name: "文档类别" });
