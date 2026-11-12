@@ -5,7 +5,7 @@ export const permissionsMessages = {
   // 区域导航
   // 权限设置页（F4）：键名按区块分组，文案沿用旧管理页的措辞
   "permissions.tabs.label": ["权限设置区域", "Permission settings sections"],
-  "permissions.tabs.categories": ["类别密级", "Category levels"],
+  "permissions.tabs.categories": ["类别与密级", "Categories and levels"],
   "permissions.tabs.stores": ["门店与业务企业", "Stores and businesses"],
   "permissions.tabs.dimensions": ["业务条件", "Business conditions"],
   "permissions.tabs.accounts": ["账号授权", "Account permissions"],
@@ -62,6 +62,10 @@ export const permissionsMessages = {
   "permissions.differentConditions": [
     "所选类别的业务条件不一致，请拆成不同授权条目。",
     "These categories require different conditions. Use separate grants.",
+  ],
+  "permissions.grantRetiredReference": [
+    "这条授权新增了已停用的目录项，请修改选择。",
+    "This grant adds a retired directory item. Update the selection.",
   ],
   "permissions.invalidGrant": [
     "请核对授权条目的类别、归属、门店和完整业务条件。",
@@ -130,13 +134,14 @@ export const permissionsMessages = {
   ],
   "permissions.name": ["名称", "Name"],
   "permissions.retired": ["已停用", "Retired"],
+  "permissions.noActiveItems": ["暂无启用项。", "No active items."],
   "permissions.retiredLabel": ["（已停用）", " (retired)"],
   "permissions.retire": [
     "停用此项（保留历史引用）",
     "Retire this item (preserve historical references)",
   ],
   "permissions.active": ["可用", "Available"],
-  "permissions.addCategory": ["新增普通文档类别", "Add document category"],
+  "permissions.addCategory": ["新增文档类别", "Add document category"],
   "permissions.categoryName": ["文档类别名称", "Document category name"],
   "permissions.categoryNameHelp": [
     "例如：运营制度、培训资料",
@@ -420,4 +425,327 @@ export const permissionsMessages = {
     "文档权限属性缺失，请核对",
     "Document permission attributes are missing",
   ],
+
+  // 页面外壳（原型 v2）：页头、状态区、分区导航
+  "permissions.subtitle": [
+    "管理资料类别、业务条件和账号的访问范围。",
+    "Manage document categories, business conditions and account access.",
+  ],
+  "permissions.banner.label": ["业务权限状态", "Business permission status"],
+  "permissions.banner.legacy": [
+    "系统尚未启用业务权限，当前仍按原有规则读取。",
+    "Business permissions are not active yet; the original read rules still apply.",
+  ],
+  "permissions.banner.preparing": [
+    "完成准备检查后即可启用业务权限。",
+    "Run the preparation check, then activate business permissions.",
+  ],
+  "permissions.banner.enabled": [
+    "系统按账号授权和资料密级控制访问。",
+    "Access follows account grants and material confidentiality levels.",
+  ],
+  "permissions.banner.suspended": [
+    "业务资料的读取当前处于暂停状态。",
+    "Business material reads are suspended.",
+  ],
+  "permissions.viewReadiness": ["查看启用状态", "View activation status"],
+  "permissions.closePanel": ["关闭编辑面板", "Close editor"],
+  "permissions.discardDescription": [
+    "切换分区会关闭当前编辑并丢弃未保存的草稿。请比较后选择是否放弃；不会自动合并或覆盖。",
+    "Switching sections closes the current editor and discards unsaved changes. Compare before discarding; nothing is merged or overwritten automatically.",
+  ],
+  "permissions.fullConfig": ["查看完整配置", "View full configuration"],
+  "permissions.diff.added": ["新增", "Added"],
+  "permissions.diff.removed": ["删除", "Removed"],
+  "permissions.diff.changed": ["变更", "Changed"],
+  "permissions.none": ["无", "None"],
+  "permissions.grant": ["授权", "Grant"],
+  "permissions.conflict.choose": [
+    "同一条在服务器和本地都被改动，请选择保留哪一侧",
+    "The same item changed on both sides. Choose which version to keep",
+  ],
+  "permissions.conflict.keepServer": ["保留服务器", "Keep server"],
+  "permissions.conflict.keepDraft": ["保留我的", "Keep mine"],
+  "permissions.conflict.loadServer": [
+    "载入服务器值并放弃草稿",
+    "Load server values and discard draft",
+  ],
+  "permissions.conflict.applyMine": [
+    "以最新配置为基线重新应用我的改动",
+    "Reapply my changes on the latest configuration",
+  ],
+  "permissions.conflict.loaded": [
+    "已载入服务器最新值。",
+    "Loaded the latest server values.",
+  ],
+  "permissions.conflict.nothingApplied": [
+    "合并后没有剩余的改动。",
+    "No changes remain after merging.",
+  ],
+  "permissions.conflict.decideFirst": [
+    "请先为每一项冲突选择保留哪一侧",
+    "Choose a side for every conflict first",
+  ],
+  "permissions.conflict.removed": ["（已删除）", "(removed)"],
+  "permissions.conflict.serverRemoved": [
+    "服务器已删除授权「{grant}」，本地改动不再生效。",
+    'The server removed grant "{grant}"; your local change no longer applies.',
+  ],
+  "permissions.conflict.serverChanged": [
+    "服务器同时修改了未编辑的授权「{grant}」，已保留服务器版本。",
+    'The server also changed the unedited grant "{grant}"; the server version is kept.',
+  ],
+  "permissions.savedNotice": ["已保存。", "Saved."],
+
+  // 列表通用
+  "permissions.count": ["条", "items"],
+  "permissions.rowCount": ["共", "Total"],
+  "permissions.statusLabel": ["状态", "Status"],
+  "permissions.actions": ["操作", "Actions"],
+  "permissions.view": ["查看", "View"],
+  "permissions.panel.documentCategories": ["文档类别", "Document categories"],
+  "permissions.panel.fixedCategories": ["固定类别", "Fixed categories"],
+  "permissions.segmented.document": ["文档类别", "Document categories"],
+  "permissions.segmented.fixed": ["固定类别", "Fixed categories"],
+  "permissions.addFixedMissing": [
+    "补齐固定类别",
+    "Add missing fixed categories",
+  ],
+  "permissions.searchCategory": ["搜索类别", "Search categories"],
+  "permissions.categoryListHint": [
+    "查看文档的归属与业务条件。",
+    "Review ownership and required conditions for documents.",
+  ],
+  "permissions.fixedListHint": [
+    "为系统内置的业务资料设置密级。",
+    "Set confidentiality levels for built-in business materials.",
+  ],
+  "permissions.docCategoryHint": [
+    "文档类别定义可用的资料归属与必需业务条件。",
+    "Document categories define supported ownership and required conditions.",
+  ],
+  "permissions.editCategory": ["编辑文档类别", "Edit document category"],
+  "permissions.addDocumentCategory": ["新增文档类别", "Add document category"],
+  "permissions.retireCategory": ["停用类别", "Retire category"],
+  "permissions.restoreCategory": ["恢复类别", "Restore category"],
+  "permissions.categoryFields": ["类别名称", "Category name"],
+  "permissions.noCategories": ["暂无文档类别", "No document categories"],
+  "permissions.archivedCategories": ["已停用类别", "Retired categories"],
+
+  // 业务条件与取值
+  "permissions.conditionHint": [
+    "条件用于描述类别和账号授权的适用范围。",
+    "Conditions describe the scope of categories and account grants.",
+  ],
+  "permissions.conditionList": ["业务条件", "Business conditions"],
+  "permissions.searchCondition": ["搜索业务条件", "Search conditions"],
+  "permissions.editCondition": ["编辑业务条件", "Edit condition"],
+  "permissions.addCondition": ["新增业务条件", "Add condition"],
+  "permissions.retireCondition": ["停用条件", "Retire condition"],
+  "permissions.restoreCondition": ["恢复条件", "Restore condition"],
+  "permissions.conditionName": ["条件名称", "Condition name"],
+  "permissions.conditionValues": ["可选取值", "Available values"],
+  "permissions.conditionValuesHint": [
+    "取值先保存条件后单独维护，每次写入只影响一个对象。",
+    "Values are maintained separately after the condition is saved; each write affects one object only.",
+  ],
+  "permissions.editValue": ["编辑取值", "Edit value"],
+  "permissions.retireValue": ["停用取值", "Retire value"],
+  "permissions.restoreValue": ["恢复取值", "Restore value"],
+  "permissions.archivedValues": ["已停用取值", "Retired values"],
+  "permissions.emptyValues": ["暂无取值", "No values"],
+  "permissions.valueName": ["取值名称", "Value name"],
+  "permissions.conditionSaveFirst": [
+    "请先保存或放弃条件名称的改动，再编辑取值。",
+    "Save or discard the condition name change before editing values.",
+  ],
+  "permissions.valueWritten": ["取值已保存。", "Value saved."],
+  "permissions.conditionWritten": ["业务条件已保存。", "Condition saved."],
+  "permissions.conditionCreated": [
+    "业务条件已创建，可以继续添加取值。",
+    "Condition created; you can add values now.",
+  ],
+
+  // 门店与业务企业
+  "permissions.enterpriseSection": [
+    "已登记的业务企业",
+    "Registered businesses",
+  ],
+  "permissions.enterpriseSectionHint": [
+    "标识用于关联授权和文档范围。",
+    "The business key links grants and document scopes.",
+  ],
+  "permissions.storeDirectory": ["门店目录", "Store directory"],
+  "permissions.storeDirectoryHint": [
+    "这里只读展示精确门店；维护正式门店请前往企业资料。",
+    "Exact stores are read-only here; maintain official stores under the enterprise directory.",
+  ],
+  "permissions.goToDirectory": ["前往企业资料", "Go to enterprise directory"],
+  "permissions.storeEnterprise": ["业务企业", "Business"],
+  "permissions.storeState": ["状态", "Status"],
+  "permissions.storeConfirmed": ["已确认", "Confirmed"],
+  "permissions.storePending": ["待确认", "Pending"],
+  "permissions.storeHistorical": ["历史", "Historical"],
+  "permissions.searchStore": ["搜索门店", "Search stores"],
+  "permissions.enterprisePreviewHint": [
+    "预览只计算企业标识，不登记企业。",
+    "Preview only computes the business key; nothing is registered.",
+  ],
+  "permissions.enterprisePreviewInvalid": [
+    "请先填写业务企业名称。",
+    "Enter a business name first.",
+  ],
+  "permissions.enterpriseDeclaredNotice": [
+    "业务企业已登记。",
+    "Business registered.",
+  ],
+
+  // 账号授权
+  "permissions.accountListHint": [
+    "查看账号密级与当前授予的业务范围。",
+    "Review account clearance and current business grants.",
+  ],
+  "permissions.searchAccount": ["搜索账号", "Search accounts"],
+  "permissions.accountPanel": ["编辑账号授权", "Edit account grants"],
+  "permissions.accountRoleHint": [
+    "角色由运维维护。账号密级与业务授权共同决定读取范围。",
+    "Roles are maintained by operators. Account clearance and grants jointly determine read access.",
+  ],
+  "permissions.addGrantEntry": ["新增授权条目", "Add grant"],
+  "permissions.editGrantEntry": ["编辑授权条目", "Edit grant"],
+  "permissions.grantComplete": ["完成条目", "Done"],
+  "permissions.grantRemoveConfirm": ["删除此授权条目？", "Remove this grant?"],
+  "permissions.grantRemoveImpact": [
+    "保存账号授权后，这条授权才会撤销。",
+    "This grant is revoked only after the account is saved.",
+  ],
+  "permissions.grantCountLabel": ["{count} 条授权", "{count} grants"],
+  "permissions.storeMode": ["门店范围", "Store scope"],
+  "permissions.valueMode": ["取值范围", "Value scope"],
+  "permissions.conditionRequired": ["（必需）", " (required)"],
+  "permissions.grantNeedsIdentity": [
+    "请选择业务企业、资料归属和至少一个资料类别。",
+    "Choose a business, ownership and at least one category.",
+  ],
+  "permissions.grantNeedsStore": ["请选择门店范围。", "Choose a store scope."],
+  "permissions.grantNeedsConditions": [
+    "请补齐业务条件与指定取值。",
+    "Complete the conditions and selected values.",
+  ],
+  "permissions.draftChanged": ["有未保存的更改", "Unsaved changes"],
+  "permissions.levelField": ["密级", "Level"],
+
+  // 普通文档
+  "permissions.documentListHint": [
+    "按名称或 ID 查找文档，并设置类别、文件密级与完整范围。",
+    "Find documents by name or ID, then set category, file level and complete scopes.",
+  ],
+  "permissions.editDocument": ["编辑文档配置", "Edit document"],
+  "permissions.documentPanelHint": [
+    "只显示权限属性，不提供正文或下载。",
+    "Only permission attributes are shown; no content or downloads.",
+  ],
+  "permissions.addDocumentScope": ["新增范围", "Add scope"],
+  "permissions.editScope": ["编辑范围", "Edit scope"],
+  "permissions.scopeComplete": ["完成范围", "Done"],
+  "permissions.scopeEnterprise": ["业务企业", "Business"],
+  "permissions.scopeStore": ["精确门店名称", "Exact store name"],
+  "permissions.scopeMissing": [
+    "请选择业务企业、资料归属，并补齐门店和必需条件。",
+    "Choose a business and ownership, then complete stores and required conditions.",
+  ],
+  "permissions.scopeRequired": [
+    "请补齐当前类别的资料归属和必需业务条件。",
+    "Complete the current category's ownership and required conditions.",
+  ],
+  "permissions.scopeChangedRequiresReason": [
+    "改动涉及停用的目录项，请填写历史补录理由。",
+    "This change touches retired catalog items; enter the historical supplement reason.",
+  ],
+  "permissions.documentSaved": ["文档配置已保存。", "Document settings saved."],
+  "permissions.documentCursorReset": [
+    "当前分页已失效，已回到第一页。",
+    "The current page expired; returned to the first page.",
+  ],
+  "permissions.documentNoResults": ["没有匹配的文档", "No matching documents"],
+  "permissions.documentMeta": ["文档属性", "Document attributes"],
+
+  // 检查与启用
+  "permissions.readinessHint": [
+    "检查当前配置，管理业务权限的启用状态。",
+    "Check the current configuration and manage activation.",
+  ],
+  "permissions.reportVersion": ["检查版本", "Check version"],
+  "permissions.reportIssues": ["待处理项目", "Open items"],
+  "permissions.reportReady": ["准备检查通过", "Check passed"],
+  "permissions.noIssues": ["没有待处理项目。", "No open items."],
+  "permissions.reloadHelp": [
+    "重新读取会替换页面上的服务端快照；有未保存草稿时请先处理。",
+    "Reloading replaces the server snapshot; resolve unsaved drafts first.",
+  ],
+  "permissions.reloadWithDrafts": [
+    "请先保存或放弃未保存的草稿，再重新读取配置。",
+    "Save or discard unsaved drafts before reloading.",
+  ],
+  "permissions.status.active": ["使用中", "In use"],
+  "permissions.status.off": ["已停用", "Retired"],
+
+  "permissions.remove": ["删除", "Remove"],
+  "permissions.accountSaveImpact": [
+    "保存后，系统会按更新后的授权计算可读取范围。",
+    "After saving, read access is computed from the updated grants.",
+  ],
+  "permissions.conflict.scopeServerRemoved": [
+    "服务器已删除一个你未改动的范围，已按服务器结果移除。",
+    "The server removed a scope you did not change; it is removed.",
+  ],
+  "permissions.conflict.scopeNeedsReview": [
+    "服务器可能同时修改了同一范围，且无法唯一配对，请核对重新确认摘要后再保存。",
+    "The server may have changed the same scope and it cannot be paired uniquely. Review the summary before saving.",
+  ],
+  "permissions.backToFirstPage": ["返回第一页", "Back to first page"],
+  "permissions.currentMode": ["当前模式", "Current mode"],
+  "permissions.reloadDone": ["已重新读取配置。", "Configuration reloaded."],
+
+  "permissions.scopeRemoveImpact": [
+    "保存文档配置后，这个范围才会移除。",
+    "This scope is removed only after the document is saved.",
+  ],
+  "permissions.documentSaveImpact": [
+    "保存后，文档的读取范围按新的类别、密级与范围计算。",
+    "After saving, document access follows the new category, level and scopes.",
+  ],
+  "permissions.valueWriteImpact": [
+    "本次只写这一个取值；已保存的授权引用保持不变。",
+    "Only this value is written; existing grant references stay unchanged.",
+  ],
+  "permissions.conditionCreateImpact": [
+    "新条件保存后可以继续添加取值，并可被类别和授权引用。",
+    "After saving, add values and reference the condition from categories and grants.",
+  ],
+  "permissions.conditionSaveImpact": [
+    "本次只写条件名称；取值请单独保存。",
+    "Only the condition name is written; save values separately.",
+  ],
+  "permissions.retireImpact": [
+    "停用后会移入「已停用」，历史引用会保留。",
+    "Retiring moves it under retired items; historical references are preserved.",
+  ],
+  "permissions.restoreImpact": [
+    "恢复后会回到默认列表，可供后续配置使用。",
+    "Restoring returns it to the default list for future configuration.",
+  ],
+  "permissions.valueRetireImpact": [
+    "停用或恢复取值后，已保存的历史引用仍会保留。",
+    "Retiring or restoring a value keeps existing historical references.",
+  ],
+
+  "permissions.discardTitle": [
+    "放弃未保存的更改？",
+    "Discard unsaved changes?",
+  ],
+  "permissions.discardChanges": ["放弃更改", "Discard changes"],
+
+  "permissions.diff.addedItem": ["新增{label}", "Added {label}"],
+  "permissions.diff.removedItem": ["删除{label}", "Removed {label}"],
 } as const satisfies TextDictionary;

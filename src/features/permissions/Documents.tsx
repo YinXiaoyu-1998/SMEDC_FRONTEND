@@ -10,48 +10,47 @@ import {
   type PermissionsDocumentsListResponse,
 } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { DataTable } from "@/ui/DataTable";
 import { Field } from "@/ui/Field";
-import { PageSection } from "@/ui/PageSection";
+import { InlineError } from "@/ui/InlineError";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
+import { DraftFeedback } from "./components";
+import type { Confirmation } from "./diff";
 import {
-  ConfirmAction,
-  DraftDialogs,
-  DraftFeedback,
-  LevelSelect,
-  SaveButton,
-  SectionNote,
-} from "./components";
-import { useRegisterDraft } from "./useRegisterDraft";
-import {
+  describeScope,
+  documentDiff,
   documentToDraft,
   documentUpdateBody,
-  emptyDocumentScope,
+  rebaseDocument,
   validateDocumentDraft,
   type DocumentDraft,
-  type DocumentScopeDraft,
 } from "./document-draft";
+import { DocumentScopeEditor } from "./DocumentScopeEditor";
 import { permissionsErrorKey } from "./errorKeys";
 import {
   categoryName,
-  changeSummary,
-  dimensionName,
-  dimensionValueName,
   documentStatusLabel,
-  enterpriseName,
-  itemLabel,
+  levelLabel,
   type LabelData,
-  type Translate,
 } from "./labels";
+import {
+  DraftConflict,
+  ListHeader,
+  ObjectListHead,
+  ObjectRow,
+  Panel,
+  PermissionConfirmDialog,
+} from "./panel";
 import styles from "./Permissions.module.css";
 import { usePermissionsScope } from "./scope";
-import { useDraftSave } from "./useDraftSave";
+import { useDraftSave, type DraftBaseline } from "./useDraftSave";
+import { useRegisterDraft } from "./useRegisterDraft";
 
-/** DataTable 用 null 表示禁用；返回上一页需要一个非空占位值。 */
-const PREVIOUS_PAGE = "previous-page";
+const NEW_SCOPE = "\u0000new";
 
 export function DocumentsSection({ active }: { readonly active: boolean }) {
   const { t } = useText();
@@ -61,9 +60,13 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
   const [appliedSearch, setAppliedSearch] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [stack, setStack] = useState<readonly (string | null)[]>([]);
-  const [selected, setSelected] = useState<PermissionDocument | null>(null);
-  const [editorDirty, setEditorDirty] = useState(false);
+  const [selected, setSelected] = useState<{
+    readonly document: PermissionDocument;
+    readonly version: string;
+  } | null>(null);
+  const [dirty, setDirty] = useState(false);
   const pendingAction = useRef<(() => void) | null>(null);
+
   const documentsKey = useMemo(
     () =>
       [
@@ -76,24 +79,6 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
       ] as const,
     [appliedSearch, cursor, scope.orgId],
   );
-
-  const discardFlow = useConfirmFlow<void, void>({
-    prepare: () => undefined,
-    submit: () => {
-      const action = pendingAction.current;
-      pendingAction.current = null;
-      if (action !== null) action();
-    },
-  });
-
-  const guard = (action: () => void) => {
-    if (editorDirty) {
-      pendingAction.current = action;
-      void discardFlow.request();
-      return;
-    }
-    action();
-  };
 
   const documentsQuery = useQuery({
     queryKey: documentsKey,
@@ -112,158 +97,237 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
     retry: false,
   });
 
-  const selectDocument = (document: PermissionDocument) => {
-    guard(() => {
-      setSelected(document);
-    });
+  const discardFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      const action = pendingAction.current;
+      pendingAction.current = null;
+      setDirty(false);
+      if (action !== null) action();
+    },
+  });
+
+  const guard = (action: () => void) => {
+    if (!dirty) {
+      action();
+      return;
+    }
+    pendingAction.current = action;
+    void discardFlow.request();
   };
 
   const applySearch = () => {
-    setAppliedSearch(searchText);
-    setCursor(null);
-    setStack([]);
-    setSelected(null);
-    setEditorDirty(false);
+    guard(() => {
+      setAppliedSearch(searchText.trim());
+      setCursor(null);
+      setStack([]);
+      setSelected(null);
+    });
   };
+
+  const documents = documentsQuery.data?.documents ?? [];
+  const nextCursor = documentsQuery.data?.nextCursor ?? null;
+  const page = stack.length + 1;
+  const error: unknown = documentsQuery.error;
 
   const goNext = () => {
     if (nextCursor === null) return;
-    setStack((previous) => [...previous, cursor]);
-    setCursor(nextCursor);
-    setSelected(null);
-    setEditorDirty(false);
+    guard(() => {
+      setStack((previous) => [...previous, cursor]);
+      setCursor(nextCursor);
+      setSelected(null);
+    });
   };
 
   const goPrevious = () => {
     if (stack.length === 0) return;
-    const target = stack[stack.length - 1] ?? null;
-    setStack(stack.slice(0, -1));
-    setCursor(target);
+    guard(() => {
+      const target = stack[stack.length - 1] ?? null;
+      setStack(stack.slice(0, -1));
+      setCursor(target);
+      setSelected(null);
+    });
+  };
+
+  const backToFirstPage = () => {
+    setStack([]);
+    setCursor(null);
     setSelected(null);
-    setEditorDirty(false);
+    setDirty(false);
+    scope.setNotice("permissions.documentCursorReset");
   };
 
   const reloadDocument = async (
     id: string,
-  ): Promise<PermissionDocument | undefined> => {
-    const result = await listDocuments(scope.orgId, appliedSearch, cursor);
-    if (result.authorizationVersion !== scope.bundle.version) {
+  ): Promise<DraftBaseline<DocumentDraft> | null> => {
+    const bundle = await scope.reload();
+    const result = await listDocuments(scope.orgId, id, null);
+    if (result.authorizationVersion !== bundle.version) {
       throw new WebApiError({
         status: 409,
         code: VERSION_CONFLICT_CODE,
         message: "配置版本不一致",
       });
     }
-    return result.documents.find((item) => item.id === id);
+    const latest = result.documents.find((item) => item.id === id);
+    if (latest === undefined) return null;
+    return {
+      snapshot: documentToDraft(latest),
+      version: result.authorizationVersion,
+    };
   };
 
-  const documents = documentsQuery.data?.documents ?? [];
-  const nextCursor = documentsQuery.data?.nextCursor ?? null;
-  const loading = documentsQuery.isFetching;
-  const error: unknown = documentsQuery.error;
-  const rows = documents;
-  const page = stack.length + 1;
+  const openDocument = (document: PermissionDocument) => {
+    const version = documentsQuery.data?.authorizationVersion;
+    if (version === undefined) return;
+    guard(() => {
+      setSelected({ document, version });
+    });
+  };
 
   return (
-    <PageSection title={t("permissions.tabs.documents")}>
-      <SectionNote>{t("permissions.documentHelp")}</SectionNote>
-      <SectionNote>{t("permissions.supplementHelp")}</SectionNote>
-      <form
-        className={styles.toolbar}
-        onSubmit={(event) => {
-          event.preventDefault();
-          guard(applySearch);
-        }}
-      >
-        <NameInput
-          label={t("permissions.searchDocument")}
-          value={searchText}
-          onChange={setSearchText}
+    <>
+      <section className={styles.catalogCard}>
+        <ListHeader
+          title={t("permissions.tabs.documents")}
+          description={t("permissions.documentListHint")}
         />
-        <ActionButton
-          label={t("permissions.search")}
-          variant="secondary"
-          onRun={() => {
-            guard(applySearch);
+        <form
+          className={styles.toolbar}
+          onSubmit={(event) => {
+            event.preventDefault();
+            applySearch();
           }}
-        />
-      </form>
+        >
+          <label className={styles.searchField}>
+            <AdminIcon name="search" />
+            <input
+              aria-label={t("permissions.searchDocument")}
+              placeholder={t("permissions.searchDocument")}
+              type="search"
+              maxLength={256}
+              value={searchText}
+              autoComplete="off"
+              onChange={(event) => {
+                setSearchText(event.target.value);
+              }}
+            />
+          </label>
+          <ActionButton
+            label={t("permissions.search")}
+            variant="secondary"
+            onRun={applySearch}
+          />
+        </form>
 
-      <DataTable<PermissionDocument>
-        columns={[
-          {
-            id: "document",
-            header: t("permissions.document"),
-            cell: (document) => (
-              <ActionButton
-                label={document.title}
-                variant="ghost"
-                onRun={() => {
-                  selectDocument(document);
-                }}
-              />
-            ),
-          },
-          {
-            id: "status",
-            header: t("permissions.documentStatus"),
-            cell: (document) => documentStatusLabel(t, document.status),
-          },
-          {
-            id: "category",
-            header: t("permissions.documentCategory"),
-            cell: (document) =>
-              document.categoryId === null
-                ? t("permissions.unset")
-                : categoryName(t, scope.bundle, document.categoryId),
-          },
-          {
-            id: "level",
-            header: t("permissions.level"),
-            cell: (document) =>
-              document.fileConfidentialityLevel === null
-                ? t("permissions.unset")
-                : String(document.fileConfidentialityLevel),
-          },
-        ]}
-        rows={rows}
-        getRowId={(document) => document.id}
-        label={t("permissions.tabs.documents")}
-        loading={loading}
-        emptyLabel={t("permissions.empty")}
-        pagination={{
-          previousCursor: stack.length === 0 ? null : PREVIOUS_PAGE,
-          nextCursor,
-          onPrevious: () => {
-            goPrevious();
-          },
-          onNext: () => {
-            goNext();
-          },
-          summary: `${t("permissions.page")}: ${page}`,
-        }}
-      />
-      {error === null ? null : (
+        <DataTable<PermissionDocument>
+          className={styles.catalogTable}
+          columns={[
+            {
+              id: "document",
+              header: t("permissions.document"),
+              cell: (document) => (
+                <>
+                  <strong>{document.title}</strong>
+                  <br />
+                  <span className={styles.muted}>{document.id}</span>
+                </>
+              ),
+            },
+            {
+              id: "status",
+              header: t("permissions.documentStatus"),
+              cell: (document) => documentStatusLabel(t, document.status),
+            },
+            {
+              id: "category",
+              header: t("permissions.documentCategory"),
+              cell: (document) =>
+                document.categoryId === null
+                  ? t("permissions.unset")
+                  : categoryName(t, scope.bundle, document.categoryId),
+            },
+            {
+              id: "level",
+              header: t("permissions.level"),
+              cell: (document) => (
+                <span className={styles.levelBadge}>
+                  {levelLabel(t, document.fileConfidentialityLevel)}
+                </span>
+              ),
+            },
+            {
+              id: "actions",
+              header: t("permissions.actions"),
+              align: "end",
+              cell: (document) => (
+                <ActionButton
+                  label={t("permissions.edit")}
+                  variant="ghost"
+                  className={styles.rowAction}
+                  icon={<AdminIcon name="edit" />}
+                  busy={documentsQuery.isFetching}
+                  onRun={() => {
+                    openDocument(document);
+                  }}
+                />
+              ),
+            },
+          ]}
+          rows={documents}
+          getRowId={(document) => document.id}
+          label={t("permissions.tabs.documents")}
+          loading={documentsQuery.isFetching}
+          emptyLabel={t("permissions.documentNoResults")}
+        />
+
+        <div className={styles.tableFoot}>
+          <span className={styles.countText}>
+            {t("permissions.page")}: {page}
+          </span>
+          <div className={styles.pager}>
+            <ActionButton
+              label={t("ui.table.previous")}
+              variant="secondary"
+              disabled={stack.length === 0 || documentsQuery.isFetching}
+              onRun={goPrevious}
+            />
+            <ActionButton
+              label={t("ui.table.next")}
+              variant="secondary"
+              disabled={nextCursor === null || documentsQuery.isFetching}
+              onRun={goNext}
+            />
+          </div>
+        </div>
+      </section>
+      {error === null || error === undefined ? null : (
         <div className={styles.actions}>
           <p className={styles.error} role="alert">
             {t(permissionsErrorKey(error))}
           </p>
-          <ActionButton
-            label={t("permissions.reload")}
-            variant="secondary"
-            onRun={() => {
-              void documentsQuery.refetch();
-            }}
-          />
+          {cursor === null ? null : (
+            <ActionButton
+              label={t("permissions.backToFirstPage")}
+              variant="secondary"
+              onRun={backToFirstPage}
+            />
+          )}
         </div>
       )}
 
       {selected === null ? null : (
-        <DocumentEditor
-          key={selected.id}
-          document={selected}
-          onSaved={(updated) => {
-            setSelected(updated);
+        <DocumentPanel
+          key={selected.document.id}
+          record={selected.document}
+          version={selected.version}
+          onClose={() => {
+            setSelected(null);
+            setDirty(false);
+          }}
+          onDirtyChange={setDirty}
+          onSaved={(updated, authorizationVersion) => {
+            setSelected({ document: updated, version: authorizationVersion });
             queryClient.setQueryData<PermissionsDocumentsListResponse>(
               documentsKey,
               (previous) =>
@@ -271,89 +335,53 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
                   ? previous
                   : {
                       ...previous,
+                      authorizationVersion,
                       documents: previous.documents.map((item) =>
                         item.id === updated.id ? updated : item,
                       ),
                     },
             );
           }}
-          onDirtyChange={setEditorDirty}
           reload={reloadDocument}
         />
       )}
 
       <ConfirmDialog
         flow={discardFlow}
-        title={t("permissions.discard.title")}
-        description={t("permissions.discard.description")}
-        confirmLabel={t("permissions.discard.action")}
+        title={t("permissions.discardTitle")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discardChanges")}
         cancelLabel={t("permissions.discard.keep")}
       />
-    </PageSection>
+    </>
   );
 }
 
-function NameInput({
-  label,
-  value,
-  onChange,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly onChange: (next: string) => void;
-}) {
-  return (
-    <Field label={label}>
-      <input
-        type="text"
-        maxLength={256}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-      />
-    </Field>
-  );
-}
-
-function describeScope(
-  t: Translate,
-  data: LabelData,
-  scope: DocumentScopeDraft,
-): string {
-  const business = enterpriseName(t, data, scope.enterpriseKey);
-  const ownership =
-    scope.ownership === "store"
-      ? scope.storeName === undefined || scope.storeName === ""
-        ? t("permissions.choose")
-        : scope.storeName
-      : scope.ownership === "group"
-        ? t("permissions.group")
-        : t("permissions.choose");
-  const conditions = Object.entries(scope.dimensions)
-    .map(
-      ([dimensionId, valueId]) =>
-        `${dimensionName(t, data, dimensionId)}: ${dimensionValueName(t, data, dimensionId, valueId)}`,
-    )
-    .join("; ");
-  return `${business} · ${ownership}${conditions === "" ? "" : ` · ${conditions}`}`;
-}
-
-function DocumentEditor({
-  document: record,
-  onSaved,
+function DocumentPanel({
+  record,
+  version,
+  onClose,
   onDirtyChange,
+  onSaved,
   reload,
 }: {
-  readonly document: PermissionDocument;
-  readonly onSaved: (next: PermissionDocument) => void;
+  readonly record: PermissionDocument;
+  readonly version: string;
+  readonly onClose: () => void;
   readonly onDirtyChange: (dirty: boolean) => void;
-  readonly reload: (id: string) => Promise<PermissionDocument | undefined>;
+  readonly onSaved: (
+    document: PermissionDocument,
+    authorizationVersion: string,
+  ) => void;
+  readonly reload: (id: string) => Promise<DraftBaseline<DocumentDraft> | null>;
 }) {
   const { t } = useText();
   const scope = usePermissionsScope();
-  const saved = useMemo(() => documentToDraft(record), [record]);
   const data = scope.bundle;
+  const baseline = useMemo(
+    () => ({ snapshot: documentToDraft(record), version }),
+    [record, version],
+  );
 
   const save = useDraftSave<
     DocumentDraft,
@@ -362,72 +390,42 @@ function DocumentEditor({
       readonly authorizationVersion: string;
     }
   >({
-    saved,
-    expectedVersion: scope.bundle.version,
-    normalize: (draft) => ({
-      ...draft,
-      historicalSupplementReason: draft.historicalSupplementReason.trim(),
-    }),
-    validate: (draft) =>
+    baseline,
+    validate: (draft, base) =>
       validateDocumentDraft(
         draft,
+        base,
         data.categories.find((item) => item.id === draft.categoryId),
         data,
       ),
-    describe: (draft) => {
-      const rule = data.categories.find((item) => item.id === draft.categoryId);
-      const title = `${record.title} · ${documentStatusLabel(t, record.status)}`;
-      return changeSummary(
-        t,
-        title,
-        describeDocument(t, data, saved),
-        describeDocument(t, data, draft, rule),
-      );
-    },
+    confirmation: (draft, base) => ({
+      subject: `${record.title} · ${documentStatusLabel(t, record.status)}`,
+      diff: documentDiff(t, data, draft, base),
+      impact: t("permissions.documentSaveImpact"),
+      fullBefore: describeDocument(t, data, base),
+      fullAfter: describeDocument(t, data, draft),
+    }),
     submit: (draft, expectedVersion) =>
       scope.writes.saveDocument(
         record,
         documentUpdateBody(draft, expectedVersion),
       ),
-    draftFromResult: (result) => documentToDraft(result.document),
+    nextBaseline: (result) => documentToDraft(result.document),
     reload: async () => {
       const latest = await reload(record.id);
-      return latest === undefined ? saved : documentToDraft(latest);
+      if (latest === null) {
+        throw new WebApiError({
+          status: 409,
+          code: "RESOURCE_NOT_FOUND",
+          message: "文档已不可用",
+        });
+      }
+      return latest;
     },
-    conflictFields: (draft, current) => [
-      {
-        key: "category",
-        label: t("permissions.documentCategory"),
-        serverValue:
-          current.categoryId === ""
-            ? t("permissions.unset")
-            : categoryName(t, data, current.categoryId),
-        draftValue:
-          draft.categoryId === ""
-            ? t("permissions.unset")
-            : categoryName(t, data, draft.categoryId),
-      },
-      {
-        key: "level",
-        label: t("permissions.level"),
-        serverValue:
-          current.fileConfidentialityLevel === null
-            ? t("permissions.unset")
-            : String(current.fileConfidentialityLevel),
-        draftValue:
-          draft.fileConfidentialityLevel === null
-            ? t("permissions.unset")
-            : String(draft.fileConfidentialityLevel),
-      },
-      {
-        key: "scopes",
-        label: t("permissions.scopes"),
-        serverValue: describeDocument(t, data, current),
-        draftValue: describeDocument(t, data, draft),
-      },
-    ],
+    rebase: (input) => rebaseDocument(t, input, data),
     onSaved: (result) => {
-      onSaved(result.document);
+      scope.setNotice("permissions.documentSaved");
+      onSaved(result.document, result.authorizationVersion);
     },
   });
   useRegisterDraft(save.isDirty || save.conflict);
@@ -436,392 +434,329 @@ function DocumentEditor({
     onDirtyChange(save.isDirty || save.conflict);
   }, [onDirtyChange, save.conflict, save.isDirty]);
 
+  const [editingScope, setEditingScope] = useState<string | null>(null);
+  const pendingScope = useRef<string | null>(null);
+
+  const removeFlow = useConfirmFlow<{ confirmation: Confirmation }, void>({
+    prepare: () => {
+      const scopeDraft = save.draft.scopes.find(
+        (item) => item.id === pendingScope.current,
+      );
+      return {
+        confirmation: {
+          subject: record.title,
+          diff:
+            scopeDraft === undefined
+              ? []
+              : [
+                  {
+                    kind: "removed" as const,
+                    label: t("permissions.scopes"),
+                    before: describeScope(t, data, scopeDraft),
+                  },
+                ],
+          impact: t("permissions.scopeRemoveImpact"),
+        },
+      };
+    },
+    submit: () => {
+      const id = pendingScope.current;
+      pendingScope.current = null;
+      if (id === null) return;
+      save.setDraft((previous) => ({
+        ...previous,
+        scopes: previous.scopes.filter((scopeDraft) => scopeDraft.id !== id),
+      }));
+    },
+  });
+
+  const requestRemoveScope = (id: string) => {
+    pendingScope.current = id;
+    void removeFlow.request();
+  };
+
+  const discardFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      save.reset();
+      onClose();
+    },
+  });
+
+  const requestClose = () => {
+    if (save.isDirty || save.conflict) {
+      void discardFlow.request();
+      return;
+    }
+    onClose();
+  };
+
   const category: PermissionCategory | undefined = data.categories.find(
     (item) => item.id === save.draft.categoryId,
   );
   const evidenceCategories = data.categories.filter(
     (item) => item.kind === "evidence",
   );
-
+  const editedScope =
+    editingScope === null || editingScope === NEW_SCOPE
+      ? null
+      : (save.draft.scopes.find((item) => item.id === editingScope) ?? null);
   return (
-    <form
-      className={styles.card}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h3 className={styles.cardTitle}>{record.title}</h3>
-      <p className={styles.hint}>
-        {t("permissions.documentStatus")}:{" "}
-        {documentStatusLabel(t, record.status)}
-      </p>
-      {record.valid ? null : (
-        <p className={styles.error}>{t("permissions.attributesNotReady")}</p>
-      )}
-
-      <Field label={t("permissions.documentCategory")}>
-        <select
-          value={save.draft.categoryId}
-          disabled={save.saving}
-          onChange={(event) => {
-            save.setDraft({
-              ...save.draft,
-              categoryId: event.target.value,
-            });
-          }}
-        >
-          <option value="">{t("permissions.choose")}</option>
-          {evidenceCategories.map((item) => (
-            <option
-              key={item.id}
-              value={item.id}
-              disabled={item.retired && item.id !== save.draft.categoryId}
-            >
-              {itemLabel(t, item.name, item.retired)}
-            </option>
-          ))}
-          {save.draft.categoryId !== "" &&
-          !evidenceCategories.some(
-            (item) => item.id === save.draft.categoryId,
-          ) ? (
-            <option value={save.draft.categoryId}>
-              {t("permissions.preserved")}
-            </option>
-          ) : null}
-        </select>
-      </Field>
-
-      <Field label={t("permissions.level")}>
-        <LevelSelect
-          value={save.draft.fileConfidentialityLevel}
-          disabled={save.saving}
-          onChange={(level) => {
-            save.setDraft({ ...save.draft, fileConfidentialityLevel: level });
-          }}
-        />
-      </Field>
-
-      <h4 className={styles.subheading}>{t("permissions.scopes")}</h4>
-      {save.draft.scopes.map((scopeDraft, index) => (
-        <DocumentScopeCard
-          key={index}
-          scope={scopeDraft}
-          category={category}
-          data={data}
-          disabled={save.saving}
-          onChange={(next) => {
-            save.setDraft({
-              ...save.draft,
-              scopes: save.draft.scopes.map((item, position) =>
-                position === index ? next : item,
-              ),
-            });
-          }}
-          onRemove={() => {
-            save.setDraft({
-              ...save.draft,
-              scopes: save.draft.scopes.filter(
-                (_item, position) => position !== index,
-              ),
-            });
-          }}
-        />
-      ))}
-      <div className={styles.actions}>
-        <ActionButton
-          label={t("permissions.addScope")}
-          variant="secondary"
-          disabled={scope.busy || save.conflict}
-          onRun={() => {
-            save.setDraft({
-              ...save.draft,
-              scopes: [...save.draft.scopes, emptyDocumentScope()],
-            });
-          }}
-        />
-      </div>
-
-      <Field
-        label={t("permissions.supplementReason")}
-        hint={t("permissions.supplementHelp")}
+    <>
+      <Panel
+        open
+        title={t("permissions.editDocument")}
+        subtitle={`${record.title} · ${documentStatusLabel(t, record.status)}`}
+        onRequestClose={requestClose}
+        footer={
+          <>
+            <ActionButton
+              label={t("permissions.cancel")}
+              variant="secondary"
+              onRun={requestClose}
+            />
+            <ActionButton
+              label={t("permissions.save")}
+              busy={save.saving}
+              disabled={!save.canSave || scope.busy}
+              {...(save.disabledReason === undefined
+                ? {}
+                : { disabledReason: save.disabledReason })}
+              onRun={save.requestSave}
+            />
+          </>
+        }
       >
-        <textarea
-          rows={3}
-          maxLength={2048}
-          value={save.draft.historicalSupplementReason}
-          disabled={save.saving}
-          onChange={(event) => {
-            save.setDraft({
-              ...save.draft,
-              historicalSupplementReason: event.target.value,
-            });
-          }}
-        />
-      </Field>
+        <p className={styles.inlineNote}>
+          {t("permissions.documentPanelHint")}
+        </p>
+        {record.valid ? null : (
+          <p className={styles.error} role="alert">
+            {t("permissions.attributesNotReady")}
+          </p>
+        )}
+        <Field label={t("permissions.documentCategory")}>
+          <select
+            value={save.draft.categoryId}
+            disabled={save.saving}
+            onChange={(event) => {
+              save.setDraft({
+                ...save.draft,
+                categoryId: event.target.value,
+              });
+            }}
+          >
+            <option value="">{t("permissions.choose")}</option>
+            {evidenceCategories.map((item) => (
+              <option
+                key={item.id}
+                value={item.id}
+                disabled={item.retired && item.id !== save.draft.categoryId}
+              >
+                {item.retired
+                  ? `${item.name}${t("permissions.retiredLabel")}`
+                  : item.name}
+              </option>
+            ))}
+            {save.draft.categoryId !== "" &&
+            !evidenceCategories.some(
+              (item) => item.id === save.draft.categoryId,
+            ) ? (
+              <option value={save.draft.categoryId}>
+                {t("permissions.preserved")}
+              </option>
+            ) : null}
+          </select>
+        </Field>
 
-      <div className={styles.actions}>
-        <SaveButton save={save} />
-      </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
+        <Field label={t("permissions.level")}>
+          <select
+            value={
+              save.draft.fileConfidentialityLevel === null
+                ? ""
+                : String(save.draft.fileConfidentialityLevel)
+            }
+            disabled={save.saving}
+            onChange={(event) => {
+              save.setDraft({
+                ...save.draft,
+                fileConfidentialityLevel:
+                  event.target.value === "" ? null : Number(event.target.value),
+              });
+            }}
+          >
+            <option value="">{t("permissions.unset")}</option>
+            {[0, 1, 2, 3].map((level) => (
+              <option key={level} value={String(level)}>
+                {level}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <ObjectListHead
+          title={t("permissions.scopes")}
+          action={
+            <ActionButton
+              label={t("permissions.addDocumentScope")}
+              variant="secondary"
+              disabled={save.saving || save.conflict}
+              onRun={() => {
+                setEditingScope(NEW_SCOPE);
+              }}
+            />
+          }
+        />
+        {save.draft.scopes.length === 0 ? (
+          <p className={styles.emptyEditor}>{t("permissions.scopeRequired")}</p>
+        ) : (
+          <div className={styles.stack}>
+            {save.draft.scopes.map((scopeDraft) => (
+              <ObjectRow
+                key={scopeDraft.id}
+                title={describeScope(t, data, scopeDraft)}
+                actions={
+                  <>
+                    <ActionButton
+                      label={t("permissions.edit")}
+                      variant="ghost"
+                      className={styles.rowAction}
+                      icon={<AdminIcon name="edit" />}
+                      disabled={save.saving}
+                      onRun={() => {
+                        setEditingScope(scopeDraft.id);
+                      }}
+                    />
+                    <ActionButton
+                      label={t("permissions.remove")}
+                      variant="ghost"
+                      disabled={save.saving}
+                      onRun={() => {
+                        requestRemoveScope(scopeDraft.id);
+                      }}
+                    />
+                  </>
+                }
+              />
+            ))}
+          </div>
+        )}
+
+        <Field
+          label={t("permissions.supplementReason")}
+          hint={t("permissions.supplementHelp")}
+        >
+          <textarea
+            rows={3}
+            maxLength={2048}
+            value={save.draft.historicalSupplementReason}
+            disabled={save.saving}
+            onChange={(event) => {
+              save.setDraft({
+                ...save.draft,
+                historicalSupplementReason: event.target.value,
+              });
+            }}
+          />
+        </Field>
+
+        {save.conflict && save.conflictConfirmation !== null ? (
+          <DraftConflict
+            confirmation={save.conflictConfirmation}
+            choices={save.conflictChoices}
+            selected={save.conflictDecisions}
+            onSelect={save.chooseConflict}
+            canApply={save.conflictCanApply}
+            {...(save.conflictApplyReason === undefined
+              ? {}
+              : { applyReason: save.conflictApplyReason })}
+            onLoadServer={save.loadServer}
+            onApplyMine={save.applyMine}
+            reloading={save.conflictReloading}
+            error={save.conflictError}
+          />
+        ) : save.conflict ? (
+          <div className={styles.conflict} role="alert">
+            <h3 className={styles.conflictTitle}>{t("ui.conflict.title")}</h3>
+            <InlineError error={save.conflictError} />
+            <div className={styles.actions}>
+              <ActionButton
+                label={t("permissions.reload")}
+                busy={save.conflictReloading}
+                onRun={save.retryConflict}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <DraftFeedback save={save} />
+      </Panel>
+
+      <DocumentScopeEditor
+        key={editingScope ?? "closed"}
+        open={editingScope !== null}
+        initial={editedScope}
+        category={category}
+        data={data}
+        documentTitle={record.title}
+        onComplete={(next) => {
+          if (editingScope === NEW_SCOPE) {
+            save.setDraft((previous) => ({
+              ...previous,
+              scopes: [...previous.scopes, next],
+            }));
+          } else {
+            save.setDraft((previous) => ({
+              ...previous,
+              scopes: previous.scopes.map((item) =>
+                item.id === next.id ? next : item,
+              ),
+            }));
+          }
+          setEditingScope(null);
+        }}
+        onCancel={() => {
+          setEditingScope(null);
+        }}
+      />
+
+      <PermissionConfirmDialog
+        flow={save.flow}
+        title={t("permissions.confirm.title")}
+        confirmLabel={t("permissions.confirm.action")}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <PermissionConfirmDialog
+        flow={removeFlow}
+        title={t("permissions.removeScope")}
+        confirmLabel={t("permissions.remove")}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <ConfirmDialog
+        flow={discardFlow}
+        title={t("permissions.discardTitle")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discardChanges")}
+        cancelLabel={t("permissions.discard.keep")}
+      />
+    </>
   );
 }
 
 function describeDocument(
-  t: Translate,
+  t: (key: string) => string,
   data: LabelData,
   draft: DocumentDraft,
-  category?: PermissionCategory | undefined,
 ): string {
-  const heading = category === undefined ? draft.categoryId : category.name;
-  const level =
-    draft.fileConfidentialityLevel === null
+  const heading =
+    draft.categoryId === ""
       ? t("permissions.unset")
-      : String(draft.fileConfidentialityLevel);
+      : categoryName(t, data, draft.categoryId);
+  const level = levelLabel(t, draft.fileConfidentialityLevel);
   const scopes =
     draft.scopes.length === 0
       ? t("permissions.empty")
       : draft.scopes.map((item) => describeScope(t, data, item)).join("\n");
   const reason = draft.historicalSupplementReason.trim();
   return `${heading} · ${t("permissions.level")}: ${level}\n${scopes}${reason === "" ? "" : `\n${t("permissions.supplementReason")}: ${reason}`}`;
-}
-
-function DocumentScopeCard({
-  scope,
-  category,
-  data,
-  disabled,
-  onChange,
-  onRemove,
-}: {
-  readonly scope: DocumentScopeDraft;
-  readonly category: PermissionCategory | undefined;
-  readonly data: LabelData;
-  readonly disabled: boolean;
-  readonly onChange: (next: DocumentScopeDraft) => void;
-  readonly onRemove: () => void;
-}) {
-  const { t } = useText();
-
-  const enterpriseOptions = data.enterprises.map((enterprise) => ({
-    value: enterprise.enterpriseKey,
-    label: enterprise.enterpriseName,
-  }));
-  if (
-    scope.enterpriseKey !== "" &&
-    !enterpriseOptions.some((option) => option.value === scope.enterpriseKey)
-  ) {
-    enterpriseOptions.push({
-      value: scope.enterpriseKey,
-      label: scope.enterpriseKey,
-    });
-  }
-
-  const ownershipOptions: { value: string; label: string }[] = [
-    { value: "", label: t("permissions.choose") },
-  ];
-  if (category?.allowStore === true || scope.ownership === "store") {
-    ownershipOptions.push({ value: "store", label: t("permissions.store") });
-  }
-  if (category?.allowGroup === true || scope.ownership === "group") {
-    ownershipOptions.push({ value: "group", label: t("permissions.group") });
-  }
-
-  const storeOptions = data.stores
-    .filter(
-      (store) =>
-        store.enterpriseKey === scope.enterpriseKey &&
-        (store.confirmation === undefined ||
-          store.confirmation === "confirmed" ||
-          store.name === scope.storeName),
-    )
-    .map((store) => ({
-      value: store.name,
-      label: itemLabel(t, store.officialName ?? store.name, store.retired),
-      disabled:
-        (store.retired ||
-          (store.confirmation !== undefined &&
-            store.confirmation !== "confirmed")) &&
-        store.name !== scope.storeName,
-    }));
-
-  const requiredDimensions =
-    category?.dimensions.map((item) => item.dimensionId) ?? [];
-  const dimensionIds = new Set([
-    ...requiredDimensions,
-    ...Object.keys(scope.dimensions),
-  ]);
-
-  const removeScope = (
-    <ConfirmAction
-      label={t("permissions.removeScope")}
-      title={t("permissions.removeScope")}
-      description={describeScope(t, data, scope)}
-      confirmLabel={t("permissions.removeScope")}
-      disabled={disabled}
-      onConfirm={onRemove}
-    />
-  );
-
-  return (
-    <div className={styles.subcard}>
-      <div className={styles.row}>
-        <Field label={t("permissions.enterprise")}>
-          <select
-            value={scope.enterpriseKey}
-            disabled={disabled}
-            onChange={(event) => {
-              onChange({
-                ...scope,
-                enterpriseKey: event.target.value,
-                ...(scope.ownership === "store" ? { storeName: "" } : {}),
-              });
-            }}
-          >
-            <option value="">{t("permissions.choose")}</option>
-            {enterpriseOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("permissions.ownership")}>
-          <select
-            value={scope.ownership}
-            disabled={disabled}
-            onChange={(event) => {
-              const ownership = event.target.value;
-              if (ownership === "store") {
-                onChange({ ...scope, ownership: "store", storeName: "" });
-              } else if (ownership === "group") {
-                onChange({
-                  enterpriseKey: scope.enterpriseKey,
-                  ownership: "group",
-                  dimensions: scope.dimensions,
-                });
-              } else {
-                onChange({
-                  enterpriseKey: scope.enterpriseKey,
-                  ownership: "",
-                  dimensions: scope.dimensions,
-                });
-              }
-            }}
-          >
-            {ownershipOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-
-      {scope.ownership === "store" ? (
-        <Field label={t("permissions.storeName")}>
-          <select
-            value={scope.storeName ?? ""}
-            disabled={disabled}
-            onChange={(event) => {
-              onChange({ ...scope, storeName: event.target.value });
-            }}
-          >
-            <option value="">{t("permissions.choose")}</option>
-            {storeOptions.map((option) => (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-              >
-                {option.label}
-              </option>
-            ))}
-            {scope.storeName !== undefined &&
-            scope.storeName !== "" &&
-            !storeOptions.some((option) => option.value === scope.storeName) ? (
-              <option value={scope.storeName}>
-                {t("permissions.preserved")}
-              </option>
-            ) : null}
-          </select>
-        </Field>
-      ) : null}
-
-      {[...dimensionIds].map((dimensionId) => {
-        const dimension = data.dimensions.find(
-          (item) => item.id === dimensionId,
-        );
-        const value = scope.dimensions[dimensionId] ?? "";
-        const required = requiredDimensions.includes(dimensionId);
-        const valueOptions = (dimension?.values ?? []).map((item) => ({
-          value: item.id,
-          label: itemLabel(t, item.name, item.retired),
-          disabled: item.retired && item.id !== value,
-        }));
-        if (
-          value !== "" &&
-          !valueOptions.some((option) => option.value === value)
-        ) {
-          valueOptions.push({
-            value,
-            label: t("permissions.preserved"),
-            disabled: false,
-          });
-        }
-        return (
-          <div key={dimensionId} className={styles.row}>
-            <Field
-              label={
-                dimension === undefined
-                  ? t("permissions.preserved")
-                  : dimension.name
-              }
-            >
-              <select
-                value={value}
-                disabled={disabled}
-                onChange={(event) => {
-                  const dimensions = { ...scope.dimensions };
-                  if (event.target.value === "") {
-                    delete dimensions[dimensionId];
-                  } else {
-                    dimensions[dimensionId] = event.target.value;
-                  }
-                  onChange({ ...scope, dimensions });
-                }}
-              >
-                <option value="">{t("permissions.choose")}</option>
-                {valueOptions.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                    disabled={option.disabled}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {required ? null : (
-              <ActionButton
-                label={t("permissions.removeCondition")}
-                variant="secondary"
-                disabled={disabled}
-                onRun={() => {
-                  const dimensions = { ...scope.dimensions };
-                  delete dimensions[dimensionId];
-                  onChange({ ...scope, dimensions });
-                }}
-              />
-            )}
-          </div>
-        );
-      })}
-
-      <div className={styles.actions}>{removeScope}</div>
-    </div>
-  );
 }

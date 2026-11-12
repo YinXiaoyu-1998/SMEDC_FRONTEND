@@ -1,68 +1,102 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
+import { WebApiError } from "@/api/client";
 import type {
   PermissionAccount,
-  PermissionDimension,
-  PermissionSelection,
   PermissionsAccountsUpdateResponse,
 } from "@/api/permissions";
+import { VERSION_CONFLICT_CODE } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { DataTable } from "@/ui/DataTable";
 import { Field } from "@/ui/Field";
 import { InlineError } from "@/ui/InlineError";
-import { PageSection } from "@/ui/PageSection";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
+import { DraftFeedback, LevelSelect, SearchInput } from "./components";
+import type { Confirmation } from "./diff";
 import {
-  Checklist,
-  DraftDialogs,
-  DraftFeedback,
-  LevelSelect,
-  SaveButton,
-  SectionNote,
-} from "./components";
-import { useRegisterDraft } from "./useRegisterDraft";
-import { INTERNAL_CATEGORY_KEY } from "./constants";
-import { createId } from "./ids";
-import {
-  accountSummary,
-  accountRoleLabel,
-  categoryLabel,
-  changeSummary,
-  grantDescription,
-  itemLabel,
-} from "./labels";
-import {
+  accountDiff,
   accountToDraft,
   accountUpdateBody,
-  emptyGrant,
-  grantToDraft,
+  rebaseAccount,
+  sameGrant,
   validateAccountDraft,
   type AccountDraft,
   type GrantDraft,
 } from "./grants";
+import {
+  accountRoleLabel,
+  accountSummary,
+  enterpriseName,
+  grantCategoryLabels,
+  grantConditionLabels,
+  grantDescription,
+  grantLocationLabel,
+} from "./labels";
+import { GrantEditor } from "./GrantEditor";
+import {
+  DraftConflict,
+  ListHeader,
+  ObjectListHead,
+  ObjectRow,
+  Panel,
+  PermissionConfirmDialog,
+} from "./panel";
 import styles from "./Permissions.module.css";
 import { usePermissionsScope } from "./scope";
 import { useDraftSave } from "./useDraftSave";
+import { useRegisterDraft } from "./useRegisterDraft";
+
+const NEW_GRANT = "\u0000new";
 
 export function AccountsSection() {
   const { t } = useText();
   const scope = usePermissionsScope();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editorDirty, setEditorDirty] = useState(false);
+  const [search, setSearch] = useState("");
+  const [snapshot, setSnapshot] = useState<PermissionAccount | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [dirty, setDirty] = useState(false);
   const pendingId = useRef<string | null>(null);
+  const opener = useRef<HTMLElement | null>(null);
+
+  const discardFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      const id = pendingId.current;
+      pendingId.current = null;
+      setSnapshot(null);
+      setDirty(false);
+      if (id !== null) void openAccount(id);
+    },
+  });
+
+  const closePanel = () => {
+    setSnapshot(null);
+    setDirty(false);
+  };
 
   const openAccount = async (id: string) => {
     setLoadingId(id);
     setLoadError(null);
     try {
-      const account = await scope.writes.readAccount(id);
-      setSelectedId(account.id);
-      setEditorDirty(false);
+      let account = await scope.writes.readAccount(id);
+      if (account.authorizationVersion !== scope.bundle.version) {
+        const latest = await scope.reload();
+        account = await scope.writes.readAccount(id);
+        if (account.authorizationVersion !== latest.version) {
+          throw new WebApiError({
+            status: 409,
+            code: VERSION_CONFLICT_CODE,
+            message: "配置版本不一致",
+          });
+        }
+      }
+      setSnapshot(account);
+      setDirty(false);
     } catch (caught) {
       setLoadError(caught);
     } finally {
@@ -70,178 +104,206 @@ export function AccountsSection() {
     }
   };
 
-  const discardFlow = useConfirmFlow<string, void>({
-    prepare: () => pendingId.current ?? "",
-    submit: async (id) => {
-      pendingId.current = null;
-      await openAccount(id);
-    },
-  });
-
   const chooseAccount = (id: string) => {
-    if (id === selectedId) return;
-    if (editorDirty) {
+    if (snapshot?.id === id) return;
+    if (dirty) {
       pendingId.current = id;
       void discardFlow.request();
       return;
     }
+    closePanel();
     void openAccount(id);
   };
 
-  const selected = scope.bundle.accounts.find(
-    (account) => account.id === selectedId,
+  const needle = search.trim().toLowerCase();
+  const accounts = scope.bundle.accounts.filter(
+    (account) =>
+      needle === "" ||
+      account.displayName.toLowerCase().includes(needle) ||
+      account.email.toLowerCase().includes(needle),
   );
 
   return (
-    <PageSection title={t("permissions.tabs.accounts")}>
-      <SectionNote>{t("permissions.accountHelp")}</SectionNote>
-      <SectionNote>{t("permissions.levelHelp")}</SectionNote>
-      <SectionNote>{t("permissions.groupHelp")}</SectionNote>
-      <SectionNote>{t("permissions.noGrantOption")}</SectionNote>
-
-      <DataTable<PermissionAccount>
-        columns={[
-          {
-            id: "name",
-            header: t("permissions.account"),
-            cell: (account) => account.displayName,
-          },
-          {
-            id: "email",
-            header: t("session.identity"),
-            cell: (account) => account.email,
-          },
-          {
-            id: "role",
-            header: t("permissions.role"),
-            cell: (account) => accountRoleLabel(t, account.role),
-          },
-          {
-            id: "clearance",
-            header: t("permissions.clearance"),
-            cell: (account) => String(account.clearance),
-          },
-          {
-            id: "grants",
-            header: t("permissions.grantCount"),
-            cell: (account) => String(account.grants.length),
-          },
-          {
-            id: "actions",
-            header: t("permissions.edit"),
-            cell: (account) => (
-              <ActionButton
-                label={t("permissions.edit")}
-                variant="secondary"
-                busy={loadingId === account.id}
-                disabled={loadingId !== null && loadingId !== account.id}
-                onRun={() => {
-                  chooseAccount(account.id);
-                }}
-              />
-            ),
-          },
-        ]}
-        rows={scope.bundle.accounts}
-        getRowId={(account) => account.id}
-        label={t("permissions.selectAccount")}
-        emptyLabel={t("permissions.empty")}
-      />
+    <>
+      <section className={styles.catalogCard}>
+        <ListHeader
+          title={t("permissions.tabs.accounts")}
+          description={t("permissions.accountListHint")}
+        />
+        <div className={styles.toolbar}>
+          <SearchInput
+            label={t("permissions.searchAccount")}
+            value={search}
+            onChange={setSearch}
+          />
+        </div>
+        <DataTable<PermissionAccount>
+          className={styles.catalogTable}
+          columns={[
+            {
+              id: "name",
+              header: t("permissions.account"),
+              cell: (account) => (
+                <div className={styles.rowName}>
+                  <span className={styles.rowIcon}>
+                    <AdminIcon name="person" />
+                  </span>
+                  <div>
+                    <strong>{account.displayName}</strong>
+                    <span className={styles.rowDescription}>
+                      {account.email}
+                    </span>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              id: "role",
+              header: t("permissions.role"),
+              cell: (account) => accountRoleLabel(t, account.role),
+            },
+            {
+              id: "clearance",
+              header: t("permissions.clearance"),
+              cell: (account) => (
+                <span className={styles.levelBadge}>{account.clearance}</span>
+              ),
+            },
+            {
+              id: "grants",
+              header: t("permissions.grantCount"),
+              cell: (account) => String(account.grants.length),
+            },
+            {
+              id: "actions",
+              header: t("permissions.actions"),
+              align: "end",
+              cell: (account) => (
+                <ActionButton
+                  label={t("permissions.edit")}
+                  variant="ghost"
+                  className={styles.rowAction}
+                  icon={<AdminIcon name="edit" />}
+                  onPointerDown={(event) => {
+                    opener.current = event.currentTarget;
+                  }}
+                  onFocus={(event) => {
+                    opener.current = event.currentTarget;
+                  }}
+                  busy={loadingId === account.id}
+                  disabled={loadingId !== null && loadingId !== account.id}
+                  onRun={() => {
+                    chooseAccount(account.id);
+                  }}
+                />
+              ),
+            },
+          ]}
+          rows={accounts}
+          getRowId={(account) => account.id}
+          label={t("permissions.tabs.accounts")}
+          emptyLabel={t("permissions.empty")}
+        />
+        <div className={styles.tableFoot}>
+          <span
+            className={styles.countText}
+          >{`${t("permissions.rowCount")} ${accounts.length} ${t("permissions.count")}`}</span>
+        </div>
+      </section>
       <InlineError error={loadError} />
-      {selected === undefined ? null : (
-        <AccountEditor
-          key={selected.id}
-          account={selected}
-          onDirtyChange={setEditorDirty}
+
+      {snapshot === null ? null : (
+        <AccountPanel
+          key={snapshot.id}
+          account={snapshot}
+          onClose={closePanel}
+          onDirtyChange={setDirty}
+          returnFocusRef={opener}
         />
       )}
+
       <ConfirmDialog
         flow={discardFlow}
-        title={t("permissions.discard.title")}
-        description={t("permissions.discard.description")}
-        confirmLabel={t("permissions.discard.action")}
+        title={t("permissions.discardTitle")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discardChanges")}
         cancelLabel={t("permissions.discard.keep")}
       />
-    </PageSection>
+    </>
   );
 }
 
-function AccountEditor({
+function AccountPanel({
   account,
+  onClose,
   onDirtyChange,
+  returnFocusRef,
 }: {
-  account: PermissionAccount;
-  onDirtyChange: (dirty: boolean) => void;
+  readonly account: PermissionAccount;
+  /** 关闭并卸载面板；是否需要放弃确认由面板内部判断。 */
+  readonly onClose: () => void;
+  readonly onDirtyChange: (dirty: boolean) => void;
+  readonly returnFocusRef: RefObject<HTMLElement | null>;
 }) {
   const { t } = useText();
   const scope = usePermissionsScope();
-  const saved = useMemo(() => accountToDraft(account), [account]);
   const data = scope.bundle;
+  const baseline = useMemo(
+    () => ({
+      snapshot: accountToDraft(account),
+      version: account.authorizationVersion,
+    }),
+    [account],
+  );
 
   const save = useDraftSave<AccountDraft, PermissionsAccountsUpdateResponse>({
-    saved,
-    expectedVersion: scope.bundle.version,
-    normalize: (draft) => draft,
-    validate: (draft) => validateAccountDraft(draft, data),
-    describe: (draft) =>
-      changeSummary(
-        t,
-        account.displayName,
-        accountSummary(t, data, {
-          displayName: account.displayName,
-          clearance: account.clearance,
-          grants: account.grants,
-        }),
-        accountSummary(t, data, {
-          displayName: account.displayName,
-          clearance: draft.clearance ?? 0,
-          grants: draft.grants,
-        }),
-      ),
+    baseline,
+    validate: (draft, baseline) => validateAccountDraft(draft, data, baseline),
+    confirmation: (draft, base) => ({
+      subject: account.displayName,
+      diff: accountDiff(t, data, draft, base),
+      impact: t("permissions.accountSaveImpact"),
+      fullBefore: accountSummary(t, data, {
+        displayName: account.displayName,
+        clearance: base.clearance ?? 0,
+        grants: base.grants,
+      }),
+      fullAfter: accountSummary(t, data, {
+        displayName: account.displayName,
+        clearance: draft.clearance ?? 0,
+        grants: draft.grants,
+      }),
+    }),
     submit: (draft, expectedVersion) =>
       scope.writes.saveAccount(
         account.id,
         accountUpdateBody(draft, expectedVersion),
       ),
-    draftFromResult: (result) => ({
-      clearance: result.value.clearance,
-      grants: result.value.grants.map((grant) => grantToDraft(grant)),
-    }),
+    nextBaseline: (result) =>
+      accountToDraft({
+        clearance: result.value.clearance,
+        grants: result.value.grants,
+      }),
     reload: async () => {
       const next = await scope.reload();
       const latest = next.accounts.find((item) => item.id === account.id);
-      return latest === undefined ? saved : accountToDraft(latest);
+      if (latest === undefined) {
+        throw new WebApiError({
+          status: 409,
+          code: "AUTHORIZATION_ACCOUNT_NOT_FOUND",
+          message: "账号已不可用",
+        });
+      }
+      return {
+        snapshot: accountToDraft(latest),
+        version: latest.authorizationVersion,
+      };
     },
-    conflictFields: (draft, current) => [
-      {
-        key: "clearance",
-        label: t("permissions.clearance"),
-        serverValue:
-          current.clearance === null
-            ? t("permissions.unset")
-            : String(current.clearance),
-        draftValue:
-          draft.clearance === null
-            ? t("permissions.unset")
-            : String(draft.clearance),
-      },
-      {
-        key: "grants",
-        label: t("permissions.grants"),
-        serverValue:
-          current.grants.length === 0
-            ? t("permissions.noGrants")
-            : current.grants
-                .map((grant) => grantDescription(t, data, grant))
-                .join("\n"),
-        draftValue:
-          draft.grants.length === 0
-            ? t("permissions.noGrants")
-            : draft.grants
-                .map((grant) => grantDescription(t, data, grant))
-                .join("\n"),
-      },
-    ],
+    rebase: (input) => rebaseAccount(t, data, input),
+    onSaved: () => {
+      scope.setNotice("permissions.saved");
+      onClose();
+    },
   });
   useRegisterDraft(save.isDirty || save.conflict);
 
@@ -249,495 +311,269 @@ function AccountEditor({
     onDirtyChange(save.isDirty || save.conflict);
   }, [onDirtyChange, save.conflict, save.isDirty]);
 
-  const updateGrant = (next: GrantDraft) => {
-    save.setDraft({
-      ...save.draft,
-      grants: save.draft.grants.map((grant) =>
-        grant.id === next.id ? next : grant,
-      ),
-    });
-  };
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const pendingRemoval = useRef<string | null>(null);
 
-  const removeGrant = (id: string) => {
-    save.setDraft({
-      ...save.draft,
-      grants: save.draft.grants.filter((grant) => grant.id !== id),
-    });
-  };
-
-  return (
-    <form
-      className={styles.card}
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.requestSave();
-      }}
-    >
-      <h3 className={styles.cardTitle}>{account.displayName}</h3>
-      <p className={styles.hint}>
-        {t("permissions.role")}: {accountRoleLabel(t, account.role)}
-      </p>
-      {account.disabled ? (
-        <p className={styles.error}>{t("permissions.disabled")}</p>
-      ) : null}
-      <Field label={t("permissions.clearance")}>
-        <LevelSelect
-          value={save.draft.clearance}
-          disabled={save.saving}
-          onChange={(clearance) => {
-            save.setDraft({ ...save.draft, clearance });
-          }}
-        />
-      </Field>
-
-      <h4 className={styles.subheading}>{t("permissions.grants")}</h4>
-      {save.draft.grants.length === 0 ? (
-        <p className={styles.hint}>{t("permissions.noGrants")}</p>
-      ) : (
-        <div className={styles.stack}>
-          {save.draft.grants.map((grant) => (
-            <GrantCard
-              key={grant.id}
-              grant={grant}
-              disabled={save.saving || scope.busy}
-              onChange={updateGrant}
-              onRemove={() => {
-                removeGrant(grant.id);
-              }}
-            />
-          ))}
-        </div>
-      )}
-      <div className={styles.actions}>
-        <ActionButton
-          label={t("permissions.addGrant")}
-          variant="secondary"
-          disabled={scope.busy || save.conflict}
-          onRun={() => {
-            save.setDraft({
-              ...save.draft,
-              grants: [
-                ...save.draft.grants,
-                emptyGrant(scope.bundle.me.orgId, createId()),
-              ],
-            });
-          }}
-        />
-        <SaveButton save={save} />
-      </div>
-      <DraftFeedback save={save} />
-      <DraftDialogs save={save} />
-    </form>
-  );
-}
-
-function selectionMode(selection: PermissionSelection | undefined): string {
-  if (selection === undefined) return "";
-  return selection.kind;
-}
-
-function grantWithStores(
-  grant: GrantDraft,
-  stores: PermissionSelection | undefined,
-): GrantDraft {
-  if (stores === undefined) {
-    return {
-      id: grant.id,
-      orgId: grant.orgId,
-      enterpriseKey: grant.enterpriseKey,
-      categoryIds: grant.categoryIds,
-      ownership: grant.ownership,
-      dimensions: grant.dimensions,
-    };
-  }
-  return { ...grant, stores };
-}
-
-function grantWithDimensions(
-  grant: GrantDraft,
-  dimensions: Readonly<Record<string, PermissionSelection>>,
-): GrantDraft {
-  return { ...grant, dimensions };
-}
-
-function GrantCard({
-  grant,
-  disabled,
-  onChange,
-  onRemove,
-}: {
-  grant: GrantDraft;
-  disabled: boolean;
-  onChange: (next: GrantDraft) => void;
-  onRemove: () => void;
-}) {
-  const { t } = useText();
-  const scope = usePermissionsScope();
-  const { categories, dimensions, enterprises, stores } = scope.bundle;
-
-  const removeFlow = useConfirmFlow<void, void>({
-    prepare: () => undefined,
+  const removeFlow = useConfirmFlow<{ confirmation: Confirmation }, void>({
+    prepare: () => {
+      const id = pendingRemoval.current;
+      const grant = save.draft.grants.find((item) => item.id === id);
+      return {
+        confirmation: {
+          subject: account.displayName,
+          diff:
+            grant === undefined
+              ? []
+              : [
+                  {
+                    kind: "removed" as const,
+                    label: t("permissions.grant"),
+                    before: grantDescription(t, data, grant),
+                  },
+                ],
+          impact: t("permissions.grantRemoveImpact"),
+        },
+      };
+    },
     submit: () => {
-      onRemove();
+      const id = pendingRemoval.current;
+      pendingRemoval.current = null;
+      if (id === null) return;
+      save.setDraft((previous) => ({
+        ...previous,
+        grants: previous.grants.filter((grant) => grant.id !== id),
+      }));
     },
   });
 
-  const categoryChoices = categories
-    .filter(
-      (category) =>
-        category.key !== INTERNAL_CATEGORY_KEY &&
-        (grant.ownership === "" ||
-          (grant.ownership === "store"
-            ? category.allowStore
-            : category.allowGroup) ||
-          grant.categoryIds.includes(category.id)),
-    )
-    .map((category) => ({
-      value: category.id,
-      label: categoryLabel(t, category),
-      disabled: category.retired,
-    }));
-  const internalIds = grant.categoryIds.filter(
-    (id) =>
-      categories.find((category) => category.id === id)?.key ===
-      INTERNAL_CATEGORY_KEY,
-  );
-  for (const id of grant.categoryIds) {
-    if (
-      !internalIds.includes(id) &&
-      !categoryChoices.some((choice) => choice.value === id) &&
-      !categories.some(
-        (category) =>
-          category.id === id && category.key === INTERNAL_CATEGORY_KEY,
-      )
-    ) {
-      categoryChoices.push({
-        value: id,
-        label: t("permissions.preserved"),
-        disabled: false,
-      });
-    }
-  }
-
-  const selectedStores = grant.stores;
-  const storeChoices =
-    selectedStores === undefined || selectedStores.kind !== "fixed"
-      ? []
-      : selectedStores.values;
-  const storeOptions = stores
-    .filter(
-      (store) =>
-        store.enterpriseKey === grant.enterpriseKey &&
-        (store.confirmation === undefined ||
-          store.confirmation === "confirmed" ||
-          storeChoices.includes(store.name)),
-    )
-    .map((store) => ({
-      value: store.name,
-      label: itemLabel(t, store.officialName ?? store.name, store.retired),
-      disabled:
-        store.retired ||
-        (store.confirmation !== undefined &&
-          store.confirmation !== "confirmed"),
-    }));
-  for (const name of storeChoices) {
-    if (!storeOptions.some((option) => option.value === name)) {
-      storeOptions.push({ value: name, label: name, disabled: false });
-    }
-  }
-
-  const requiredDimensionIds = new Set(
-    grant.categoryIds.flatMap((id) => {
-      const category = categories.find((item) => item.id === id);
-      return category === undefined
-        ? []
-        : category.dimensions.map((item) => item.dimensionId);
-    }),
-  );
-  const dimensionIds = new Set([
-    ...requiredDimensionIds,
-    ...Object.keys(grant.dimensions),
-  ]);
-
-  const enterpriseOptions = enterprises.map((enterprise) => ({
-    value: enterprise.enterpriseKey,
-    label: enterprise.enterpriseName,
-  }));
-  if (
-    grant.enterpriseKey !== "" &&
-    !enterpriseOptions.some((option) => option.value === grant.enterpriseKey)
-  ) {
-    enterpriseOptions.push({
-      value: grant.enterpriseKey,
-      label: grant.enterpriseKey,
-    });
-  }
-
-  const handleStoreMode = (mode: string) => {
-    if (mode === "none") {
-      // 复刻旧页：选择“无门店读取权限”等于撤掉整条授权，必须显式确认。
-      void removeFlow.request();
-      return;
-    }
-    if (mode === "") {
-      onChange(grantWithStores(grant, undefined));
-      return;
-    }
-    if (mode === "all") {
-      onChange(grantWithStores(grant, { kind: "all" }));
-      return;
-    }
-    onChange(
-      grantWithStores(grant, {
-        kind: "fixed",
-        values:
-          selectedStores?.kind === "fixed" ? [...selectedStores.values] : [],
-      }),
-    );
+  const requestRemove = (id: string) => {
+    setEditingId(null);
+    pendingRemoval.current = id;
+    void removeFlow.request();
   };
 
-  return (
-    <div className={styles.subcard}>
-      <div className={styles.row}>
-        <Field label={t("permissions.enterprise")}>
-          <select
-            value={grant.enterpriseKey}
-            disabled={disabled}
-            onChange={(event) => {
-              onChange({
-                ...grant,
-                enterpriseKey: event.target.value,
-                ...(grant.ownership === "store"
-                  ? { stores: { kind: "fixed", values: [] } }
-                  : {}),
-              });
-            }}
-          >
-            <option value="">{t("permissions.choose")}</option>
-            {enterpriseOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={t("permissions.ownership")}>
-          <select
-            value={grant.ownership}
-            disabled={disabled}
-            onChange={(event) => {
-              const ownership = event.target.value;
-              const next: GrantDraft =
-                ownership === "store"
-                  ? {
-                      ...grant,
-                      ownership: "store",
-                      stores:
-                        grant.stores === undefined
-                          ? { kind: "fixed", values: [] }
-                          : grant.stores,
-                    }
-                  : ownership === "group"
-                    ? grantWithStores(
-                        { ...grant, ownership: "group" },
-                        undefined,
-                      )
-                    : grantWithStores({ ...grant, ownership: "" }, undefined);
-              onChange(next);
-            }}
-          >
-            <option value="">{t("permissions.choose")}</option>
-            <option value="store">{t("permissions.store")}</option>
-            <option value="group">{t("permissions.group")}</option>
-          </select>
-        </Field>
-      </div>
+  const discardFlow = useConfirmFlow<void, void>({
+    prepare: () => undefined,
+    submit: () => {
+      save.reset();
+      onClose();
+    },
+  });
 
-      <Checklist
-        legend={t("permissions.categoriesLabel")}
-        options={categoryChoices}
-        selected={grant.categoryIds}
-        disabled={disabled}
-        onChange={(values) => {
-          onChange({
-            ...grant,
-            categoryIds: [...internalIds, ...values],
-          });
-        }}
-      />
-      {internalIds.length === 0 ? null : (
-        <SectionNote>{t("permissions.internalLedger")}</SectionNote>
-      )}
+  const requestClose = () => {
+    if (save.isDirty || save.conflict) {
+      void discardFlow.request();
+      return;
+    }
+    onClose();
+  };
 
-      {grant.ownership === "group" ? (
-        <SectionNote>{t("permissions.groupHelp")}</SectionNote>
-      ) : null}
-      {grant.ownership === "store" ? (
-        <div>
-          <Field label={t("permissions.selectedStores")}>
-            <select
-              value={selectionMode(grant.stores)}
-              disabled={disabled}
-              onChange={(event) => {
-                handleStoreMode(event.target.value);
-              }}
-            >
-              <option value="">{t("permissions.choose")}</option>
-              <option value="none">{t("permissions.noStoreRead")}</option>
-              <option value="fixed">{t("permissions.selectedStores")}</option>
-              <option value="all">{t("permissions.allStores")}</option>
-            </select>
-          </Field>
-          {grant.stores !== undefined && grant.stores.kind === "fixed" ? (
-            <Checklist
-              legend={t("permissions.selectedStores")}
-              options={storeOptions}
-              selected={grant.stores.values}
-              disabled={disabled}
-              onChange={(values) => {
-                onChange(grantWithStores(grant, { kind: "fixed", values }));
-              }}
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className={styles.stack}>
-        {[...dimensionIds].map((dimensionId) => (
-          <GrantDimensionCard
-            key={dimensionId}
-            dimension={dimensions.find((item) => item.id === dimensionId)}
-            dimensionId={dimensionId}
-            required={requiredDimensionIds.has(dimensionId)}
-            grant={grant}
-            disabled={disabled}
-            onChange={onChange}
-          />
-        ))}
-      </div>
-
-      <ConfirmDialog
-        flow={removeFlow}
-        title={t("permissions.removeGrant")}
-        description={grantDescription(t, scope.bundle, grant)}
-        confirmLabel={t("permissions.removeGrant")}
-        cancelLabel={t("permissions.cancel")}
-      />
-      <div className={styles.actions}>
-        <ActionButton
-          label={t("permissions.removeGrant")}
-          variant="secondary"
-          disabled={disabled}
-          onRun={() => {
-            void removeFlow.request();
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function GrantDimensionCard({
-  dimension,
-  dimensionId,
-  required,
-  grant,
-  disabled,
-  onChange,
-}: {
-  dimension: PermissionDimension | undefined;
-  dimensionId: string;
-  required: boolean;
-  grant: GrantDraft;
-  disabled: boolean;
-  onChange: (next: GrantDraft) => void;
-}) {
-  const { t } = useText();
-  const selection = grant.dimensions[dimensionId];
-  const mode = selectionMode(selection);
-
-  const setSelection = (next: PermissionSelection | undefined) => {
-    const dimensions = { ...grant.dimensions };
-    if (next === undefined) {
-      delete dimensions[dimensionId];
+  const completeGrant = (next: GrantDraft) => {
+    if (editingId === NEW_GRANT) {
+      save.setDraft((previous) => ({
+        ...previous,
+        grants: [...previous.grants, next],
+      }));
     } else {
-      dimensions[dimensionId] = next;
+      save.setDraft((previous) => ({
+        ...previous,
+        grants: previous.grants.map((grant) =>
+          grant.id === next.id ? next : grant,
+        ),
+      }));
     }
-    onChange(grantWithDimensions(grant, dimensions));
+    setEditingId(null);
   };
 
-  const valueChoices = (dimension?.values ?? []).map((value) => ({
-    value: value.id,
-    label: itemLabel(t, value.name, value.retired),
-    disabled: value.retired,
-  }));
-  if (selection !== undefined && selection.kind === "fixed") {
-    for (const id of selection.values) {
-      if (!valueChoices.some((choice) => choice.value === id)) {
-        valueChoices.push({
-          value: id,
-          label: t("permissions.preserved"),
-          disabled: false,
-        });
-      }
-    }
-  }
+  const editingGrant =
+    editingId === null || editingId === NEW_GRANT
+      ? null
+      : (save.draft.grants.find((grant) => grant.id === editingId) ?? null);
 
   return (
-    <div className={styles.subcard}>
-      <Field
-        label={
-          dimension === undefined ? t("permissions.preserved") : dimension.name
+    <>
+      <Panel
+        open
+        title={t("permissions.accountPanel")}
+        subtitle={`${account.displayName} · ${accountRoleLabel(t, account.role)} · ${account.email}`}
+        onRequestClose={requestClose}
+        returnFocusRef={returnFocusRef}
+        footer={
+          <>
+            <ActionButton
+              label={t("permissions.cancel")}
+              variant="secondary"
+              onRun={requestClose}
+            />
+            <ActionButton
+              label={t("permissions.save")}
+              busy={save.saving}
+              disabled={!save.canSave || scope.busy || account.disabled}
+              disabledReason={
+                account.disabled
+                  ? t("permissions.disabled")
+                  : (save.disabledReason ?? t("permissions.noChange"))
+              }
+              onRun={save.requestSave}
+            />
+          </>
         }
       >
-        <select
-          value={mode}
-          disabled={disabled}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (next === "") {
-              setSelection(undefined);
-            } else if (next === "all") {
-              setSelection({ kind: "all" });
-            } else {
-              setSelection({
-                kind: "fixed",
-                values:
-                  selection !== undefined && selection.kind === "fixed"
-                    ? [...selection.values]
-                    : [],
-              });
-            }
-          }}
+        <p className={styles.inlineNote}>{t("permissions.accountRoleHint")}</p>
+        {account.disabled ? (
+          <p className={styles.error} role="alert">
+            {t("permissions.disabled")}
+          </p>
+        ) : null}
+        <Field
+          label={t("permissions.clearance")}
+          hint={t("permissions.levelHelp")}
         >
-          <option value="">{t("permissions.choose")}</option>
-          <option value="fixed">{t("permissions.selectedValues")}</option>
-          <option value="all">{t("permissions.allValues")}</option>
-        </select>
-      </Field>
-      {selection !== undefined && selection.kind === "fixed" ? (
-        <Checklist
-          legend={t("permissions.selectedValues")}
-          options={valueChoices}
-          selected={selection.values}
-          disabled={disabled}
-          onChange={(values) => {
-            setSelection({ kind: "fixed", values });
-          }}
-        />
-      ) : null}
-      {required ? null : (
-        <div className={styles.actions}>
-          <ActionButton
-            label={t("permissions.removeCondition")}
-            variant="secondary"
-            disabled={disabled}
-            onRun={() => {
-              setSelection(undefined);
+          <LevelSelect
+            value={save.draft.clearance}
+            disabled={save.saving}
+            onChange={(clearance) => {
+              save.setDraft({ ...save.draft, clearance });
             }}
           />
-        </div>
-      )}
-    </div>
+        </Field>
+
+        <ObjectListHead
+          title={t("permissions.grants")}
+          action={
+            <ActionButton
+              label={t("permissions.addGrantEntry")}
+              variant="ghost"
+              className={styles.rowAction}
+              icon={<AdminIcon name="plus" />}
+              disabled={save.saving || save.conflict}
+              onRun={() => {
+                setEditingId(NEW_GRANT);
+              }}
+            />
+          }
+        />
+        {save.draft.grants.length === 0 ? (
+          <p className={styles.emptyEditor}>{t("permissions.noGrants")}</p>
+        ) : (
+          <div className={styles.stack}>
+            {save.draft.grants.map((grant) => {
+              const unchanged = save.baseline.grants.some((base) =>
+                sameGrant(base, grant),
+              );
+              return (
+                <ObjectRow
+                  key={grant.id}
+                  highlight={!unchanged}
+                  title={`${grantLocationLabel(t, data, grant)} · ${grantCategoryLabels(t, data, grant.categoryIds)}`}
+                  description={[
+                    enterpriseName(t, data, grant.enterpriseKey),
+                    t(
+                      grant.ownership === "store"
+                        ? "permissions.store"
+                        : "permissions.group",
+                    ),
+                    grantConditionLabels(t, data, grant.dimensions),
+                  ]
+                    .filter((part) => part !== "")
+                    .join(" · ")}
+                  actions={
+                    <>
+                      <ActionButton
+                        label={t("permissions.edit")}
+                        variant="ghost"
+                        className={styles.rowAction}
+                        icon={<AdminIcon name="edit" />}
+                        disabled={save.saving}
+                        onRun={() => {
+                          setEditingId(grant.id);
+                        }}
+                      />
+                      <ActionButton
+                        label={t("permissions.remove")}
+                        variant="ghost"
+                        className={styles.dangerAction}
+                        disabled={save.saving}
+                        onRun={() => {
+                          requestRemove(grant.id);
+                        }}
+                      />
+                    </>
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {save.conflict && save.conflictConfirmation !== null ? (
+          <DraftConflict
+            confirmation={save.conflictConfirmation}
+            choices={save.conflictChoices}
+            selected={save.conflictDecisions}
+            onSelect={save.chooseConflict}
+            canApply={save.conflictCanApply}
+            {...(save.conflictApplyReason === undefined
+              ? {}
+              : { applyReason: save.conflictApplyReason })}
+            onLoadServer={save.loadServer}
+            onApplyMine={save.applyMine}
+            reloading={save.conflictReloading}
+            error={save.conflictError}
+          />
+        ) : save.conflict ? (
+          <div className={styles.conflict} role="alert">
+            <h3 className={styles.conflictTitle}>{t("ui.conflict.title")}</h3>
+            <InlineError error={save.conflictError} />
+            <div className={styles.actions}>
+              <ActionButton
+                label={t("permissions.reload")}
+                busy={save.conflictReloading}
+                onRun={save.retryConflict}
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <DraftFeedback save={save} />
+      </Panel>
+
+      <GrantEditor
+        key={editingId ?? "closed"}
+        open={editingId !== null}
+        grant={editingGrant}
+        accountName={account.displayName}
+        orgId={account.orgId}
+        data={data}
+        onComplete={completeGrant}
+        onRemove={() => {
+          if (editingId === null || editingId === NEW_GRANT) return;
+          requestRemove(editingId);
+        }}
+        onCancel={() => {
+          setEditingId(null);
+        }}
+      />
+
+      <PermissionConfirmDialog
+        flow={save.flow}
+        title={t("permissions.confirm.title")}
+        confirmLabel={t("permissions.confirm.action")}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <PermissionConfirmDialog
+        flow={removeFlow}
+        title={t("permissions.grantRemoveConfirm")}
+        confirmLabel={t("permissions.remove")}
+        cancelLabel={t("permissions.cancel")}
+      />
+      <ConfirmDialog
+        flow={discardFlow}
+        title={t("permissions.discardTitle")}
+        description={t("permissions.discardDescription")}
+        confirmLabel={t("permissions.discardChanges")}
+        cancelLabel={t("permissions.discard.keep")}
+      />
+    </>
   );
 }

@@ -31,11 +31,12 @@ export function isFixedCategoryKey(
   return fixedCategoryKeySet.has(value);
 }
 
+// 顺序与已评审原型 v2 的分区导航一致。
 export const sectionKeys = [
   "categories",
-  "stores",
   "dimensions",
   "accounts",
+  "stores",
   "documents",
   "readiness",
 ] as const;

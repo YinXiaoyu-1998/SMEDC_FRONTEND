@@ -149,8 +149,7 @@ function createState(): MockState {
       scopes: [
         {
           enterpriseKey: "ent-1",
-          ownership: "store",
-          storeName: "一号店",
+          ownership: "group",
           dimensions: { "dim-team": "team-a" },
         },
       ],
@@ -837,26 +836,6 @@ function renderPermissions(
   return { ...view, state, fetchMock };
 }
 
-async function openCategories() {
-  await screen.findByRole("heading", { name: "营业数据" });
-}
-
-function categoryForm(name: string): HTMLElement {
-  const heading = screen.getByRole("heading", { name });
-  const form = heading.closest("form");
-  if (form === null) throw new Error("找不到类别表单");
-  return form;
-}
-
-async function saveLevel(form: HTMLElement, value: string) {
-  fireEvent.change(within(form).getByLabelText("密级"), {
-    target: { value },
-  });
-  fireEvent.click(within(form).getByRole("button", { name: "保存" }));
-  const dialog = await screen.findByRole("dialog");
-  return dialog;
-}
-
 beforeEach(() => {
   localStorage.clear();
 });
@@ -866,24 +845,43 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function bodyOf(
+  fetchMock: ReturnType<typeof installFetch>,
+  method: string,
+  path: RegExp,
+): unknown[] {
+  return fetchMock.mock.calls
+    .filter(([input, init]) => {
+      const url = new URL(String(input), "http://localhost");
+      return (init?.method ?? "GET") === method && path.test(url.pathname);
+    })
+    .map(([, init]) =>
+      init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+    );
+}
+
+async function openTab(name: string) {
+  fireEvent.click(await screen.findByRole("tab", { name }));
+}
+
 describe("权限设置页", () => {
-  it("首次加载时读取同一版本的全部分区快照", async () => {
+  it("加载时读取同一版本的全部分区，默认打开文档类别", async () => {
     const { fetchMock } = renderPermissions();
 
-    await openCategories();
-
+    await screen.findByRole("heading", { name: "文档类别" });
+    await screen.findByText("运营制度");
     expect(
       screen.getByRole("heading", { name: "权限设置" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "类别密级" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "类别与密级" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    expect(screen.getByText("配置版本: 7")).toBeInTheDocument();
-    expect(screen.getByText("准备中 · 仍按原有规则读取")).toBeInTheDocument();
 
-    const urls = fetchMock.mock.calls.map(([input]) => String(input));
-    for (const endpoint of [
+    const paths = fetchMock.mock.calls.map(
+      ([input]) => new URL(String(input), "http://localhost").pathname,
+    );
+    for (const suffix of [
       "/permissions/me",
       "/permissions/categories",
       "/permissions/stores",
@@ -891,44 +889,492 @@ describe("权限设置页", () => {
       "/permissions/accounts",
       "/permissions/enterprises",
     ]) {
-      expect(urls.some((url) => url.endsWith(endpoint))).toBe(true);
+      expect(paths.some((path) => path.endsWith(suffix))).toBe(true);
     }
   });
 
-  it("空态：文档列表没有条目时显示空态而不是表格行", async () => {
-    const state = createState();
-    state.documents = [];
-    renderPermissions({ state });
-    await openCategories();
+  it("编辑固定类别密级时确认摘要只有密级一项，并按冻结版本提交", async () => {
+    const { fetchMock } = renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
 
-    fireEvent.click(screen.getByRole("tab", { name: "普通文档" }));
+    fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
+    const row = (await screen.findByText("营业数据")).closest("tr");
+    if (row === null) throw new Error("找不到固定类别行");
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
 
-    const panel = screen.getByRole("tabpanel", { name: "普通文档" });
-    await waitFor(() => {
-      expect(within(panel).getByText("暂无条目")).toBeInTheDocument();
+    const panel = await screen.findByRole("dialog", { name: "固定类别" });
+    fireEvent.change(within(panel).getByLabelText("密级"), {
+      target: { value: "2" },
     });
-    expect(
-      within(panel).queryByRole("button", { name: "门店巡检制度" }),
-    ).toBeNull();
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    expect(within(confirm).getAllByTestId("diff-entry")).toHaveLength(1);
+    expect(within(confirm).getByText("密级")).toBeInTheDocument();
+    expect(within(confirm).queryByText("资料归属")).toBeNull();
+
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "固定类别" })).toBeNull();
+    });
+
+    const bodies = bodyOf(
+      fetchMock,
+      "PATCH",
+      /\/permissions\/categories\/cat-business$/,
+    );
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]).toMatchObject({
+      expectedVersion: "7",
+      name: "营业数据",
+      confidentialityLevel: 2,
+    });
   });
 
-  it("请求失败时展示可重试的错误状态", async () => {
-    renderPermissions({
+  it("账号逐条新增与删除授权只在最后提交一次完整载荷", async () => {
+    const { fetchMock } = renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+
+    const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.change(within(panel).getByLabelText("账号密级"), {
+      target: { value: "3" },
+    });
+
+    fireEvent.click(within(panel).getByRole("button", { name: "删除" }));
+    const removeConfirm = await screen.findByRole("dialog", {
+      name: "删除此授权条目？",
+    });
+    fireEvent.click(
+      within(removeConfirm).getByRole("button", { name: "删除" }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "删除此授权条目？" }),
+      ).toBeNull();
+    });
+
+    fireEvent.click(
+      within(panel).getByRole("button", { name: "新增授权条目" }),
+    );
+    const editor = await screen.findByRole("dialog", { name: "新增授权条目" });
+    fireEvent.change(within(editor).getByLabelText("业务企业"), {
+      target: { value: "ent-1" },
+    });
+    fireEvent.change(within(editor).getByLabelText("资料归属"), {
+      target: { value: "store" },
+    });
+    fireEvent.click(within(editor).getByRole("checkbox", { name: "营业数据" }));
+    fireEvent.change(within(editor).getByLabelText("门店范围"), {
+      target: { value: "fixed" },
+    });
+    fireEvent.click(within(editor).getByRole("checkbox", { name: "一号店" }));
+    fireEvent.click(within(editor).getByRole("button", { name: "完成条目" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "新增授权条目" })).toBeNull();
+    });
+
+    expect(
+      bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+    ).toHaveLength(0);
+
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    expect(within(confirm).getAllByTestId("diff-entry")).toHaveLength(3);
+
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+    await waitFor(() => {
+      expect(
+        bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+      ).toHaveLength(1);
+    });
+
+    const body = bodyOf(
+      fetchMock,
+      "PATCH",
+      /\/permissions\/accounts\/employee-1$/,
+    )[0] as {
+      readonly expectedVersion: string;
+      readonly clearance: number;
+      readonly grants: readonly {
+        readonly enterpriseKey: string;
+        readonly categoryIds: readonly string[];
+        readonly ownership: string;
+        readonly stores?: {
+          readonly kind: string;
+          readonly values: readonly string[];
+        };
+      }[];
+    };
+    expect(body.expectedVersion).toBe("7");
+    expect(body.clearance).toBe(3);
+    expect(body.grants).toHaveLength(1);
+    expect(body.grants[0]).toMatchObject({
+      enterpriseKey: "ent-1",
+      ownership: "store",
+      categoryIds: ["cat-business"],
+      stores: { kind: "fixed", values: ["一号店"] },
+    });
+  });
+
+  it("版本冲突保留草稿，重新应用后保留服务端新增的授权", async () => {
+    const state = createState();
+    let conflictSent = false;
+    const { fetchMock } = renderPermissions({
+      state,
       overrides: {
-        "categories.list": () =>
-          jsonResponse(
-            { error: { code: "INTERNAL_ERROR", message: "boom" } },
-            500,
-          ),
+        "accounts.update": () => {
+          if (!conflictSent) {
+            conflictSent = true;
+            state.version = "8";
+            state.accounts = state.accounts.map((account) =>
+              account.id === "employee-1"
+                ? {
+                    ...account,
+                    grants: [
+                      ...account.grants,
+                      {
+                        id: "grant-server",
+                        orgId: ORG,
+                        enterpriseKey: "ent-1",
+                        categoryIds: ["cat-dishes"],
+                        ownership: "store",
+                        stores: { kind: "all" },
+                        dimensions: {},
+                      },
+                    ],
+                  }
+                : account,
+            );
+          }
+          return jsonResponse(
+            {
+              error: {
+                code: "AUTHORIZATION_VERSION_CONFLICT",
+                message: "conflict",
+              },
+            },
+            409,
+          );
+        },
       },
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "服务器暂时无法处理该操作，请稍后重试",
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.change(within(panel).getByLabelText("账号密级"), {
+      target: { value: "3" },
+    });
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+
+    await screen.findByText("版本冲突");
+    expect(screen.queryByRole("dialog", { name: "确认本次变更" })).toBeNull();
+    expect(within(panel).getByText("版本冲突")).toBeInTheDocument();
+
+    fireEvent.click(
+      within(panel).getByRole("button", {
+        name: "以最新配置为基线重新应用我的改动",
+      }),
     );
+    const reconfirm = await screen.findByRole("dialog", {
+      name: "确认本次变更",
+    });
+    expect(within(reconfirm).getAllByTestId("diff-entry")).toHaveLength(1);
+    fireEvent.click(
+      within(reconfirm).getByRole("button", { name: "确认变更" }),
+    );
+
+    await waitFor(() => {
+      const bodies = fetchMock.mock.calls.filter(
+        ([input, init]) =>
+          String(input).endsWith("/accounts/employee-1") &&
+          init?.method === "PATCH",
+      );
+      expect(bodies).toHaveLength(2);
+    });
+    const patches = fetchMock.mock.calls.filter(
+      ([input, init]) =>
+        String(input).endsWith("/accounts/employee-1") &&
+        init?.method === "PATCH",
+    );
+    const body = JSON.parse(String(patches[1]?.[1]?.body)) as {
+      readonly expectedVersion: string;
+      readonly grants: readonly { readonly id: string }[];
+    };
+    expect(body.expectedVersion).toBe("8");
+    expect(body.grants.map((grant) => grant.id)).toEqual(
+      expect.arrayContaining(["grant-1", "grant-server"]),
+    );
+  });
+
+  it("账号写入冲突后的回读失败保留草稿并可以重读", async () => {
+    const state = createState();
+    let failRead = false;
+    renderPermissions({
+      state,
+      overrides: {
+        "accounts.update": () => {
+          state.version = "8";
+          failRead = true;
+          return jsonResponse(
+            {
+              error: {
+                code: "AUTHORIZATION_VERSION_CONFLICT",
+                message: "conflict",
+              },
+            },
+            409,
+          );
+        },
+        "categories.list": (current, request) =>
+          failRead
+            ? jsonResponse(
+                { error: { code: "SERVER_ERROR", message: "offline" } },
+                503,
+              )
+            : handleRequest(current, request, "categories.list"),
+      },
+    });
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.change(within(panel).getByLabelText("账号密级"), {
+      target: { value: "3" },
+    });
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+
+    const retry = await within(panel).findByRole("button", {
+      name: "重新读取配置",
+    });
+    expect(within(panel).getByLabelText("账号密级")).toHaveValue("3");
+    failRead = false;
+    fireEvent.click(retry);
+    await within(panel).findByText("版本冲突");
+    expect(within(panel).getByLabelText("账号密级")).toHaveValue("3");
+  });
+
+  it("版本冲突时载入服务器值会放弃草稿", async () => {
+    const state = createState();
+    const { fetchMock } = renderPermissions({
+      state,
+      overrides: {
+        "accounts.update": () => {
+          state.version = "8";
+          return jsonResponse(
+            {
+              error: {
+                code: "AUTHORIZATION_VERSION_CONFLICT",
+                message: "conflict",
+              },
+            },
+            409,
+          );
+        },
+      },
+    });
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.change(within(panel).getByLabelText("账号密级"), {
+      target: { value: "3" },
+    });
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+
+    await screen.findByText("版本冲突");
+    fireEvent.click(
+      within(panel).getByRole("button", {
+        name: "载入服务器值并放弃草稿",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("版本冲突")).toBeNull();
+    });
+    expect(within(panel).getByLabelText("账号密级")).toHaveValue("2");
     expect(
-      screen.getByRole("button", { name: "重新读取配置" }),
+      bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+    ).toHaveLength(1);
+  });
+
+  it("有草稿时切换分区要求先确认放弃", async () => {
+    renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
+    const row = (await screen.findByText("营业数据")).closest("tr");
+    if (row === null) throw new Error("找不到固定类别行");
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "固定类别" });
+    fireEvent.change(within(panel).getByLabelText("密级"), {
+      target: { value: "2" },
+    });
+
+    fireEvent.click(within(panel).getByRole("button", { name: "取消" }));
+    const discard = await screen.findByRole("dialog", {
+      name: "放弃未保存的更改？",
+    });
+    fireEvent.click(within(discard).getByRole("button", { name: "保留草稿" }));
+    expect(
+      screen.queryByRole("dialog", { name: "放弃未保存的更改？" }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("dialog", { name: "固定类别" }),
     ).toBeInTheDocument();
+
+    fireEvent.click(within(panel).getByRole("button", { name: "取消" }));
+    const second = await screen.findByRole("dialog", {
+      name: "放弃未保存的更改？",
+    });
+    fireEvent.click(within(second).getByRole("button", { name: "放弃更改" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "固定类别" })).toBeNull();
+    });
+  });
+
+  it("文档：搜索、打开配置并保存文件密级", async () => {
+    const { fetchMock } = renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("普通文档");
+
+    await screen.findByText("门店巡检制度");
+    fireEvent.change(screen.getByLabelText("按文档名称或 ID 查找"), {
+      target: { value: "巡检" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "查找" }));
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.map(([input]) => String(input));
+      expect(urls.some((url) => url.includes("search="))).toBe(true);
+    });
+
+    const row = (await screen.findByText("门店巡检制度")).closest("tr");
+    if (row === null) throw new Error("找不到文档行");
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const panel = await screen.findByRole("dialog", { name: "编辑文档配置" });
+    fireEvent.change(within(panel).getByLabelText("密级"), {
+      target: { value: "3" },
+    });
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    expect(within(confirm).getAllByTestId("diff-entry")).toHaveLength(1);
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+
+    await waitFor(() => {
+      expect(
+        bodyOf(fetchMock, "PATCH", /\/permissions\/documents\/doc-1$/),
+      ).toHaveLength(1);
+    });
+    const body = bodyOf(
+      fetchMock,
+      "PATCH",
+      /\/permissions\/documents\/doc-1$/,
+    )[0] as {
+      readonly expectedVersion: string;
+      readonly fileConfidentialityLevel: number;
+    };
+    expect(body.expectedVersion).toBe("7");
+    expect(body.fileConfidentialityLevel).toBe(3);
+    expect(
+      screen.queryByRole("dialog", { name: "编辑文档配置" }),
+    ).toBeInTheDocument();
+  });
+
+  it("准备检查通过且版本一致时才发送启用请求", async () => {
+    const { fetchMock } = renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("检查与启用");
+
+    const activate = await screen.findByRole("button", {
+      name: "确认启用业务权限",
+    });
+    expect(activate).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "运行只读准备检查" }));
+    await screen.findByText("准备检查通过");
+    expect(activate).toBeEnabled();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "确认启用业务权限" }),
+    );
+    const confirm = await screen.findByRole("dialog", {
+      name: "确认启用业务权限",
+    });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认启用" }));
+
+    await waitFor(() => {
+      expect(
+        bodyOf(fetchMock, "POST", /\/permissions\/cutover\/activate$/),
+      ).toHaveLength(1);
+    });
+    const body = bodyOf(
+      fetchMock,
+      "POST",
+      /\/permissions\/cutover\/activate$/,
+    )[0] as { readonly expectedVersion: string; readonly confirm: boolean };
+    expect(body).toMatchObject({ expectedVersion: "7", confirm: true });
+  });
+
+  it("分区标签支持方向键切换", async () => {
+    renderPermissions();
+    const tab = await screen.findByRole("tab", { name: "类别与密级" });
+    tab.focus();
+    fireEvent.keyDown(tab, { key: "ArrowRight" });
+    expect(
+      await screen.findByRole("tab", { name: "业务条件" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("关闭面板后焦点回到打开它的按钮", async () => {
+    renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    await openTab("账号授权");
+    const row = await screen.findByRole("row", { name: /张三/ });
+    const edit = within(row).getByRole("button", { name: "编辑" });
+    edit.focus();
+    fireEvent.click(edit);
+    await screen.findByRole("dialog", { name: "编辑账号授权" });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "编辑账号授权" })).toBeNull();
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(edit);
+    });
+  });
+
+  it("切换语言后分区与按钮使用英文词组", async () => {
+    renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Permissions" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Categories and levels" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Document categories" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "中文" }));
+    expect(screen.getByRole("tab", { name: "类别与密级" })).toBeInTheDocument();
   });
 
   it("权限被拒绝（403）时显示无权限页面而不是空表单", async () => {
@@ -942,271 +1388,40 @@ describe("权限设置页", () => {
       },
     });
 
-    expect(
-      await screen.findByRole("heading", { name: "无访问权限" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "营业数据" }),
-    ).not.toBeInTheDocument();
+    await screen.findByText("无访问权限");
+    expect(screen.queryByRole("tab", { name: "账号授权" })).toBeNull();
   });
 
-  it("确认撤销后提交的授权列表只保留未删除的授权", async () => {
-    const state = createState();
-    const account = state.accounts[0]!;
-    state.accounts = [
-      {
-        ...account,
-        grants: [
-          ...account.grants,
-          { ...account.grants[0]!, id: "grant-keep" },
-        ],
-      },
-    ];
-    renderPermissions({ state });
-    await openCategories();
-    fireEvent.click(screen.getByRole("tab", { name: "账号授权" }));
-    fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
-    const [remove] = await screen.findAllByRole("button", {
-      name: "删除此授权条目",
-    });
-    fireEvent.click(remove!);
-    fireEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "删除此授权条目",
-      }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "保存" }));
-    fireEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "确认变更",
-      }),
-    );
-    await screen.findByText("已保存。");
-    expect(state.accounts[0]?.grants.map((grant) => grant.id)).toEqual([
-      "grant-keep",
-    ]);
-  });
-
-  it("保存密级：确认摘要后提交 expectedVersion 并推进版本", async () => {
-    const { fetchMock } = renderPermissions();
-    await openCategories();
-    const form = categoryForm("营业数据");
-
-    const save = within(form).getByRole("button", { name: "保存" });
-    expect(save).toBeDisabled();
-    expect(save).toHaveAccessibleDescription("没有需要保存的变更。");
-
-    const dialog = await saveLevel(form, "3");
-    expect(within(dialog).getByText("确认本次变更")).toBeInTheDocument();
-    expect(within(dialog).getByText(/原配置: 1/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/本次配置: 3/)).toBeInTheDocument();
-
-    fireEvent.click(within(dialog).getByRole("button", { name: "确认变更" }));
-
-    await waitFor(() => {
-      expect(within(form).getByText("已保存。")).toBeInTheDocument();
-    });
-    expect(screen.getByText("配置版本: 8")).toBeInTheDocument();
-    expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
-
-    const patch = fetchMock.mock.calls.find(
-      ([input, init]) =>
-        String(input).endsWith("/categories/cat-business") &&
-        init?.method === "PATCH",
-    );
-    expect(patch).toBeDefined();
-    expect(JSON.parse(String(patch?.[1]?.body))).toMatchObject({
-      expectedVersion: "7",
-      name: "营业数据",
-      confidentialityLevel: 3,
-    });
-  });
-
-  it("提交中按钮保持忙碌且不能重复提交", async () => {
-    let resolveWrite: ((response: Response) => void) | undefined;
-    const state = createState();
-    const { fetchMock } = renderPermissions({
-      state,
-      overrides: {
-        "categories.update": (currentState, request) => {
-          if (resolveWrite === undefined) {
-            return new Promise<Response>((resolve) => {
-              resolveWrite = (response) => {
-                currentState.version = nextVersion(currentState.version);
-                currentState.categories = replaceById(currentState.categories, {
-                  ...currentState.categories[0]!,
-                  confidentialityLevel: 3,
-                });
-                resolve(response);
-              };
-            });
-          }
-          return handleRequest(currentState, request, "categories.update");
-        },
-      },
-    });
-    await openCategories();
-    const form = categoryForm("营业数据");
-    const dialog = await saveLevel(form, "3");
-    const confirm = within(dialog).getByRole("button", { name: "确认变更" });
-
-    fireEvent.click(confirm);
-    fireEvent.click(confirm);
-    await waitFor(() => {
-      expect(confirm).toHaveAttribute("aria-busy", "true");
-    });
-    expect(confirm).toBeDisabled();
-
-    const patchCalls = fetchMock.mock.calls.filter(
-      ([input, init]) =>
-        String(input).endsWith("/categories/cat-business") &&
-        init?.method === "PATCH",
-    );
-    expect(patchCalls).toHaveLength(1);
-
-    resolveWrite?.(
-      jsonResponse({
-        authorizationVersion: nextVersion(state.version),
-        value: { ...state.categories[0], confidentialityLevel: 3 },
-      }),
-    );
-    await waitFor(() => {
-      expect(within(form).getByText("已保存。")).toBeInTheDocument();
-    });
-  });
-
-  it("版本冲突（409）保留草稿并比较，重新加载后回到服务端值", async () => {
-    let calls = 0;
-    const state = createState();
+  it("读取失败时给出可重试入口", async () => {
+    let attempts = 0;
     renderPermissions({
-      state,
       overrides: {
-        "categories.update": (currentState, request) => {
-          calls += 1;
-          if (calls === 1) {
-            currentState.version = "8";
-            currentState.categories = replaceById(currentState.categories, {
-              ...currentState.categories[0]!,
-              confidentialityLevel: 2,
-            });
+        "categories.list": (state, request) => {
+          attempts += 1;
+          if (attempts === 1) {
             return jsonResponse(
-              {
-                error: {
-                  code: "AUTHORIZATION_VERSION_CONFLICT",
-                  message: "conflict",
-                },
-              },
-              409,
+              { error: { code: "INTERNAL_ERROR", message: "boom" } },
+              500,
             );
           }
-          return handleRequest(currentState, request, "categories.update");
+          return handleRequest(state, request, "categories.list");
         },
       },
     });
-    await openCategories();
-    const form = categoryForm("营业数据");
-    const dialog = await saveLevel(form, "3");
-    fireEvent.click(within(dialog).getByRole("button", { name: "确认变更" }));
 
-    const panel = await screen.findByRole("alert", { name: "版本冲突" });
-    expect(within(panel).getByText("2")).toBeInTheDocument();
-    expect(within(panel).getByText("3")).toBeInTheDocument();
-    expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
-    expect(screen.getByText("配置版本: 8")).toBeInTheDocument();
-
-    fireEvent.click(within(panel).getByRole("button", { name: "重新加载" }));
-
-    await waitFor(() => {
-      expect(
-        screen.queryByRole("alert", { name: "版本冲突" }),
-      ).not.toBeInTheDocument();
-    });
-    expect(within(form).getByLabelText("密级")).toHaveValue("2");
-    expect(within(form).getByRole("button", { name: "保存" })).toBeDisabled();
-  });
-
-  it("版本冲突后可用草稿重新提交，并按最新版本号提交", async () => {
-    let calls = 0;
-    const state = createState();
-    const { fetchMock } = renderPermissions({
-      state,
-      overrides: {
-        "categories.update": (currentState, request) => {
-          calls += 1;
-          if (calls === 1) {
-            currentState.version = "8";
-            currentState.categories = replaceById(currentState.categories, {
-              ...currentState.categories[0]!,
-              confidentialityLevel: 2,
-            });
-            return jsonResponse(
-              {
-                error: {
-                  code: "AUTHORIZATION_VERSION_CONFLICT",
-                  message: "conflict",
-                },
-              },
-              409,
-            );
-          }
-          return handleRequest(currentState, request, "categories.update");
-        },
-      },
-    });
-    await openCategories();
-    const form = categoryForm("营业数据");
-    const dialog = await saveLevel(form, "3");
-    fireEvent.click(within(dialog).getByRole("button", { name: "确认变更" }));
-
-    const panel = await screen.findByRole("alert", { name: "版本冲突" });
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts.length).toBeGreaterThan(0);
     fireEvent.click(
-      within(panel).getByRole("button", { name: "用我的改动重新提交" }),
+      await screen.findByRole("button", { name: "重新读取配置" }),
     );
-
-    const secondDialog = await screen.findByRole("dialog");
-    expect(within(secondDialog).getByText(/本次配置: 3/)).toBeInTheDocument();
-    fireEvent.click(
-      within(secondDialog).getByRole("button", { name: "确认变更" }),
-    );
-
-    await waitFor(() => {
-      expect(within(form).getByText("已保存。")).toBeInTheDocument();
-    });
-
-    const patches = fetchMock.mock.calls.filter(
-      ([input, init]) =>
-        String(input).endsWith("/categories/cat-business") &&
-        init?.method === "PATCH",
-    );
-    expect(patches).toHaveLength(2);
-    expect(JSON.parse(String(patches[1]?.[1]?.body))).toMatchObject({
-      expectedVersion: "8",
-      confidentialityLevel: 3,
-    });
-  });
-
-  it("切换语言后分区、类别与按钮使用英文词组", async () => {
-    renderPermissions();
-    await openCategories();
-
-    fireEvent.click(screen.getByRole("button", { name: "English" }));
-
-    expect(
-      screen.getByRole("tab", { name: "Category levels" }),
-    ).toBeInTheDocument();
-    const form = categoryForm("Business data");
-    expect(
-      within(form).getByRole("button", { name: "Save" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "中文" }));
-    expect(screen.getByRole("tab", { name: "类别密级" })).toBeInTheDocument();
+    await screen.findByRole("heading", { name: "文档类别" });
+    expect(attempts).toBeGreaterThanOrEqual(2);
   });
 
   it("深链使用 URL 中的企业标识读取配置", async () => {
     const { fetchMock, router } = renderPermissions({ orgId: "org-9" });
 
-    await screen.findByRole("heading", { name: "营业数据" });
+    await screen.findByRole("heading", { name: "文档类别" });
 
     expect(router.state.location.pathname).toBe("/admin/org-9/permissions");
     expect(screen.getByRole("link", { name: "权限设置" })).toHaveAttribute(

@@ -2,37 +2,51 @@ import { useEffect, useRef, useState } from "react";
 
 import { isVersionConflict } from "@/api/permissions";
 import { useText } from "@/i18n/useText";
-import type { ConflictField } from "@/ui/ConflictPanel";
 import { useConfirmFlow, type ConfirmFlow } from "@/ui/useConfirmFlow";
-import { canSaveDraft, useDraft, type DraftStatus } from "@/ui/useDraft";
-import { stableSerialize } from "@/ui/stableSerialize";
 
+import type {
+  Confirmation,
+  RebaseChoice,
+  RebaseDecision,
+  RebaseInput,
+  RebaseOutcome,
+} from "./diff";
 import { permissionsErrorKey } from "./errorKeys";
 
 export interface DraftWriteResult {
   readonly authorizationVersion: string;
 }
 
-export interface DraftSaveOptions<Draft, Result extends DraftWriteResult> {
-  readonly saved: Draft;
+export interface DraftBaseline<Draft> {
+  readonly snapshot: Draft;
+  readonly version: string;
+}
+
+export interface PreparedSave<Draft> {
+  readonly confirmation: Confirmation;
+  readonly draft: Draft;
   readonly expectedVersion: string;
-  readonly normalize: (value: Draft) => unknown;
-  readonly validate: (draft: Draft) => string | null;
-  readonly describe: (draft: Draft) => string;
+}
+
+export interface DraftSaveOptions<Draft, Result extends DraftWriteResult> {
+  /** 打开对象时冻结的快照与版本；编辑期间不随后台刷新替换 */
+  readonly baseline: DraftBaseline<Draft>;
+  readonly validate: (draft: Draft, baseline: Draft) => string | null;
+  /** 语义差异；同时决定保存按钮是否可用与确认弹窗内容 */
+  readonly confirmation: (draft: Draft, baseline: Draft) => Confirmation;
   readonly submit: (draft: Draft, expectedVersion: string) => Promise<Result>;
-  readonly draftFromResult: (result: Result, draft: Draft) => Draft;
-  readonly reload: () => Promise<Draft>;
-  readonly conflictFields: (
-    draft: Draft,
-    saved: Draft,
-  ) => readonly ConflictField[];
-  readonly onSaved?: ((result: Result) => void) | undefined;
+  /** 保存成功后作为新基线的草稿（通常来自服务端响应） */
+  readonly nextBaseline: (result: Result, draft: Draft) => Draft;
+  readonly reload: () => Promise<DraftBaseline<Draft>>;
+  /** 版本冲突时把本地改动重新应用到最新快照；缺省表示整体以草稿为准 */
+  readonly rebase?: (input: RebaseInput<Draft>) => RebaseOutcome<Draft>;
+  readonly onSaved?: (result: Result, draft: Draft) => void;
 }
 
 export interface DraftSave<Draft> {
   readonly draft: Draft;
   readonly setDraft: (next: Draft | ((previous: Draft) => Draft)) => void;
-  readonly status: DraftStatus;
+  readonly baseline: Draft;
   readonly isDirty: boolean;
   readonly validationError: string | null;
   readonly canSave: boolean;
@@ -41,163 +55,274 @@ export interface DraftSave<Draft> {
   readonly errorMessage: string | null;
   readonly saving: boolean;
   readonly conflict: boolean;
-  readonly conflictFields: readonly ConflictField[];
+  readonly conflictConfirmation: Confirmation | null;
+  readonly conflictChoices: readonly RebaseChoice[];
+  readonly conflictDecisions: Readonly<Record<string, RebaseDecision>>;
+  readonly conflictCanApply: boolean;
+  readonly conflictApplyReason: string | undefined;
+  readonly chooseConflict: (key: string, decision: RebaseDecision) => void;
+  readonly loadServer: () => void;
+  readonly applyMine: () => void;
   readonly conflictReloading: boolean;
+  readonly conflictError: unknown;
+  readonly retryConflict: () => void;
   readonly savedNotice: string | null;
-  readonly flow: ConfirmFlow<string>;
+  readonly flow: ConfirmFlow<PreparedSave<Draft>>;
   readonly requestSave: () => void;
-  readonly reloadFromServer: () => void;
-  readonly resubmit: () => void;
+  readonly reset: () => void;
 }
 
 /**
- * 单个表单的“准备 → 摘要 → 确认 → 提交”状态机。
+ * 单个表单的「冻结基线 → 语义差异 → 确认 → 提交一次」状态机。
  *
- * - 草稿只在内存；保存按钮只由 dirty + 校验通过决定。
- * - 版本冲突不会重试：先保留草稿，冲突面板要求用户在“重新加载”与“用我的改动重新提交”间明确选择。
- * - 重新提交前重新读取服务端并让用户再次确认摘要，避免把旧版本号或旧差异直接写回。
+ * - 基线固定在打开对象时读取的快照与版本；后台刷新不会替换正在编辑的草稿，
+ *   也不会把新版本号偷偷带进旧载荷。
+ * - 确认时捕获摘要、完整草稿与 expectedVersion，提交只使用该次捕获。
+ * - 409 不重试、不覆盖：保留草稿，读取最新快照，用户要么载入服务器值，
+ *   要么以最新快照为基线重新应用自己的改动，再生成一次新确认。
  */
 export function useDraftSave<Draft, Result extends DraftWriteResult>(
   options: DraftSaveOptions<Draft, Result>,
 ): DraftSave<Draft> {
   const { t } = useText();
-  const state = useDraft<Draft>(
-    options.saved,
-    options.saved,
-    options.normalize,
+  const optionsRef = useRef(options);
+  // 最新一次渲染的选项只在下一次事件/提交时读取，写入 ref 放到 effect 里，
+  // 避免在渲染期间修改 ref。
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
+  const [draftState, setDraftState] = useState<Draft>(
+    options.baseline.snapshot,
+  );
+  const [baseline, setBaseline] = useState<DraftBaseline<Draft>>(
+    options.baseline,
   );
   const [error, setError] = useState<unknown>(null);
-  const [conflict, setConflict] = useState(false);
-  const [conflictReloading, setConflictReloading] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
-  const [resubmitToken, setResubmitToken] = useState(0);
-  const pendingResubmit = useRef(false);
-  const keepDraft = useRef(false);
-  // 用归一化后的值而不是对象引用判断“服务端快照是否变化”：
-  // 调用方每次渲染都会生成结构相同的新对象，按引用比较会造成无限重置。
-  const savedSnapshot = stableSerialize(options.normalize(options.saved));
-  const previousSaved = useRef(savedSnapshot);
+  const [conflictPending, setConflictPending] = useState(false);
+  const [conflictServer, setConflictServer] =
+    useState<DraftBaseline<Draft> | null>(null);
+  const [conflictError, setConflictError] = useState<unknown>(null);
+  const [conflictReloading, setConflictReloading] = useState(false);
+  const [conflictChoices, setConflictChoices] = useState<
+    readonly RebaseChoice[]
+  >([]);
+  const [conflictDecisions, setConflictDecisions] = useState<
+    Readonly<Record<string, RebaseDecision>>
+  >({});
 
-  const validationKey = options.validate(state.draft);
-  const validationError = validationKey === null ? null : t(validationKey);
+  const draftRef = useRef(draftState);
+  const baselineRef = useRef(baseline);
+  const notesRef = useRef<readonly string[]>([]);
 
-  // 服务端快照更新时同步比较基线；冲突期间绝不覆盖用户草稿。
-  useEffect(() => {
-    if (previousSaved.current === savedSnapshot) return;
-    previousSaved.current = savedSnapshot;
-    if (keepDraft.current) {
-      keepDraft.current = false;
-      return;
-    }
-    if (conflict) return;
-    state.reset();
-  }, [savedSnapshot, conflict, state]);
+  const applyDraft = (next: Draft) => {
+    draftRef.current = next;
+    setDraftState(next);
+  };
 
-  const flow = useConfirmFlow<string, Result | null>({
-    prepare: () => options.describe(state.draft),
-    submit: async () => {
+  const applyBaseline = (next: DraftBaseline<Draft>) => {
+    baselineRef.current = next;
+    setBaseline(next);
+  };
+
+  const setDraft = (next: Draft | ((previous: Draft) => Draft)) => {
+    const value =
+      typeof next === "function"
+        ? (next as (previous: Draft) => Draft)(draftRef.current)
+        : next;
+    applyDraft(value);
+  };
+
+  const buildConfirmation = (draft: Draft, base: Draft): Confirmation => {
+    const confirmation = optionsRef.current.confirmation(draft, base);
+    const notes = notesRef.current;
+    notesRef.current = [];
+    if (notes.length === 0) return confirmation;
+    return {
+      ...confirmation,
+      impact:
+        confirmation.impact === undefined
+          ? notes.join(" ")
+          : `${confirmation.impact} ${notes.join(" ")}`,
+    };
+  };
+
+  const flow = useConfirmFlow<PreparedSave<Draft>, Result | null>({
+    prepare: () => {
+      const draft = draftRef.current;
+      const base = baselineRef.current;
+      return {
+        confirmation: buildConfirmation(draft, base.snapshot),
+        draft,
+        expectedVersion: base.version,
+      };
+    },
+    submit: async (prepared) => {
       setError(null);
       setSavedNotice(null);
       try {
-        const result = await options.submit(
-          state.draft,
-          options.expectedVersion,
+        const result = await optionsRef.current.submit(
+          prepared.draft,
+          prepared.expectedVersion,
         );
-        const nextDraft = options.draftFromResult(result, state.draft);
-        state.setDraft(nextDraft);
-        options.onSaved?.(result);
+        const nextDraft = optionsRef.current.nextBaseline(
+          result,
+          prepared.draft,
+        );
+        applyDraft(nextDraft);
+        applyBaseline({
+          snapshot: nextDraft,
+          version: result.authorizationVersion,
+        });
+        setConflictPending(false);
+        setConflictServer(null);
+        setConflictChoices([]);
+        setConflictDecisions({});
+        setConflictError(null);
         setSavedNotice(t("permissions.saved"));
+        optionsRef.current.onSaved?.(result, nextDraft);
         return result;
       } catch (caught) {
-        if (isVersionConflict(caught)) {
-          state.markConflicting();
-          setConflict(true);
-          try {
-            await options.reload();
-          } catch (reloadError) {
-            setError(reloadError);
-          }
+        if (!isVersionConflict(caught)) {
+          setError(caught);
           return null;
         }
-        setError(caught);
+        setConflictPending(true);
+        setConflictServer(null);
+        setConflictChoices([]);
+        setConflictDecisions({});
+        setConflictError(null);
+        try {
+          const server = await optionsRef.current.reload();
+          setConflictServer(server);
+        } catch (reloadError) {
+          setConflictError(reloadError);
+        }
         return null;
       }
     },
-    onSuccess: () => undefined,
   });
+
+  const confirmation = options.confirmation(draftState, baseline.snapshot);
+  const isDirty = confirmation.diff.length > 0;
+  const validationKey = options.validate(draftState, baseline.snapshot);
+  const validationError = validationKey === null ? null : t(validationKey);
+  const conflict = conflictPending;
+  const conflictConfirmation =
+    conflictServer === null
+      ? null
+      : options.confirmation(draftState, conflictServer.snapshot);
+  const conflictReady = conflictChoices.every(
+    (choice) => conflictDecisions[choice.key] !== undefined,
+  );
 
   const requestSave = () => {
     if (flow.status !== "idle") return;
     if (conflict) return;
     if (validationKey !== null) return;
-    if (!canSaveDraft(state.status)) return;
+    if (!isDirty) return;
     setError(null);
     setSavedNotice(null);
     void flow.request();
   };
 
-  const reloadFromServer = () => {
+  const readLatest = async () => {
+    setConflictReloading(true);
+    setConflictServer(null);
+    setConflictChoices([]);
+    setConflictDecisions({});
+    setConflictError(null);
+    try {
+      const server = await optionsRef.current.reload();
+      setConflictServer(server);
+      setConflictPending(true);
+    } catch (caught) {
+      setConflictError(caught);
+    } finally {
+      setConflictReloading(false);
+    }
+  };
+
+  const retryConflict = () => {
     if (conflictReloading) return;
-    setConflictReloading(true);
-    setError(null);
-    void options
-      .reload()
-      .then((latest) => {
-        state.setDraft(latest);
-        state.acknowledgeConflict();
-        setConflict(false);
-      })
-      .catch((caught: unknown) => {
-        setError(caught);
-      })
-      .finally(() => {
-        setConflictReloading(false);
-      });
+    void readLatest();
   };
 
-  const resubmit = () => {
-    if (!conflict || conflictReloading) return;
-    pendingResubmit.current = true;
-    keepDraft.current = true;
-    setConflictReloading(true);
-    setError(null);
-    void options
-      .reload()
-      .then(() => {
-        state.acknowledgeConflict();
-        setConflict(false);
-        setResubmitToken((token) => token + 1);
-      })
-      .catch((caught: unknown) => {
-        pendingResubmit.current = false;
-        keepDraft.current = false;
-        setError(caught);
-      })
-      .finally(() => {
-        setConflictReloading(false);
-      });
+  const loadServer = () => {
+    if (conflictServer === null) return;
+    applyBaseline(conflictServer);
+    applyDraft(conflictServer.snapshot);
+    setConflictPending(false);
+    setConflictServer(null);
+    setConflictChoices([]);
+    setConflictDecisions({});
+    setConflictError(null);
+    notesRef.current = [];
+    flow.cancel();
+    setSavedNotice(t("permissions.conflict.loaded"));
   };
 
-  useEffect(() => {
-    if (!pendingResubmit.current) return;
-    pendingResubmit.current = false;
-    // 重新读取后再走一遍确认，保证用户看到的是新版本下的摘要
+  const chooseConflict = (key: string, decision: RebaseDecision) => {
+    setConflictDecisions((previous) => ({ ...previous, [key]: decision }));
+  };
+
+  const applyMine = () => {
+    const server = conflictServer;
+    if (server === null || conflictReloading || flow.status !== "idle") return;
+    const outcome = optionsRef.current.rebase?.({
+      draft: draftRef.current,
+      baseline: baselineRef.current.snapshot,
+      server: server.snapshot,
+      decisions: conflictDecisions,
+    });
+    if (outcome?.kind === "choice") {
+      setConflictChoices(outcome.choices);
+      return;
+    }
+    const draft = outcome?.draft ?? draftRef.current;
+    applyBaseline(server);
+    applyDraft(draft);
+    setConflictPending(false);
+    setConflictServer(null);
+    setConflictChoices([]);
+    setConflictDecisions({});
+    setConflictError(null);
+    notesRef.current = outcome?.notes ?? [];
+    if (
+      optionsRef.current.confirmation(draft, server.snapshot).diff.length === 0
+    ) {
+      notesRef.current = [];
+      setSavedNotice(t("permissions.conflict.nothingApplied"));
+      return;
+    }
+    if (optionsRef.current.validate(draft, server.snapshot) !== null) return;
     void flow.request();
-  }, [flow, resubmitToken]);
+  };
+
+  const reset = () => {
+    applyDraft(baselineRef.current.snapshot);
+    setConflictPending(false);
+    setConflictServer(null);
+    setConflictChoices([]);
+    setConflictDecisions({});
+    setConflictError(null);
+    notesRef.current = [];
+  };
 
   const canSave =
-    !conflict && canSaveDraft(state.status) && validationKey === null;
+    !conflict && isDirty && validationKey === null && flow.status === "idle";
   const disabledReason = conflict
     ? t("permissions.saveBlocked.conflict")
-    : state.status !== "dirty"
+    : !isDirty
       ? t("permissions.noChange")
       : (validationError ?? undefined);
 
   return {
-    draft: state.draft,
-    setDraft: state.setDraft,
-    status: state.status,
-    isDirty: state.isDirty,
+    draft: draftState,
+    setDraft,
+    baseline: baseline.snapshot,
+    isDirty,
     validationError,
     canSave,
     disabledReason,
@@ -205,14 +330,22 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
     errorMessage: error === null ? null : t(permissionsErrorKey(error)),
     saving: flow.isSubmitting,
     conflict,
-    conflictFields: conflict
-      ? options.conflictFields(state.draft, options.saved)
-      : [],
+    conflictConfirmation,
+    conflictChoices,
+    conflictDecisions,
+    conflictCanApply: conflictReady,
+    conflictApplyReason: conflictReady
+      ? undefined
+      : t("permissions.conflict.decideFirst"),
+    chooseConflict,
+    loadServer,
+    applyMine,
     conflictReloading,
+    conflictError,
+    retryConflict,
     savedNotice,
     flow,
     requestSave,
-    reloadFromServer,
-    resubmit,
+    reset,
   };
 }

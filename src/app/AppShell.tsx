@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router";
+import {
+  Link,
+  NavLink,
+  useLocation,
+  useMatch,
+  useNavigate,
+} from "react-router";
 
 import type { Session } from "@/api/session";
 import { useLogout } from "@/api/session";
+import { AdminSectionNav } from "@/app/AdminSectionNav";
 import { LanguageSwitch } from "@/app/LanguageSwitch";
 import { appPaths } from "@/app/paths";
 import { useText } from "@/i18n/useText";
+import theme from "@/styles/PermissionsTheme.module.css";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { Button } from "@/ui/Button";
 
 import styles from "./AppShell.module.css";
@@ -36,6 +45,10 @@ export function AppShell({ session, children }: AppShellProps) {
   }, [menuOpen]);
 
   const isAdminSection = location.pathname.startsWith("/admin/");
+  const permissionsMatch = useMatch("/admin/:orgId/permissions");
+  const consoleOrg = session.canManageSettings
+    ? permissionsMatch?.params.orgId
+    : undefined;
   const managementPath = appPaths.permissions(session.identity.orgId);
 
   const handleLogout = () => {
@@ -51,15 +64,47 @@ export function AppShell({ session, children }: AppShellProps) {
   };
 
   return (
-    <div className={styles.shell}>
+    <div
+      className={
+        consoleOrg === undefined
+          ? styles.shell
+          : `${styles.shell} ${styles.permissionShell} ${theme.theme}`
+      }
+    >
       <a className={styles.skipLink} href="#main-content">
         {t("app.skipToContent")}
       </a>
 
+      {consoleOrg === undefined ? null : (
+        <aside className={styles.permissionSidebar}>
+          <Link className={styles.consoleBrand} to={appPaths.home}>
+            <span className={styles.consoleMark}>
+              <AdminIcon name="grid" />
+            </span>
+            <span>{t("app.brand")}</span>
+          </Link>
+          <AdminSectionNav orgId={consoleOrg} consoleLayout />
+          <div className={styles.consoleOrganization}>
+            <span className={styles.avatar} aria-hidden="true">
+              {Array.from(session.identity.organizationName)[0]}
+            </span>
+            <strong>{session.identity.organizationName}</strong>
+          </div>
+        </aside>
+      )}
+
       <header className={styles.header}>
-        <Link className={styles.brand} to={appPaths.home}>
-          {t("app.brand")}
-        </Link>
+        {consoleOrg === undefined ? (
+          <Link className={styles.brand} to={appPaths.home}>
+            {t("app.brand")}
+          </Link>
+        ) : (
+          <div className={styles.consoleBreadcrumb}>
+            <span>{t("nav.management")}</span>
+            <AdminIcon name="chevron" />
+            <strong>{t("nav.permissions")}</strong>
+          </div>
+        )}
 
         <button
           type="button"
@@ -77,7 +122,7 @@ export function AppShell({ session, children }: AppShellProps) {
           aria-label={t("nav.primary")}
         >
           <ul className={styles.navList}>
-            {session.canManageSettings ? (
+            {session.canManageSettings && consoleOrg === undefined ? (
               <li>
                 <Link
                   to={managementPath}
@@ -113,7 +158,19 @@ export function AppShell({ session, children }: AppShellProps) {
           <LanguageSwitch />
           <span className={styles.identity}>
             <span className="visually-hidden">{t("session.identity")}</span>
-            {session.identity.organizationName} · {session.identity.displayName}
+            {consoleOrg === undefined ? (
+              <>
+                {session.identity.organizationName} ·{" "}
+                {session.identity.displayName}
+              </>
+            ) : (
+              <>
+                <span className={styles.avatar} aria-hidden="true">
+                  {Array.from(session.identity.displayName)[0]}
+                </span>
+                {session.identity.displayName}
+              </>
+            )}
           </span>
           <Button
             variant="secondary"

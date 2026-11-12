@@ -15,6 +15,7 @@ export interface ConfirmDialogProps<Prepared> {
   readonly confirmLabel: string;
   readonly cancelLabel: string;
   readonly children?: ReactNode;
+  readonly className?: string | undefined;
   /** 传入时覆盖 flow.error；传 null 可隐藏弹窗内错误，改在页面区块展示 */
   readonly error?: unknown;
   readonly returnFocusRef?: RefObject<HTMLElement | null> | undefined;
@@ -27,6 +28,7 @@ export function ConfirmDialog<Prepared>({
   confirmLabel,
   cancelLabel,
   children,
+  className,
   error,
   returnFocusRef,
 }: ConfirmDialogProps<Prepared>) {
@@ -55,7 +57,7 @@ export function ConfirmDialog<Prepared>({
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content
-          className={styles.content}
+          className={[styles.content, className].filter(Boolean).join(" ")}
           onCloseAutoFocus={handleCloseAutoFocus}
         >
           <Dialog.Title className={styles.title}>{title}</Dialog.Title>
