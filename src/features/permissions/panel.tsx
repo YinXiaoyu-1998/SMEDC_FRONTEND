@@ -2,7 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useId, useRef, type ReactNode, type RefObject } from "react";
 
 import { useText } from "@/i18n/useText";
-import theme from "@/styles/PermissionsTheme.module.css";
+import theme from "@/styles/AdminTheme.module.css";
 import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import type { ButtonVariant } from "@/ui/Button";

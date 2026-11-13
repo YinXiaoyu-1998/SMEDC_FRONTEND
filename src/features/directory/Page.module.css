@@ -1,39 +1,211 @@
-.stack {
+.stack,
+.catalog {
   display: grid;
+  min-width: 0;
   gap: var(--space-3);
 }
-.row {
+
+.row,
+.createRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
   align-items: end;
+  gap: var(--space-2);
 }
+
 .field {
   display: grid;
+  min-width: 0;
   gap: var(--space-1);
+  font-weight: 600;
 }
+
+.stack > .field {
+  width: min(100%, 22rem);
+}
+
 .tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-5);
+  overflow-x: auto;
   border-bottom: 1px solid var(--color-border);
-  padding-bottom: var(--space-2);
 }
+
+.tabs button {
+  flex: none;
+  padding: var(--space-2) 0 var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabs button[aria-pressed="true"] {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-accent-strong);
+}
+
+.catalog,
+.panel {
+  padding: clamp(0.875rem, 2vw, 1.3125rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--admin-card-shadow);
+}
+
+.scopeHint {
+  color: var(--color-text-muted);
+}
+
+.employeeFilters {
+  display: grid;
+  grid-template-columns:
+    minmax(10rem, 1.2fr) minmax(5rem, 0.6fr) repeat(2, minmax(7rem, 1fr))
+    auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.employeeFilters > button,
+.createRow > button {
+  justify-self: start;
+}
+
+.createRow .field {
+  flex: 0 1 20rem;
+}
+
+.tableScroll {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 .table {
   width: 100%;
+  min-width: 28rem;
   border-collapse: collapse;
 }
+
 .table th,
 .table td {
-  text-align: left;
-  padding: var(--space-2);
+  padding: 0.625rem 0.875rem;
   border-bottom: 1px solid var(--color-border);
+  text-align: left;
 }
+
+.table th {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: #fcfbff;
+}
+
+.table th:last-child,
+.table td:last-child {
+  text-align: right;
+}
+
+.employeeName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: max-content;
+  font-weight: 650;
+}
+
+.employeeIcon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.activeBadge,
+.inactiveBadge {
+  display: inline-block;
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.activeBadge {
+  background: #e9f7ef;
+  color: #19704f;
+}
+
+.inactiveBadge {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.table button,
+.rowAction {
+  min-height: 2rem;
+  padding-inline: var(--space-2);
+  font-size: 0.8125rem;
+}
+
+.rowAction {
+  color: var(--color-accent-strong);
+}
+
+:where(.catalog, .stack) button:not(:where([class])) {
+  width: fit-content;
+  min-height: 2rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-accent-strong);
+  cursor: pointer;
+}
+
+.catalog button[aria-pressed="true"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.catalog button:disabled,
+.stack button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .error {
   color: var(--color-danger);
 }
-.panel {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
+
+@media (max-width: 72rem) {
+  .employeeFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 34rem) {
+  .tabs {
+    gap: var(--space-4);
+  }
+
+  .table td,
+  .table th {
+    padding-inline: var(--space-2);
+  }
 }

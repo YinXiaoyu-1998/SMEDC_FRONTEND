@@ -69,7 +69,7 @@ export function IntegrationSection({
         })}
         onChange={(sourceAccounts) => update({ sourceAccounts })}
         renderItem={(account, replace) => (
-          <div className={styles.stack}>
+          <div className={styles.row}>
             <SelectField
               label={w("product")}
               value={account.product}

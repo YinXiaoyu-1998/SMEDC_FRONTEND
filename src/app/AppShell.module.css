@@ -152,36 +152,36 @@
   }
 }
 
-.permissionShell {
+.consoleShell {
   display: grid;
   grid-template-columns: 226px minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
 }
 
-.permissionShell > .header,
-.permissionShell > .main,
-.permissionShell > .logoutError {
+.consoleShell > .header,
+.consoleShell > .main,
+.consoleShell > .logoutError {
   grid-column: 2;
 }
 
-.permissionShell > .header {
+.consoleShell > .header {
   min-height: 68px;
   padding: 10px 34px;
 }
 
-.permissionShell > .main {
+.consoleShell > .main {
   max-width: 1340px;
   min-width: 0;
   padding: 37px 42px 56px;
 }
 
-.permissionShell .identity {
+.consoleShell .identity {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.permissionSidebar {
+.consoleSidebar {
   position: sticky;
   top: 0;
   grid-column: 1;
@@ -257,25 +257,25 @@
 }
 
 @media (max-width: 68rem) {
-  .permissionShell {
+  .consoleShell {
     grid-template-columns: 185px minmax(0, 1fr);
   }
 
-  .permissionShell > .main {
+  .consoleShell > .main {
     padding: 30px 24px 45px;
   }
 
-  .permissionShell > .header {
+  .consoleShell > .header {
     padding-inline: 24px;
   }
 }
 
 @media (max-width: 48rem) {
-  .permissionShell {
+  .consoleShell {
     display: flex;
   }
 
-  .permissionSidebar {
+  .consoleSidebar {
     position: static;
     height: auto;
     padding: 11px 14px;
@@ -292,21 +292,21 @@
     display: none;
   }
 
-  .permissionShell > .header {
+  .consoleShell > .header {
     justify-content: space-between;
     padding: 8px 14px;
   }
 
-  .permissionShell > .main {
+  .consoleShell > .main {
     padding: 20px 14px 36px;
   }
 
-  .permissionShell .meta {
+  .consoleShell .meta {
     flex-wrap: nowrap;
     gap: var(--space-2);
   }
 
-  .permissionShell .identity {
+  .consoleShell .identity {
     overflow-wrap: anywhere;
   }
 }

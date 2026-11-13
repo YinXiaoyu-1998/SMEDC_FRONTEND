@@ -14,7 +14,7 @@ import { AdminSectionNav } from "@/app/AdminSectionNav";
 import { LanguageSwitch } from "@/app/LanguageSwitch";
 import { appPaths } from "@/app/paths";
 import { useText } from "@/i18n/useText";
-import theme from "@/styles/PermissionsTheme.module.css";
+import theme from "@/styles/AdminTheme.module.css";
 import { AdminIcon } from "@/ui/AdminIcon";
 import { Button } from "@/ui/Button";
 
@@ -46,9 +46,17 @@ export function AppShell({ session, children }: AppShellProps) {
 
   const isAdminSection = location.pathname.startsWith("/admin/");
   const permissionsMatch = useMatch("/admin/:orgId/permissions");
+  const directoryMatch = useMatch("/admin/:orgId/directory");
+  const workflowsMatch = useMatch("/admin/:orgId/workflows/:enterpriseKey?");
   const consoleOrg = session.canManageSettings
-    ? permissionsMatch?.params.orgId
+    ? (permissionsMatch ?? directoryMatch ?? workflowsMatch)?.params.orgId
     : undefined;
+  const consolePage =
+    directoryMatch !== null
+      ? "nav.directory"
+      : workflowsMatch !== null
+        ? "nav.workflows"
+        : "nav.permissions";
   const managementPath = appPaths.permissions(session.identity.orgId);
 
   const handleLogout = () => {
@@ -68,7 +76,7 @@ export function AppShell({ session, children }: AppShellProps) {
       className={
         consoleOrg === undefined
           ? styles.shell
-          : `${styles.shell} ${styles.permissionShell} ${theme.theme}`
+          : `${styles.shell} ${styles.consoleShell} ${theme.theme}`
       }
     >
       <a className={styles.skipLink} href="#main-content">
@@ -76,14 +84,14 @@ export function AppShell({ session, children }: AppShellProps) {
       </a>
 
       {consoleOrg === undefined ? null : (
-        <aside className={styles.permissionSidebar}>
+        <aside className={styles.consoleSidebar}>
           <Link className={styles.consoleBrand} to={appPaths.home}>
             <span className={styles.consoleMark}>
               <AdminIcon name="grid" />
             </span>
             <span>{t("app.brand")}</span>
           </Link>
-          <AdminSectionNav orgId={consoleOrg} consoleLayout />
+          <AdminSectionNav orgId={consoleOrg} />
           <div className={styles.consoleOrganization}>
             <span className={styles.avatar} aria-hidden="true">
               {Array.from(session.identity.organizationName)[0]}
@@ -102,7 +110,7 @@ export function AppShell({ session, children }: AppShellProps) {
           <div className={styles.consoleBreadcrumb}>
             <span>{t("nav.management")}</span>
             <AdminIcon name="chevron" />
-            <strong>{t("nav.permissions")}</strong>
+            <strong>{t(consolePage)}</strong>
           </div>
         )}
 

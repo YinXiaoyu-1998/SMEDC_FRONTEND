@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
 
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { Field } from "@/ui/Field";
 import type {
@@ -383,7 +384,16 @@ export function EditableList<Item>({
 
   return (
     <div className={styles.stack}>
-      <h3 className={styles.subheading}>{title}</h3>
+      <div className={styles.listHeading}>
+        <h3 className={styles.subheading}>{title}</h3>
+        <ActionButton
+          label={w("add")}
+          icon={<AdminIcon name="plus" />}
+          variant="secondary"
+          disabled={disabled || items.length >= maximum}
+          onRun={() => onChange([...items, create()])}
+        />
+      </div>
       {items.map((item, index) => (
         <div className={styles.subpanel} key={index}>
           {renderItem(item, (next) =>
@@ -396,7 +406,8 @@ export function EditableList<Item>({
           <div className={styles.actionsRow}>
             <ActionButton
               label={w("remove")}
-              variant="secondary"
+              variant="ghost"
+              className={styles.removeAction}
               disabled={disabled}
               onRun={() =>
                 onChange(
@@ -407,14 +418,6 @@ export function EditableList<Item>({
           </div>
         </div>
       ))}
-      <div className={styles.actionsRow}>
-        <ActionButton
-          label={w("add")}
-          variant="secondary"
-          disabled={disabled || items.length >= maximum}
-          onRun={() => onChange([...items, create()])}
-        />
-      </div>
     </div>
   );
 }
