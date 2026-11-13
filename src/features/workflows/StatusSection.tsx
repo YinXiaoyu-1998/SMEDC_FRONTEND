@@ -279,6 +279,7 @@ function InstallationPanel({
           <h4 className={styles.subheading}>{w("schedule")}</h4>
           <Summary
             value={{
+              host: host.host === "dsh" ? "DeepSeek Harness" : "Codex",
               cron: host.cron,
               host_timezone: host.timezone,
               model: host.model,

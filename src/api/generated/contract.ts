@@ -841,6 +841,7 @@ export const rWorkflowsListEnterpriseWorkflowsSchema0Schema = z.strictObject({
     .min(-9007199254740991)
     .max(9007199254740991),
   minimumLauncherVersion: z.string(),
+  dshMinimumLauncherVersion: z.string().optional(),
 });
 
 export const rWorkflowsListEnterpriseWorkflowsSchema1Schema = z
@@ -1268,6 +1269,7 @@ export const bWorkflowsManageWorkflowInstallationSchema32Schema = z.enum([
   "service_status",
   "launcher_transfer",
   "provider_readback",
+  "smtp_accepted",
   "smedc_readback",
   "manual_resolution",
   "request_rejected",
@@ -1352,6 +1354,15 @@ export const bWorkflowsManageWorkflowInstallationSchema40Schema =
     outcome: z.enum(["published", "sent", "not_executed"]),
   });
 
+export const bWorkflowsManageWorkflowInstallationSchema41Schema =
+  z.strictObject({
+    identityHash: bWorkflowsManageWorkflowInstallationSchema5Schema,
+    artifactHash: bWorkflowsManageWorkflowInstallationSchema5Schema,
+    correlationMarker: bWorkflowsManageWorkflowInstallationSchema0Schema,
+    messageId: bWorkflowsManageWorkflowInstallationSchema9Schema,
+    responseCode: z.literal(250),
+  });
+
 export const bWorkflowsManageWorkflowInstallationSchema30Schema =
   z.strictObject({
     actionId: bWorkflowsManageWorkflowInstallationSchema0Schema,
@@ -1368,6 +1379,8 @@ export const bWorkflowsManageWorkflowInstallationSchema30Schema =
       bWorkflowsManageWorkflowInstallationSchema39Schema.optional(),
     providerReadback:
       bWorkflowsManageWorkflowInstallationSchema40Schema.optional(),
+    smtpAcceptance:
+      bWorkflowsManageWorkflowInstallationSchema41Schema.optional(),
   });
 
 export const bWorkflowsManageWorkflowInstallationSchema4Schema = z.strictObject(
@@ -1382,47 +1395,47 @@ export const bWorkflowsManageWorkflowInstallationSchema3Schema = z
   .array(bWorkflowsManageWorkflowInstallationSchema4Schema)
   .max(100);
 
-export const bWorkflowsManageWorkflowInstallationSchema43Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema44Schema = z.enum([
   "source_conflict",
   "missing_receipt",
   "unknown_action",
   "missing_local_evidence",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema44Schema =
+export const bWorkflowsManageWorkflowInstallationSchema45Schema =
   bWorkflowsManageWorkflowInstallationSchema5Schema;
 
-export const bWorkflowsManageWorkflowInstallationSchema45Schema =
+export const bWorkflowsManageWorkflowInstallationSchema46Schema =
   bWorkflowsManageWorkflowInstallationSchema6Schema;
 
-export const bWorkflowsManageWorkflowInstallationSchema46Schema =
+export const bWorkflowsManageWorkflowInstallationSchema47Schema =
   bWorkflowsManageWorkflowInstallationSchema30Schema;
 
-export const bWorkflowsManageWorkflowInstallationSchema42Schema =
+export const bWorkflowsManageWorkflowInstallationSchema43Schema =
   z.strictObject({
-    code: bWorkflowsManageWorkflowInstallationSchema43Schema,
+    code: bWorkflowsManageWorkflowInstallationSchema44Schema,
     sourceRef: bWorkflowsManageWorkflowInstallationSchema0Schema,
-    evidenceHash: bWorkflowsManageWorkflowInstallationSchema44Schema.optional(),
-    intent: bWorkflowsManageWorkflowInstallationSchema45Schema.optional(),
-    receipt: bWorkflowsManageWorkflowInstallationSchema46Schema.optional(),
+    evidenceHash: bWorkflowsManageWorkflowInstallationSchema45Schema.optional(),
+    intent: bWorkflowsManageWorkflowInstallationSchema46Schema.optional(),
+    receipt: bWorkflowsManageWorkflowInstallationSchema47Schema.optional(),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema41Schema = z
-  .array(bWorkflowsManageWorkflowInstallationSchema42Schema)
+export const bWorkflowsManageWorkflowInstallationSchema42Schema = z
+  .array(bWorkflowsManageWorkflowInstallationSchema43Schema)
   .max(100);
 
-export const bWorkflowsManageWorkflowInstallationSchema49Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema50Schema = z.enum([
   "business",
   "evidence",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema50Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema51Schema = z.enum([
   "open",
   "waived",
   "resolved",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema51Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema52Schema = z.enum([
   "preparing",
   "collecting",
   "validating",
@@ -1433,7 +1446,7 @@ export const bWorkflowsManageWorkflowInstallationSchema51Schema = z.enum([
   "finished",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema52Schema = z.union([
+export const bWorkflowsManageWorkflowInstallationSchema53Schema = z.union([
   z.strictObject({
     kind: z.literal("dataset"),
     dataset: z.enum([
@@ -1468,47 +1481,63 @@ export const bWorkflowsManageWorkflowInstallationSchema52Schema = z.union([
   }),
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema53Schema =
+export const bWorkflowsManageWorkflowInstallationSchema54Schema =
   bWorkflowsManageWorkflowInstallationSchema0Schema;
 
-export const bWorkflowsManageWorkflowInstallationSchema54Schema =
+export const bWorkflowsManageWorkflowInstallationSchema55Schema =
   bWorkflowsManageWorkflowInstallationSchema5Schema;
 
-export const bWorkflowsManageWorkflowInstallationSchema55Schema = z
+export const bWorkflowsManageWorkflowInstallationSchema56Schema = z
   .string()
   .min(1)
   .max(2000);
 
-export const bWorkflowsManageWorkflowInstallationSchema48Schema =
+export const bWorkflowsManageWorkflowInstallationSchema49Schema =
   z.strictObject({
     itemId: bWorkflowsManageWorkflowInstallationSchema0Schema,
-    kind: bWorkflowsManageWorkflowInstallationSchema49Schema,
-    disposition: bWorkflowsManageWorkflowInstallationSchema50Schema,
-    stage: bWorkflowsManageWorkflowInstallationSchema51Schema,
-    scope: bWorkflowsManageWorkflowInstallationSchema52Schema,
-    evidenceRef: bWorkflowsManageWorkflowInstallationSchema53Schema.optional(),
-    evidenceHash: bWorkflowsManageWorkflowInstallationSchema54Schema.optional(),
+    kind: bWorkflowsManageWorkflowInstallationSchema50Schema,
+    disposition: bWorkflowsManageWorkflowInstallationSchema51Schema,
+    stage: bWorkflowsManageWorkflowInstallationSchema52Schema,
+    scope: bWorkflowsManageWorkflowInstallationSchema53Schema,
+    evidenceRef: bWorkflowsManageWorkflowInstallationSchema54Schema.optional(),
+    evidenceHash: bWorkflowsManageWorkflowInstallationSchema55Schema.optional(),
     resolutionReason:
-      bWorkflowsManageWorkflowInstallationSchema55Schema.optional(),
+      bWorkflowsManageWorkflowInstallationSchema56Schema.optional(),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema47Schema = z
-  .array(bWorkflowsManageWorkflowInstallationSchema48Schema)
+export const bWorkflowsManageWorkflowInstallationSchema48Schema = z
+  .array(bWorkflowsManageWorkflowInstallationSchema49Schema)
   .max(100);
 
 export const bWorkflowsManageWorkflowInstallationSchema2Schema = z.strictObject(
   {
     workflowId: bWorkflowsManageWorkflowInstallationSchema0Schema,
     completedActions: bWorkflowsManageWorkflowInstallationSchema3Schema,
-    unresolved: bWorkflowsManageWorkflowInstallationSchema41Schema,
+    unresolved: bWorkflowsManageWorkflowInstallationSchema42Schema,
     recoveryItems:
-      bWorkflowsManageWorkflowInstallationSchema47Schema.optional(),
+      bWorkflowsManageWorkflowInstallationSchema48Schema.optional(),
   },
 );
 
-export const bWorkflowsManageWorkflowInstallationSchema56Schema =
+export const bWorkflowsManageWorkflowInstallationSchema57Schema = z.enum([
+  "codex",
+  "dsh",
+]);
+
+export const bWorkflowsManageWorkflowInstallationSchema58Schema =
+  z.literal("macos");
+
+export const bWorkflowsManageWorkflowInstallationSchema59Schema = z
+  .string()
+  .regex(new RegExp("^\\d+\\.\\d+\\.\\d+$"));
+
+export const bWorkflowsManageWorkflowInstallationSchema60Schema = z
+  .string()
+  .regex(new RegExp("^\\d+\\.\\d+\\.\\d+$"));
+
+export const bWorkflowsManageWorkflowInstallationSchema62Schema =
   z.strictObject({
-    host: z.literal("codex"),
+    host: bWorkflowsManageWorkflowInstallationSchema57Schema,
     platform: z.literal("macos"),
     taskId: bWorkflowsManageWorkflowInstallationSchema0Schema,
     projectRef: bWorkflowsManageWorkflowInstallationSchema0Schema,
@@ -1534,7 +1563,10 @@ export const bWorkflowsManageWorkflowInstallationSchema56Schema =
       ),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema57Schema =
+export const bWorkflowsManageWorkflowInstallationSchema61Schema =
+  bWorkflowsManageWorkflowInstallationSchema62Schema;
+
+export const bWorkflowsManageWorkflowInstallationSchema63Schema =
   z.strictObject({
     capability: z.enum([
       "configuration",
@@ -1546,6 +1578,7 @@ export const bWorkflowsManageWorkflowInstallationSchema57Schema =
       "dependencies",
       "email_identity",
       "sent_mail_lookup",
+      "smtp_submission",
       "host_schedule",
       "host_timezone",
       "host_model",
@@ -1571,12 +1604,12 @@ export const bWorkflowsManageWorkflowInstallationSchema57Schema =
     sampleStatus: z.enum(["verified", "no_sample", "not_checked"]).optional(),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema59Schema = z.literal(1);
+export const bWorkflowsManageWorkflowInstallationSchema65Schema = z.literal(1);
 
-export const bWorkflowsManageWorkflowInstallationSchema60Schema =
+export const bWorkflowsManageWorkflowInstallationSchema66Schema =
   z.literal("Asia/Shanghai");
 
-export const bWorkflowsManageWorkflowInstallationSchema62Schema =
+export const bWorkflowsManageWorkflowInstallationSchema68Schema =
   z.strictObject({
     product: z.enum(["meituan_erp", "meituan_reviews"]),
     accountRef: bWorkflowsManageWorkflowInstallationSchema9Schema,
@@ -1586,45 +1619,45 @@ export const bWorkflowsManageWorkflowInstallationSchema62Schema =
       bWorkflowsManageWorkflowInstallationSchema9Schema.optional(),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema61Schema = z
-  .array(bWorkflowsManageWorkflowInstallationSchema62Schema)
+export const bWorkflowsManageWorkflowInstallationSchema67Schema = z
+  .array(bWorkflowsManageWorkflowInstallationSchema68Schema)
   .max(100);
 
-export const bWorkflowsManageWorkflowInstallationSchema64Schema =
+export const bWorkflowsManageWorkflowInstallationSchema70Schema =
   z.strictObject({
     source: bWorkflowsManageWorkflowInstallationSchema19Schema,
     storeName: bWorkflowsManageWorkflowInstallationSchema9Schema,
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema63Schema = z
-  .array(bWorkflowsManageWorkflowInstallationSchema64Schema)
+export const bWorkflowsManageWorkflowInstallationSchema69Schema = z
+  .array(bWorkflowsManageWorkflowInstallationSchema70Schema)
   .max(2000);
 
-export const bWorkflowsManageWorkflowInstallationSchema66Schema =
+export const bWorkflowsManageWorkflowInstallationSchema72Schema =
   z.strictObject({
     source: bWorkflowsManageWorkflowInstallationSchema19Schema,
     reason: z.string().min(1).max(2000),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema65Schema = z
-  .array(bWorkflowsManageWorkflowInstallationSchema66Schema)
+export const bWorkflowsManageWorkflowInstallationSchema71Schema = z
+  .array(bWorkflowsManageWorkflowInstallationSchema72Schema)
   .max(2000);
 
-export const bWorkflowsManageWorkflowInstallationSchema58Schema =
+export const bWorkflowsManageWorkflowInstallationSchema64Schema =
   z.strictObject({
-    schemaVersion: bWorkflowsManageWorkflowInstallationSchema59Schema,
-    timezone: bWorkflowsManageWorkflowInstallationSchema60Schema,
-    sourceAccounts: bWorkflowsManageWorkflowInstallationSchema61Schema,
-    storeMappings: bWorkflowsManageWorkflowInstallationSchema63Schema,
-    exclusions: bWorkflowsManageWorkflowInstallationSchema65Schema,
+    schemaVersion: bWorkflowsManageWorkflowInstallationSchema65Schema,
+    timezone: bWorkflowsManageWorkflowInstallationSchema66Schema,
+    sourceAccounts: bWorkflowsManageWorkflowInstallationSchema67Schema,
+    storeMappings: bWorkflowsManageWorkflowInstallationSchema69Schema,
+    exclusions: bWorkflowsManageWorkflowInstallationSchema71Schema,
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema70Schema = z.literal(1);
+export const bWorkflowsManageWorkflowInstallationSchema76Schema = z.literal(1);
 
-export const bWorkflowsManageWorkflowInstallationSchema71Schema =
+export const bWorkflowsManageWorkflowInstallationSchema77Schema =
   z.literal("action_required");
 
-export const bWorkflowsManageWorkflowInstallationSchema72Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema78Schema = z.enum([
   "business",
   "dishes",
   "in_store_orders",
@@ -1632,21 +1665,21 @@ export const bWorkflowsManageWorkflowInstallationSchema72Schema = z.enum([
   "delivery_ledger",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema69Schema =
+export const bWorkflowsManageWorkflowInstallationSchema75Schema =
   z.strictObject({
-    schemaVersion: bWorkflowsManageWorkflowInstallationSchema70Schema,
+    schemaVersion: bWorkflowsManageWorkflowInstallationSchema76Schema,
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
-    notificationPolicy: bWorkflowsManageWorkflowInstallationSchema71Schema,
+    notificationPolicy: bWorkflowsManageWorkflowInstallationSchema77Schema,
     type: z.literal("meituan-daily-ingestion"),
     datasets: z
-      .array(bWorkflowsManageWorkflowInstallationSchema72Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema78Schema)
       .min(1)
       .max(5),
     orderScope: z.literal("settled_only"),
     cleanupPolicy: z.literal("confirmed_files_only"),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema74Schema =
+export const bWorkflowsManageWorkflowInstallationSchema80Schema =
   z.strictObject({
     source: bWorkflowsManageWorkflowInstallationSchema15Schema,
     feedbackId: bWorkflowsManageWorkflowInstallationSchema9Schema,
@@ -1654,14 +1687,14 @@ export const bWorkflowsManageWorkflowInstallationSchema74Schema =
     purpose: z.literal("exclude_source_record"),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema75Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.enum([
   "meituan",
   "dianping",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema77Schema = z.boolean();
+export const bWorkflowsManageWorkflowInstallationSchema83Schema = z.boolean();
 
-export const bWorkflowsManageWorkflowInstallationSchema78Schema = z
+export const bWorkflowsManageWorkflowInstallationSchema84Schema = z
   .string()
   .max(254)
   .regex(
@@ -1670,29 +1703,29 @@ export const bWorkflowsManageWorkflowInstallationSchema78Schema = z
     ),
   );
 
-export const bWorkflowsManageWorkflowInstallationSchema76Schema =
+export const bWorkflowsManageWorkflowInstallationSchema82Schema =
   z.strictObject({
-    enabled: bWorkflowsManageWorkflowInstallationSchema77Schema,
+    enabled: bWorkflowsManageWorkflowInstallationSchema83Schema,
     recipients: bWorkflowsManageWorkflowInstallationSchema24Schema,
     allowedSender:
-      bWorkflowsManageWorkflowInstallationSchema78Schema.optional(),
+      bWorkflowsManageWorkflowInstallationSchema84Schema.optional(),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema73Schema =
+export const bWorkflowsManageWorkflowInstallationSchema79Schema =
   z.strictObject({
-    schemaVersion: bWorkflowsManageWorkflowInstallationSchema70Schema,
+    schemaVersion: bWorkflowsManageWorkflowInstallationSchema76Schema,
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
-    notificationPolicy: bWorkflowsManageWorkflowInstallationSchema71Schema,
+    notificationPolicy: bWorkflowsManageWorkflowInstallationSchema77Schema,
     type: z.literal("meituan-review-operations"),
     executionPolicy: z.strictObject({
       id: z.literal("verified-review-operations"),
       version: z.literal(1),
     }),
     ignoredReviewIdentities: z
-      .array(bWorkflowsManageWorkflowInstallationSchema74Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema80Schema)
       .max(2000),
     channels: z
-      .array(bWorkflowsManageWorkflowInstallationSchema75Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema81Schema)
       .min(1)
       .max(2),
     publication: z.strictObject({
@@ -1703,30 +1736,30 @@ export const bWorkflowsManageWorkflowInstallationSchema73Schema =
     }),
     brandFacts: z.string().max(20000),
     tone: z.string().max(2000),
-    draftNotification: bWorkflowsManageWorkflowInstallationSchema76Schema,
+    draftNotification: bWorkflowsManageWorkflowInstallationSchema82Schema,
     cleanupPolicy: z.literal("complete_run_only"),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema80Schema =
+export const bWorkflowsManageWorkflowInstallationSchema86Schema =
   z.strictObject({
     name: bWorkflowsManageWorkflowInstallationSchema9Schema,
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema79Schema =
+export const bWorkflowsManageWorkflowInstallationSchema85Schema =
   z.strictObject({
-    schemaVersion: bWorkflowsManageWorkflowInstallationSchema70Schema,
+    schemaVersion: bWorkflowsManageWorkflowInstallationSchema76Schema,
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
-    notificationPolicy: bWorkflowsManageWorkflowInstallationSchema71Schema,
+    notificationPolicy: bWorkflowsManageWorkflowInstallationSchema77Schema,
     type: z.literal("weekly-business-report"),
     groups: z
-      .array(bWorkflowsManageWorkflowInstallationSchema80Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema86Schema)
       .max(100),
-    delivery: bWorkflowsManageWorkflowInstallationSchema76Schema,
+    delivery: bWorkflowsManageWorkflowInstallationSchema82Schema,
     cleanupPolicy: z.literal("retain_final_report"),
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema82Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema88Schema = z.enum([
   "business",
   "dishes",
   "in_store_orders",
@@ -1734,28 +1767,28 @@ export const bWorkflowsManageWorkflowInstallationSchema82Schema = z.enum([
   "delivery_ledger",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema83Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema89Schema = z.enum([
   "business",
   "dishes",
   "in_store_orders",
   "takeaway_orders",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema84Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema90Schema = z.enum([
   "meituan",
   "dianping",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema85Schema = z.enum([
+export const bWorkflowsManageWorkflowInstallationSchema91Schema = z.enum([
   "meituan",
   "dianping",
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.union([
+export const bWorkflowsManageWorkflowInstallationSchema87Schema = z.union([
   z.strictObject({
     kind: z.literal("upload"),
     datasets: z
-      .array(bWorkflowsManageWorkflowInstallationSchema82Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema88Schema)
       .min(1)
       .max(5),
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
@@ -1763,7 +1796,7 @@ export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.union([
   z.strictObject({
     kind: z.literal("download"),
     datasets: z
-      .array(bWorkflowsManageWorkflowInstallationSchema83Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema89Schema)
       .min(1)
       .max(4),
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
@@ -1771,7 +1804,7 @@ export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.union([
   z.strictObject({
     kind: z.literal("review_sync"),
     channels: z
-      .array(bWorkflowsManageWorkflowInstallationSchema84Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema90Schema)
       .min(1)
       .max(2),
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
@@ -1779,7 +1812,7 @@ export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.union([
   z.strictObject({
     kind: z.literal("review_publish"),
     channels: z
-      .array(bWorkflowsManageWorkflowInstallationSchema85Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema91Schema)
       .min(1)
       .max(2),
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
@@ -1801,26 +1834,26 @@ export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.union([
   }),
 ]);
 
-export const bWorkflowsManageWorkflowInstallationSchema68Schema =
+export const bWorkflowsManageWorkflowInstallationSchema74Schema =
   z.strictObject({
     workflowId: bWorkflowsManageWorkflowInstallationSchema0Schema,
     configuration: z.union([
-      bWorkflowsManageWorkflowInstallationSchema69Schema,
-      bWorkflowsManageWorkflowInstallationSchema73Schema,
+      bWorkflowsManageWorkflowInstallationSchema75Schema,
       bWorkflowsManageWorkflowInstallationSchema79Schema,
+      bWorkflowsManageWorkflowInstallationSchema85Schema,
     ]),
     authorizations: z
-      .array(bWorkflowsManageWorkflowInstallationSchema81Schema)
+      .array(bWorkflowsManageWorkflowInstallationSchema87Schema)
       .max(20),
-    hostSnapshot: bWorkflowsManageWorkflowInstallationSchema56Schema,
+    hostSnapshot: bWorkflowsManageWorkflowInstallationSchema62Schema,
     completedActions: bWorkflowsManageWorkflowInstallationSchema3Schema,
     recoveryItems:
-      bWorkflowsManageWorkflowInstallationSchema47Schema.optional(),
-    unresolved: bWorkflowsManageWorkflowInstallationSchema41Schema,
+      bWorkflowsManageWorkflowInstallationSchema48Schema.optional(),
+    unresolved: bWorkflowsManageWorkflowInstallationSchema42Schema,
   });
 
-export const bWorkflowsManageWorkflowInstallationSchema67Schema = z
-  .array(bWorkflowsManageWorkflowInstallationSchema68Schema)
+export const bWorkflowsManageWorkflowInstallationSchema73Schema = z
+  .array(bWorkflowsManageWorkflowInstallationSchema74Schema)
   .min(1)
   .max(3);
 
@@ -2150,7 +2183,7 @@ export const rWorkflowsManageWorkflowInstallationSchema43Schema = z.union([
 
 export const rWorkflowsManageWorkflowInstallationSchema48Schema =
   z.strictObject({
-    host: z.literal("codex"),
+    host: z.enum(["codex", "dsh"]),
     platform: z.literal("macos"),
     taskId: rWorkflowsManageWorkflowInstallationSchema26Schema,
     projectRef: rWorkflowsManageWorkflowInstallationSchema26Schema,
@@ -2317,6 +2350,7 @@ export const rWorkflowsManageWorkflowInstallationSchema68Schema = z.enum([
   "service_status",
   "launcher_transfer",
   "provider_readback",
+  "smtp_accepted",
   "smedc_readback",
   "manual_resolution",
   "request_rejected",
@@ -2401,6 +2435,15 @@ export const rWorkflowsManageWorkflowInstallationSchema76Schema =
     outcome: z.enum(["published", "sent", "not_executed"]),
   });
 
+export const rWorkflowsManageWorkflowInstallationSchema77Schema =
+  z.strictObject({
+    identityHash: rWorkflowsManageWorkflowInstallationSchema4Schema,
+    artifactHash: rWorkflowsManageWorkflowInstallationSchema4Schema,
+    correlationMarker: rWorkflowsManageWorkflowInstallationSchema26Schema,
+    messageId: rWorkflowsManageWorkflowInstallationSchema15Schema,
+    responseCode: z.literal(250),
+  });
+
 export const rWorkflowsManageWorkflowInstallationSchema66Schema =
   z.strictObject({
     actionId: rWorkflowsManageWorkflowInstallationSchema26Schema,
@@ -2417,6 +2460,8 @@ export const rWorkflowsManageWorkflowInstallationSchema66Schema =
       rWorkflowsManageWorkflowInstallationSchema75Schema.optional(),
     providerReadback:
       rWorkflowsManageWorkflowInstallationSchema76Schema.optional(),
+    smtpAcceptance:
+      rWorkflowsManageWorkflowInstallationSchema77Schema.optional(),
   });
 
 export const rWorkflowsManageWorkflowInstallationSchema50Schema =
@@ -2430,18 +2475,18 @@ export const rWorkflowsManageWorkflowInstallationSchema49Schema = z
   .array(rWorkflowsManageWorkflowInstallationSchema50Schema)
   .max(100);
 
-export const rWorkflowsManageWorkflowInstallationSchema79Schema = z.enum([
+export const rWorkflowsManageWorkflowInstallationSchema80Schema = z.enum([
   "business",
   "evidence",
 ]);
 
-export const rWorkflowsManageWorkflowInstallationSchema80Schema = z.enum([
+export const rWorkflowsManageWorkflowInstallationSchema81Schema = z.enum([
   "open",
   "waived",
   "resolved",
 ]);
 
-export const rWorkflowsManageWorkflowInstallationSchema81Schema = z.enum([
+export const rWorkflowsManageWorkflowInstallationSchema82Schema = z.enum([
   "preparing",
   "collecting",
   "validating",
@@ -2452,7 +2497,7 @@ export const rWorkflowsManageWorkflowInstallationSchema81Schema = z.enum([
   "finished",
 ]);
 
-export const rWorkflowsManageWorkflowInstallationSchema82Schema = z.union([
+export const rWorkflowsManageWorkflowInstallationSchema83Schema = z.union([
   z.strictObject({
     kind: z.literal("dataset"),
     dataset: z.enum([
@@ -2487,61 +2532,61 @@ export const rWorkflowsManageWorkflowInstallationSchema82Schema = z.union([
   }),
 ]);
 
-export const rWorkflowsManageWorkflowInstallationSchema83Schema =
+export const rWorkflowsManageWorkflowInstallationSchema84Schema =
   rWorkflowsManageWorkflowInstallationSchema26Schema;
 
-export const rWorkflowsManageWorkflowInstallationSchema84Schema =
+export const rWorkflowsManageWorkflowInstallationSchema85Schema =
   rWorkflowsManageWorkflowInstallationSchema4Schema;
 
-export const rWorkflowsManageWorkflowInstallationSchema85Schema = z
+export const rWorkflowsManageWorkflowInstallationSchema86Schema = z
   .string()
   .min(1)
   .max(2000);
 
-export const rWorkflowsManageWorkflowInstallationSchema78Schema =
+export const rWorkflowsManageWorkflowInstallationSchema79Schema =
   z.strictObject({
     itemId: rWorkflowsManageWorkflowInstallationSchema26Schema,
-    kind: rWorkflowsManageWorkflowInstallationSchema79Schema,
-    disposition: rWorkflowsManageWorkflowInstallationSchema80Schema,
-    stage: rWorkflowsManageWorkflowInstallationSchema81Schema,
-    scope: rWorkflowsManageWorkflowInstallationSchema82Schema,
-    evidenceRef: rWorkflowsManageWorkflowInstallationSchema83Schema.optional(),
-    evidenceHash: rWorkflowsManageWorkflowInstallationSchema84Schema.optional(),
+    kind: rWorkflowsManageWorkflowInstallationSchema80Schema,
+    disposition: rWorkflowsManageWorkflowInstallationSchema81Schema,
+    stage: rWorkflowsManageWorkflowInstallationSchema82Schema,
+    scope: rWorkflowsManageWorkflowInstallationSchema83Schema,
+    evidenceRef: rWorkflowsManageWorkflowInstallationSchema84Schema.optional(),
+    evidenceHash: rWorkflowsManageWorkflowInstallationSchema85Schema.optional(),
     resolutionReason:
-      rWorkflowsManageWorkflowInstallationSchema85Schema.optional(),
+      rWorkflowsManageWorkflowInstallationSchema86Schema.optional(),
   });
 
-export const rWorkflowsManageWorkflowInstallationSchema77Schema = z
-  .array(rWorkflowsManageWorkflowInstallationSchema78Schema)
+export const rWorkflowsManageWorkflowInstallationSchema78Schema = z
+  .array(rWorkflowsManageWorkflowInstallationSchema79Schema)
   .max(100);
 
-export const rWorkflowsManageWorkflowInstallationSchema88Schema = z.enum([
+export const rWorkflowsManageWorkflowInstallationSchema89Schema = z.enum([
   "source_conflict",
   "missing_receipt",
   "unknown_action",
   "missing_local_evidence",
 ]);
 
-export const rWorkflowsManageWorkflowInstallationSchema89Schema =
+export const rWorkflowsManageWorkflowInstallationSchema90Schema =
   rWorkflowsManageWorkflowInstallationSchema4Schema;
 
-export const rWorkflowsManageWorkflowInstallationSchema90Schema =
+export const rWorkflowsManageWorkflowInstallationSchema91Schema =
   rWorkflowsManageWorkflowInstallationSchema51Schema;
 
-export const rWorkflowsManageWorkflowInstallationSchema91Schema =
+export const rWorkflowsManageWorkflowInstallationSchema92Schema =
   rWorkflowsManageWorkflowInstallationSchema66Schema;
 
-export const rWorkflowsManageWorkflowInstallationSchema87Schema =
+export const rWorkflowsManageWorkflowInstallationSchema88Schema =
   z.strictObject({
-    code: rWorkflowsManageWorkflowInstallationSchema88Schema,
+    code: rWorkflowsManageWorkflowInstallationSchema89Schema,
     sourceRef: rWorkflowsManageWorkflowInstallationSchema26Schema,
-    evidenceHash: rWorkflowsManageWorkflowInstallationSchema89Schema.optional(),
-    intent: rWorkflowsManageWorkflowInstallationSchema90Schema.optional(),
-    receipt: rWorkflowsManageWorkflowInstallationSchema91Schema.optional(),
+    evidenceHash: rWorkflowsManageWorkflowInstallationSchema90Schema.optional(),
+    intent: rWorkflowsManageWorkflowInstallationSchema91Schema.optional(),
+    receipt: rWorkflowsManageWorkflowInstallationSchema92Schema.optional(),
   });
 
-export const rWorkflowsManageWorkflowInstallationSchema86Schema = z
-  .array(rWorkflowsManageWorkflowInstallationSchema87Schema)
+export const rWorkflowsManageWorkflowInstallationSchema87Schema = z
+  .array(rWorkflowsManageWorkflowInstallationSchema88Schema)
   .max(100);
 
 export const rWorkflowsManageWorkflowInstallationSchema25Schema =
@@ -2558,8 +2603,8 @@ export const rWorkflowsManageWorkflowInstallationSchema25Schema =
     hostSnapshot: rWorkflowsManageWorkflowInstallationSchema48Schema,
     completedActions: rWorkflowsManageWorkflowInstallationSchema49Schema,
     recoveryItems:
-      rWorkflowsManageWorkflowInstallationSchema77Schema.optional(),
-    unresolved: rWorkflowsManageWorkflowInstallationSchema86Schema,
+      rWorkflowsManageWorkflowInstallationSchema78Schema.optional(),
+    unresolved: rWorkflowsManageWorkflowInstallationSchema87Schema,
   });
 
 export const rWorkflowsManageWorkflowInstallationSchema24Schema = z
@@ -2576,9 +2621,9 @@ export const rWorkflowsManageWorkflowInstallationSchema8Schema = z.strictObject(
   },
 );
 
-export const rWorkflowsManageWorkflowInstallationSchema92Schema = z.string();
+export const rWorkflowsManageWorkflowInstallationSchema93Schema = z.string();
 
-export const rWorkflowsManageWorkflowInstallationSchema93Schema = z
+export const rWorkflowsManageWorkflowInstallationSchema94Schema = z
   .string()
   .regex(
     new RegExp(
@@ -2586,16 +2631,10 @@ export const rWorkflowsManageWorkflowInstallationSchema93Schema = z
     ),
   );
 
-export const rWorkflowsManageWorkflowInstallationSchema94Schema = z.union([
-  rWorkflowsManageWorkflowInstallationSchema93Schema,
+export const rWorkflowsManageWorkflowInstallationSchema95Schema = z.union([
+  rWorkflowsManageWorkflowInstallationSchema94Schema,
   z.null(),
 ]);
-
-export const rWorkflowsManageWorkflowInstallationSchema95Schema = z
-  .number()
-  .int()
-  .min(-9007199254740991)
-  .max(9007199254740991);
 
 export const rWorkflowsManageWorkflowInstallationSchema96Schema = z
   .number()
@@ -2603,16 +2642,16 @@ export const rWorkflowsManageWorkflowInstallationSchema96Schema = z
   .min(-9007199254740991)
   .max(9007199254740991);
 
-export const rWorkflowsManageWorkflowInstallationSchema97Schema = z.union([
-  rWorkflowsManageWorkflowInstallationSchema4Schema,
-  z.null(),
-]);
-
-export const rWorkflowsManageWorkflowInstallationSchema98Schema = z
+export const rWorkflowsManageWorkflowInstallationSchema97Schema = z
   .number()
   .int()
   .min(-9007199254740991)
   .max(9007199254740991);
+
+export const rWorkflowsManageWorkflowInstallationSchema98Schema = z.union([
+  rWorkflowsManageWorkflowInstallationSchema4Schema,
+  z.null(),
+]);
 
 export const rWorkflowsManageWorkflowInstallationSchema99Schema = z
   .number()
@@ -2620,7 +2659,13 @@ export const rWorkflowsManageWorkflowInstallationSchema99Schema = z
   .min(-9007199254740991)
   .max(9007199254740991);
 
-export const rWorkflowsManageWorkflowInstallationSchema100Schema = z.array(
+export const rWorkflowsManageWorkflowInstallationSchema100Schema = z
+  .number()
+  .int()
+  .min(-9007199254740991)
+  .max(9007199254740991);
+
+export const rWorkflowsManageWorkflowInstallationSchema101Schema = z.array(
   z.strictObject({
     workflowId: z.string(),
     version: z.number().int().min(-9007199254740991).max(9007199254740991),
@@ -2637,13 +2682,13 @@ export const rWorkflowsManageWorkflowInstallationSchema100Schema = z.array(
   }),
 );
 
-export const rWorkflowsManageWorkflowInstallationSchema101Schema =
+export const rWorkflowsManageWorkflowInstallationSchema102Schema =
   z.strictObject({
     workflowId: rWorkflowsManageWorkflowInstallationSchema26Schema,
     completedActions: rWorkflowsManageWorkflowInstallationSchema49Schema,
-    unresolved: rWorkflowsManageWorkflowInstallationSchema86Schema,
+    unresolved: rWorkflowsManageWorkflowInstallationSchema87Schema,
     recoveryItems:
-      rWorkflowsManageWorkflowInstallationSchema77Schema.optional(),
+      rWorkflowsManageWorkflowInstallationSchema78Schema.optional(),
   });
 
 export const bWorkflowsManageWorkflowRunSchema0Schema = z
@@ -4082,6 +4127,7 @@ export const bWorkflowsRecordWorkflowActionSchema27Schema = z.enum([
   "service_status",
   "launcher_transfer",
   "provider_readback",
+  "smtp_accepted",
   "smedc_readback",
   "manual_resolution",
   "request_rejected",
@@ -4163,6 +4209,14 @@ export const bWorkflowsRecordWorkflowActionSchema35Schema = z.strictObject({
   outcome: z.enum(["published", "sent", "not_executed"]),
 });
 
+export const bWorkflowsRecordWorkflowActionSchema36Schema = z.strictObject({
+  identityHash: bWorkflowsRecordWorkflowActionSchema11Schema,
+  artifactHash: bWorkflowsRecordWorkflowActionSchema11Schema,
+  correlationMarker: bWorkflowsRecordWorkflowActionSchema0Schema,
+  messageId: bWorkflowsRecordWorkflowActionSchema5Schema,
+  responseCode: z.literal(250),
+});
+
 export const bWorkflowsRecordWorkflowActionSchema25Schema = z.strictObject({
   actionId: bWorkflowsRecordWorkflowActionSchema0Schema,
   state: bWorkflowsRecordWorkflowActionSchema26Schema,
@@ -4175,6 +4229,7 @@ export const bWorkflowsRecordWorkflowActionSchema25Schema = z.strictObject({
   launcherTransfer: bWorkflowsRecordWorkflowActionSchema33Schema.optional(),
   smedcReadback: bWorkflowsRecordWorkflowActionSchema34Schema.optional(),
   providerReadback: bWorkflowsRecordWorkflowActionSchema35Schema.optional(),
+  smtpAcceptance: bWorkflowsRecordWorkflowActionSchema36Schema.optional(),
 });
 
 export const rWorkflowsRecordWorkflowActionSchema1Schema = z
@@ -4308,6 +4363,7 @@ export const rWorkflowsRecordWorkflowActionSchema23Schema = z.enum([
   "service_status",
   "launcher_transfer",
   "provider_readback",
+  "smtp_accepted",
   "smedc_readback",
   "manual_resolution",
   "request_rejected",
@@ -4389,6 +4445,14 @@ export const rWorkflowsRecordWorkflowActionSchema31Schema = z.strictObject({
   outcome: z.enum(["published", "sent", "not_executed"]),
 });
 
+export const rWorkflowsRecordWorkflowActionSchema32Schema = z.strictObject({
+  identityHash: rWorkflowsRecordWorkflowActionSchema7Schema,
+  artifactHash: rWorkflowsRecordWorkflowActionSchema7Schema,
+  correlationMarker: rWorkflowsRecordWorkflowActionSchema21Schema,
+  messageId: rWorkflowsRecordWorkflowActionSchema1Schema,
+  responseCode: z.literal(250),
+});
+
 export const rWorkflowsRecordWorkflowActionSchema20Schema = z.strictObject({
   actionId: rWorkflowsRecordWorkflowActionSchema21Schema,
   state: rWorkflowsRecordWorkflowActionSchema22Schema,
@@ -4401,6 +4465,7 @@ export const rWorkflowsRecordWorkflowActionSchema20Schema = z.strictObject({
   launcherTransfer: rWorkflowsRecordWorkflowActionSchema29Schema.optional(),
   smedcReadback: rWorkflowsRecordWorkflowActionSchema30Schema.optional(),
   providerReadback: rWorkflowsRecordWorkflowActionSchema31Schema.optional(),
+  smtpAcceptance: rWorkflowsRecordWorkflowActionSchema32Schema.optional(),
 });
 
 export const bWorkflowsSaveEnterpriseWorkflowSchema0Schema = z
@@ -6477,6 +6542,7 @@ export const workflowsGetEnterpriseWorkflowResponseSchema = z.strictObject({
       .min(-9007199254740991)
       .max(9007199254740991),
     minimumLauncherVersion: z.string(),
+    dshMinimumLauncherVersion: z.string().optional(),
   }),
   workflowId: z.string().min(1).max(64).regex(new RegExp("^[A-Za-z0-9_-]+$")),
   enterpriseKey: z.string(),
@@ -6631,6 +6697,7 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
       .min(-9007199254740991)
       .max(9007199254740991),
     minimumLauncherVersion: z.string(),
+    dshMinimumLauncherVersion: z.string().optional(),
   }),
   workflowId: rWorkflowsGetWorkflowStatusSchema0Schema,
   enterpriseKey: z.string(),
@@ -6790,7 +6857,7 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
       ]),
       hostSnapshot: z.union([
         z.strictObject({
-          host: z.literal("codex"),
+          host: z.enum(["codex", "dsh"]),
           platform: z.literal("macos"),
           taskId: rWorkflowsGetWorkflowStatusSchema0Schema,
           projectRef: rWorkflowsGetWorkflowStatusSchema0Schema,
@@ -6830,6 +6897,7 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
               "dependencies",
               "email_identity",
               "sent_mail_lookup",
+              "smtp_submission",
               "host_schedule",
               "host_timezone",
               "host_model",
@@ -7133,21 +7201,20 @@ export const workflowsManageWorkflowInstallationBodySchema = z.strictObject({
       installation: z.strictObject({
         installationId: bWorkflowsManageWorkflowInstallationSchema0Schema,
         deviceAlias: bWorkflowsManageWorkflowInstallationSchema9Schema,
-        host: z.literal("codex"),
-        platform: z.literal("macos"),
-        launcherVersion: z.string().regex(new RegExp("^\\d+\\.\\d+\\.\\d+$")),
-        workflowPackageVersion: z
-          .string()
-          .regex(new RegExp("^\\d+\\.\\d+\\.\\d+$")),
+        host: bWorkflowsManageWorkflowInstallationSchema57Schema,
+        platform: bWorkflowsManageWorkflowInstallationSchema58Schema,
+        launcherVersion: bWorkflowsManageWorkflowInstallationSchema59Schema,
+        workflowPackageVersion:
+          bWorkflowsManageWorkflowInstallationSchema60Schema,
         hostSnapshot:
-          bWorkflowsManageWorkflowInstallationSchema56Schema.optional(),
+          bWorkflowsManageWorkflowInstallationSchema61Schema.optional(),
       }),
     }),
     z.strictObject({
       kind: z.literal("record_checks"),
       installationId: bWorkflowsManageWorkflowInstallationSchema0Schema,
       checks: z
-        .array(bWorkflowsManageWorkflowInstallationSchema57Schema)
+        .array(bWorkflowsManageWorkflowInstallationSchema63Schema)
         .max(100),
       firstRunVerification: z.enum([
         "not_run",
@@ -7159,7 +7226,7 @@ export const workflowsManageWorkflowInstallationBodySchema = z.strictObject({
     z.strictObject({
       kind: z.literal("record_host"),
       installationId: bWorkflowsManageWorkflowInstallationSchema0Schema,
-      hostSnapshot: bWorkflowsManageWorkflowInstallationSchema56Schema,
+      hostSnapshot: bWorkflowsManageWorkflowInstallationSchema62Schema,
     }),
     z.strictObject({
       kind: z.literal("prepare_takeover"),
@@ -7188,8 +7255,8 @@ export const workflowsManageWorkflowInstallationBodySchema = z.strictObject({
       manifest: z.strictObject({
         sourceSnapshotHash: bWorkflowsManageWorkflowInstallationSchema5Schema,
         targetVersion: bWorkflowsManageWorkflowInstallationSchema1Schema,
-        integration: bWorkflowsManageWorkflowInstallationSchema58Schema,
-        workflows: bWorkflowsManageWorkflowInstallationSchema67Schema,
+        integration: bWorkflowsManageWorkflowInstallationSchema64Schema,
+        workflows: bWorkflowsManageWorkflowInstallationSchema73Schema,
       }),
     }),
     z.strictObject({
@@ -7235,21 +7302,21 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
     stage: rWorkflowsManageWorkflowInstallationSchema7Schema,
     manifest: rWorkflowsManageWorkflowInstallationSchema8Schema,
     confirmationDigest: rWorkflowsManageWorkflowInstallationSchema4Schema,
-    createdBy: rWorkflowsManageWorkflowInstallationSchema92Schema,
-    createdAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    updatedAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    sealedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
-    chunkCount: rWorkflowsManageWorkflowInstallationSchema95Schema,
-    recordCount: rWorkflowsManageWorkflowInstallationSchema96Schema,
-    chunksDigest: rWorkflowsManageWorkflowInstallationSchema97Schema,
-    importedChunks: rWorkflowsManageWorkflowInstallationSchema98Schema,
-    validatedChunks: rWorkflowsManageWorkflowInstallationSchema99Schema,
-    targetVersions: rWorkflowsManageWorkflowInstallationSchema100Schema,
+    createdBy: rWorkflowsManageWorkflowInstallationSchema93Schema,
+    createdAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    updatedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    sealedAt: rWorkflowsManageWorkflowInstallationSchema95Schema,
+    chunkCount: rWorkflowsManageWorkflowInstallationSchema96Schema,
+    recordCount: rWorkflowsManageWorkflowInstallationSchema97Schema,
+    chunksDigest: rWorkflowsManageWorkflowInstallationSchema98Schema,
+    importedChunks: rWorkflowsManageWorkflowInstallationSchema99Schema,
+    validatedChunks: rWorkflowsManageWorkflowInstallationSchema100Schema,
+    targetVersions: rWorkflowsManageWorkflowInstallationSchema101Schema,
     chunks: z.array(
       z.strictObject({
         sequence: z.number().int().min(-9007199254740991).max(9007199254740991),
         chunk: z
-          .array(rWorkflowsManageWorkflowInstallationSchema101Schema)
+          .array(rWorkflowsManageWorkflowInstallationSchema102Schema)
           .min(1)
           .max(3),
         chunkHash: rWorkflowsManageWorkflowInstallationSchema4Schema,
@@ -7259,7 +7326,7 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
           .min(-9007199254740991)
           .max(9007199254740991),
         importedAt: z.union([
-          rWorkflowsManageWorkflowInstallationSchema93Schema,
+          rWorkflowsManageWorkflowInstallationSchema94Schema,
           z.null(),
         ]),
       }),
@@ -7280,16 +7347,16 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
     stage: rWorkflowsManageWorkflowInstallationSchema7Schema,
     manifest: rWorkflowsManageWorkflowInstallationSchema8Schema,
     confirmationDigest: rWorkflowsManageWorkflowInstallationSchema4Schema,
-    createdBy: rWorkflowsManageWorkflowInstallationSchema92Schema,
-    createdAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    updatedAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    sealedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
-    chunkCount: rWorkflowsManageWorkflowInstallationSchema95Schema,
-    recordCount: rWorkflowsManageWorkflowInstallationSchema96Schema,
-    chunksDigest: rWorkflowsManageWorkflowInstallationSchema97Schema,
-    importedChunks: rWorkflowsManageWorkflowInstallationSchema98Schema,
-    validatedChunks: rWorkflowsManageWorkflowInstallationSchema99Schema,
-    targetVersions: rWorkflowsManageWorkflowInstallationSchema100Schema,
+    createdBy: rWorkflowsManageWorkflowInstallationSchema93Schema,
+    createdAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    updatedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    sealedAt: rWorkflowsManageWorkflowInstallationSchema95Schema,
+    chunkCount: rWorkflowsManageWorkflowInstallationSchema96Schema,
+    recordCount: rWorkflowsManageWorkflowInstallationSchema97Schema,
+    chunksDigest: rWorkflowsManageWorkflowInstallationSchema98Schema,
+    importedChunks: rWorkflowsManageWorkflowInstallationSchema99Schema,
+    validatedChunks: rWorkflowsManageWorkflowInstallationSchema100Schema,
+    targetVersions: rWorkflowsManageWorkflowInstallationSchema101Schema,
     complete: z.boolean(),
     nextSequence: z.union([
       z.number().int().min(-9007199254740991).max(9007199254740991),
@@ -7316,7 +7383,7 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
       .max(9007199254740991),
     unknownLatestChange: z.union([z.string(), z.null()]),
     leaseExpiresAt: z.union([
-      rWorkflowsManageWorkflowInstallationSchema93Schema,
+      rWorkflowsManageWorkflowInstallationSchema94Schema,
       z.null(),
     ]),
   }),
@@ -7347,16 +7414,16 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
     stage: rWorkflowsManageWorkflowInstallationSchema7Schema,
     manifest: rWorkflowsManageWorkflowInstallationSchema8Schema,
     confirmationDigest: rWorkflowsManageWorkflowInstallationSchema4Schema,
-    createdBy: rWorkflowsManageWorkflowInstallationSchema92Schema,
-    createdAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    updatedAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    sealedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
-    chunkCount: rWorkflowsManageWorkflowInstallationSchema95Schema,
-    recordCount: rWorkflowsManageWorkflowInstallationSchema96Schema,
-    chunksDigest: rWorkflowsManageWorkflowInstallationSchema97Schema,
-    importedChunks: rWorkflowsManageWorkflowInstallationSchema98Schema,
-    validatedChunks: rWorkflowsManageWorkflowInstallationSchema99Schema,
-    targetVersions: rWorkflowsManageWorkflowInstallationSchema100Schema,
+    createdBy: rWorkflowsManageWorkflowInstallationSchema93Schema,
+    createdAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    updatedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    sealedAt: rWorkflowsManageWorkflowInstallationSchema95Schema,
+    chunkCount: rWorkflowsManageWorkflowInstallationSchema96Schema,
+    recordCount: rWorkflowsManageWorkflowInstallationSchema97Schema,
+    chunksDigest: rWorkflowsManageWorkflowInstallationSchema98Schema,
+    importedChunks: rWorkflowsManageWorkflowInstallationSchema99Schema,
+    validatedChunks: rWorkflowsManageWorkflowInstallationSchema100Schema,
+    targetVersions: rWorkflowsManageWorkflowInstallationSchema101Schema,
   }),
   z.strictObject({
     orgId: z.string(),
@@ -7387,6 +7454,7 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
             "dependencies",
             "email_identity",
             "sent_mail_lookup",
+            "smtp_submission",
             "host_schedule",
             "host_timezone",
             "host_model",
@@ -7418,11 +7486,11 @@ export const workflowsManageWorkflowInstallationResponseSchema = z.union([
     ]),
     firstRunVerification: z.string(),
     lastCheckedAt: z.union([
-      rWorkflowsManageWorkflowInstallationSchema93Schema,
+      rWorkflowsManageWorkflowInstallationSchema94Schema,
       z.null(),
     ]),
-    createdAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
-    updatedAt: rWorkflowsManageWorkflowInstallationSchema93Schema,
+    createdAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
+    updatedAt: rWorkflowsManageWorkflowInstallationSchema94Schema,
   }),
 ]);
 
@@ -7932,6 +8000,7 @@ export const workflowsSaveEnterpriseWorkflowResponseSchema = z.strictObject({
       .min(-9007199254740991)
       .max(9007199254740991),
     minimumLauncherVersion: z.string(),
+    dshMinimumLauncherVersion: z.string().optional(),
   }),
   workflowId: z.string().min(1).max(64).regex(new RegExp("^[A-Za-z0-9_-]+$")),
   enterpriseKey: z.string(),
