@@ -53,21 +53,23 @@ export function EnterprisePicker({
 
   return (
     <PageSection title={w("title")} description={w("enterpriseHint")}>
-      <SelectField
-        label={w("enterprise")}
-        value={selected}
-        options={enterprises.map((enterprise) => ({
-          value: enterprise.enterpriseKey,
-          label: enterprise.enterpriseName,
-        }))}
-        placeholder={w("choose")}
-        disabled={busy}
-        error={fieldError ? w("selectEnterpriseRequired") : undefined}
-        onChange={(value) => {
-          setSelected(value);
-          if (value !== "") setFieldError(false);
-        }}
-      />
+      <div className={styles.pickerField}>
+        <SelectField
+          label={w("enterprise")}
+          value={selected}
+          options={enterprises.map((enterprise) => ({
+            value: enterprise.enterpriseKey,
+            label: enterprise.enterpriseName,
+          }))}
+          placeholder={w("choose")}
+          disabled={busy}
+          error={fieldError ? w("selectEnterpriseRequired") : undefined}
+          onChange={(value) => {
+            setSelected(value);
+            if (value !== "") setFieldError(false);
+          }}
+        />
+      </div>
 
       {enterprises.length === 0 ? (
         <div className={styles.stack}>

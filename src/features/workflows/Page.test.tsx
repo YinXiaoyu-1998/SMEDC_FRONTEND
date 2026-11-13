@@ -408,7 +408,9 @@ describe("自动任务页", () => {
     expect(
       screen.getByRole("button", { name: "Save task settings" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("示例企业")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "示例企业" }),
+    ).toBeInTheDocument();
   });
 
   it("未指定企业时选择后进入深链", async () => {

@@ -6,6 +6,8 @@ import type {
   WorkflowsSaveEnterpriseWorkflowResponse,
 } from "@/api/generated/contract";
 import { appPaths } from "@/app/paths";
+import theme from "@/styles/AdminTheme.module.css";
+import { AdminIcon } from "@/ui/AdminIcon";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { ConflictPanel } from "@/ui/ConflictPanel";
@@ -653,7 +655,10 @@ export function WorkflowEditor({
   return (
     <div className={styles.page}>
       <div className={styles.enterpriseHeader}>
-        <div className={styles.stack}>
+        <span className={styles.enterpriseIcon}>
+          <AdminIcon name="building" />
+        </span>
+        <div className={styles.enterpriseInfo}>
           <h2 className={styles.enterpriseName}>{enterpriseName}</h2>
           <p className={styles.hint}>{w("noReadAccess")}</p>
           <p className={styles.hint}>{w("installHelp")}</p>
@@ -796,6 +801,7 @@ export function WorkflowEditor({
       />
 
       <ConfirmDialog
+        className={theme.theme}
         flow={flow}
         title={w("preview")}
         description={w("confirmHelp")}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { WebApiError } from "@/api/client";
@@ -7,6 +7,8 @@ import { PageFrame } from "@/app/PageFrame";
 import { listEnterprises } from "@/features/workflows/api";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
+import { AdminIcon } from "@/ui/AdminIcon";
+import { Button } from "@/ui/Button";
 import { directoryApi, type DirectoryApiClient } from "./api";
 import styles from "./Page.module.css";
 import type {
@@ -123,6 +125,11 @@ export function DirectoryPage() {
   const [cursor, setCursor] = useState("");
   const [editing, setEditing] = useState<Employee | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const employeeHeading = useRef<HTMLHeadingElement>(null);
+  const employeeEditorOpen = draft !== null && tab === "employees";
+  useEffect(() => {
+    if (employeeEditorOpen) employeeHeading.current?.focus();
+  }, [editing?.employeeUid, employeeEditorOpen]);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const busy = pendingAction !== null;
   const [error, setError] = useState<unknown>(null);
@@ -437,7 +444,7 @@ export function DirectoryPage() {
       `department:${"departmentId" in operation ? operation.departmentId : "new"}:${operation.kind}`,
     );
   return (
-    <PageFrame title={L(["企业资料", "Enterprise directory"])} orgId={orgId}>
+    <PageFrame title={L(["企业资料", "Enterprise directory"])} icon="building">
       <div className={styles.stack}>
         <label className={styles.field}>
           {L(["当前业务企业", "Current enterprise"])}
@@ -479,7 +486,11 @@ export function DirectoryPage() {
         {!enterprise && (
           <p>{L(["请先登记业务企业。", "Register an enterprise first."])}</p>
         )}
-        <div className={styles.tabs}>
+        <div
+          className={styles.tabs}
+          role="group"
+          aria-label={L(["企业资料", "Enterprise directory"])}
+        >
           {(["employees", "stores", "departments"] as const).map((key, i) => (
             <button
               type="button"
@@ -645,8 +656,8 @@ export function DirectoryPage() {
             );
           })()}
         {enterprise && tab === "employees" && (
-          <div className={styles.stack}>
-            <p>
+          <div className={styles.catalog}>
+            <p className={styles.scopeHint}>
               {employees.data?.access === "none"
                 ? L([
                     "当前没有员工档案读取权限。仍可尝试新增。",
@@ -662,7 +673,7 @@ export function DirectoryPage() {
                       "Showing your authorized scope.",
                     ])}
             </p>
-            <div className={styles.row}>
+            <div className={styles.employeeFilters}>
               <label className={styles.field}>
                 {L(["姓名", "Name"])}
                 <input
@@ -720,25 +731,26 @@ export function DirectoryPage() {
                   ))}
                 </select>
               </label>
-            </div>
-            <ActionButton
-              label={L(["新增员工", "Add employee"])}
-              onRun={() => {
-                if (
-                  draft &&
-                  !window.confirm(
-                    L([
-                      "放弃当前草稿并新增？",
-                      "Discard the current draft and add a record?",
-                    ]),
+              <ActionButton
+                icon={<AdminIcon name="plus" />}
+                label={L(["新增员工", "Add employee"])}
+                onRun={() => {
+                  if (
+                    draft &&
+                    !window.confirm(
+                      L([
+                        "放弃当前草稿并新增？",
+                        "Discard the current draft and add a record?",
+                      ]),
+                    )
                   )
-                )
-                  return;
-                setEditing(null);
-                setDraft(blank);
-                setConflict(false);
-              }}
-            />
+                    return;
+                  setEditing(null);
+                  setDraft(blank);
+                  setConflict(false);
+                }}
+              />
+            </div>
             {employees.isError && (
               <p role="alert">
                 {L(["无法读取员工档案。", "Unable to load employees."])}
@@ -750,60 +762,9 @@ export function DirectoryPage() {
                   {L(["当前筛选没有结果。", "No records match these filters."])}
                 </p>
               )}
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{L(["姓名", "Name"])}</th>
-                  <th>{L(["归属", "Assignment"])}</th>
-                  <th>{L(["部门", "Department"])}</th>
-                  <th>{L(["状态", "Status"])}</th>
-                  <th>{L(["操作", "Actions"])}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.data?.employees.map((e) => (
-                  <tr key={e.employeeUid}>
-                    <td>{e.name}</td>
-                    <td>{e.scope.storeName ?? L(["集团直属", "Group"])}</td>
-                    <td>{e.departmentName}</td>
-                    <td>
-                      {e.status === "active"
-                        ? L(["在职", "Active"])
-                        : L(["离职", "Departed"])}
-                    </td>
-                    <td>
-                      <button type="button" onClick={() => startEdit(e)}>
-                        {L(["编辑", "Edit"])}
-                      </button>{" "}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void navigator.clipboard.writeText(e.employeeUid)
-                        }
-                      >
-                        {L(["复制标识", "Copy ID"])}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {employees.data?.nextCursor && (
-              <button
-                type="button"
-                onClick={() => setCursor(employees.data!.nextCursor!)}
-              >
-                {L(["下一页", "Next page"])}
-              </button>
-            )}
-            {cursor && (
-              <button type="button" onClick={() => setCursor("")}>
-                {L(["返回首页", "First page"])}
-              </button>
-            )}
             {draft && (
               <section className={`${styles.stack} ${styles.panel}`}>
-                <h2>
+                <h2 ref={employeeHeading} tabIndex={-1}>
                   {editing
                     ? L(["编辑员工", "Edit employee"])
                     : L(["新增员工", "Add employee"])}
@@ -959,10 +920,84 @@ export function DirectoryPage() {
                 </div>
               </section>
             )}
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>{L(["姓名", "Name"])}</th>
+                    <th>{L(["归属", "Assignment"])}</th>
+                    <th>{L(["部门", "Department"])}</th>
+                    <th>{L(["状态", "Status"])}</th>
+                    <th>{L(["操作", "Actions"])}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.data?.employees.map((e) => (
+                    <tr key={e.employeeUid}>
+                      <td>
+                        <span className={styles.employeeName}>
+                          <span className={styles.employeeIcon}>
+                            <AdminIcon name="person" />
+                          </span>
+                          {e.name}
+                        </span>
+                      </td>
+                      <td>{e.scope.storeName ?? L(["集团直属", "Group"])}</td>
+                      <td>{e.departmentName}</td>
+                      <td>
+                        <span
+                          className={
+                            e.status === "active"
+                              ? styles.activeBadge
+                              : styles.inactiveBadge
+                          }
+                        >
+                          {e.status === "active"
+                            ? L(["在职", "Active"])
+                            : L(["离职", "Departed"])}
+                        </span>
+                      </td>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          className={styles.rowAction}
+                          onClick={() => startEdit(e)}
+                        >
+                          <AdminIcon name="edit" />
+                          {L(["编辑", "Edit"])}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={styles.rowAction}
+                          onClick={() =>
+                            void navigator.clipboard.writeText(e.employeeUid)
+                          }
+                        >
+                          {L(["复制标识", "Copy ID"])}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {employees.data?.nextCursor && (
+              <button
+                type="button"
+                onClick={() => setCursor(employees.data!.nextCursor!)}
+              >
+                {L(["下一页", "Next page"])}
+              </button>
+            )}
+            {cursor && (
+              <button type="button" onClick={() => setCursor("")}>
+                {L(["返回首页", "First page"])}
+              </button>
+            )}
           </div>
         )}
         {enterprise && tab === "stores" && (
-          <div className={styles.stack}>
+          <div className={styles.catalog}>
             <div className={styles.row}>
               {(["confirmed", "pending", "retired", "historical"] as const).map(
                 (s) => (
@@ -983,261 +1018,271 @@ export function DirectoryPage() {
                 ),
               )}
             </div>
-            <label className={styles.field}>
-              {L(["新门店名称", "New store name"])}
-              <input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+            <div className={styles.createRow}>
+              <label className={styles.field}>
+                {L(["新门店名称", "New store name"])}
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </label>
+              <ActionButton
+                icon={<AdminIcon name="plus" />}
+                label={L(["新增门店", "Add store"])}
+                busy={pendingAction === "store-create"}
+                disabled={busy || !newName.trim()}
+                onRun={() => {
+                  const name = newName;
+                  void run(
+                    () =>
+                      directoryApi.store(client, {
+                        enterpriseKey: enterprise,
+                        operation: { kind: "create", name },
+                      }),
+                    () => setNewName(""),
+                    "store-create",
+                  );
+                }}
               />
-            </label>
-            <ActionButton
-              label={L(["新增门店", "Add store"])}
-              busy={pendingAction === "store-create"}
-              disabled={busy || !newName.trim()}
-              onRun={() => {
-                const name = newName;
-                void run(
-                  () =>
-                    directoryApi.store(client, {
-                      enterpriseKey: enterprise,
-                      operation: { kind: "create", name },
-                    }),
-                  () => setNewName(""),
-                  "store-create",
-                );
-              }}
-            />
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{L(["名称", "Name"])}</th>
-                  <th>{L(["操作", "Actions"])}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {directory.data?.stores
-                  .filter((s) => s.status === storeStatus)
-                  .map((s) => (
-                    <tr key={s.storeId}>
-                      <td>{s.name}</td>
-                      <td>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => {
-                            setConflict(false);
-                            setRename({
-                              kind: "store",
-                              id: s.storeId,
-                              name: s.name,
-                              original: s.name,
-                              version: s.version,
-                            });
-                          }}
-                        >
-                          {L(["改名", "Rename"])}
-                        </button>
-                        {s.status === "pending" && (
-                          <>
+            </div>
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>{L(["名称", "Name"])}</th>
+                    <th>{L(["操作", "Actions"])}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {directory.data?.stores
+                    .filter((s) => s.status === storeStatus)
+                    .map((s) => (
+                      <tr key={s.storeId}>
+                        <td>{s.name}</td>
+                        <td>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              setConflict(false);
+                              setRename({
+                                kind: "store",
+                                id: s.storeId,
+                                name: s.name,
+                                original: s.name,
+                                version: s.version,
+                              });
+                            }}
+                          >
+                            {L(["改名", "Rename"])}
+                          </button>
+                          {s.status === "pending" && (
+                            <>
+                              <ActionButton
+                                label={L(["确认", "Confirm"])}
+                                busy={
+                                  pendingAction === `store:${s.storeId}:confirm`
+                                }
+                                disabled={busy}
+                                onRun={() =>
+                                  changeStore({
+                                    kind: "confirm",
+                                    storeId: s.storeId,
+                                    expectedVersion: s.version,
+                                  })
+                                }
+                              />
+                              <ActionButton
+                                label={L(["保留历史", "Keep historical"])}
+                                busy={
+                                  pendingAction ===
+                                  `store:${s.storeId}:historical`
+                                }
+                                disabled={busy}
+                                onRun={() => {
+                                  if (
+                                    window.confirm(
+                                      L([
+                                        "保留为历史记录？",
+                                        "Keep as historical?",
+                                      ]),
+                                    )
+                                  )
+                                    changeStore({
+                                      kind: "historical",
+                                      storeId: s.storeId,
+                                      expectedVersion: s.version,
+                                    });
+                                }}
+                              />
+                            </>
+                          )}
+                          {(s.status === "confirmed" ||
+                            s.status === "retired") && (
                             <ActionButton
-                              label={L(["确认", "Confirm"])}
-                              busy={
-                                pendingAction === `store:${s.storeId}:confirm`
+                              label={
+                                s.status === "retired"
+                                  ? L(["恢复", "Restore"])
+                                  : L(["停用", "Retire"])
                               }
-                              disabled={busy}
-                              onRun={() =>
-                                changeStore({
-                                  kind: "confirm",
-                                  storeId: s.storeId,
-                                  expectedVersion: s.version,
-                                })
-                              }
-                            />
-                            <ActionButton
-                              label={L(["保留历史", "Keep historical"])}
                               busy={
                                 pendingAction ===
-                                `store:${s.storeId}:historical`
+                                `store:${s.storeId}:${s.status === "retired" ? "restore" : "retire"}`
                               }
                               disabled={busy}
                               onRun={() => {
+                                const kind =
+                                  s.status === "retired" ? "restore" : "retire";
                                 if (
                                   window.confirm(
-                                    L([
-                                      "保留为历史记录？",
-                                      "Keep as historical?",
-                                    ]),
+                                    kind === "retire"
+                                      ? L([
+                                          "确定停用门店？",
+                                          "Retire this store?",
+                                        ])
+                                      : L([
+                                          "确定恢复门店？",
+                                          "Restore this store?",
+                                        ]),
                                   )
                                 )
                                   changeStore({
-                                    kind: "historical",
+                                    kind,
                                     storeId: s.storeId,
                                     expectedVersion: s.version,
                                   });
                               }}
                             />
-                          </>
-                        )}
-                        {(s.status === "confirmed" ||
-                          s.status === "retired") && (
-                          <ActionButton
-                            label={
-                              s.status === "retired"
-                                ? L(["恢复", "Restore"])
-                                : L(["停用", "Retire"])
-                            }
-                            busy={
-                              pendingAction ===
-                              `store:${s.storeId}:${s.status === "retired" ? "restore" : "retire"}`
-                            }
-                            disabled={busy}
-                            onRun={() => {
-                              const kind =
-                                s.status === "retired" ? "restore" : "retire";
-                              if (
-                                window.confirm(
-                                  kind === "retire"
-                                    ? L([
-                                        "确定停用门店？",
-                                        "Retire this store?",
-                                      ])
-                                    : L([
-                                        "确定恢复门店？",
-                                        "Restore this store?",
-                                      ]),
-                                )
-                              )
-                                changeStore({
-                                  kind,
-                                  storeId: s.storeId,
-                                  expectedVersion: s.version,
-                                });
-                            }}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
         {enterprise && tab === "departments" && (
-          <div className={styles.stack}>
-            <label className={styles.field}>
-              {L(["新部门名称", "New department name"])}
-              <input
-                value={newName}
-                aria-invalid={createNameError !== null}
-                onChange={(e) => {
-                  setNewName(e.target.value);
+          <div className={styles.catalog}>
+            <div className={styles.createRow}>
+              <label className={styles.field}>
+                {L(["新部门名称", "New department name"])}
+                <input
+                  value={newName}
+                  aria-invalid={createNameError !== null}
+                  onChange={(e) => {
+                    setNewName(e.target.value);
+                    setDuplicateNameError(null);
+                  }}
+                />
+              </label>
+              <ActionButton
+                icon={<AdminIcon name="plus" />}
+                label={L(["新增部门", "Add department"])}
+                busy={
+                  pendingAction === "department-create" ||
+                  createNameCheck.checking
+                }
+                disabled={busy || !canCreateDepartment}
+                onRun={() => {
+                  if (!canCreateDepartment) return;
                   setDuplicateNameError(null);
+                  const name = newName;
+                  void run(
+                    () =>
+                      directoryApi.department(client, {
+                        enterpriseKey: enterprise,
+                        operation: { kind: "create", name },
+                      }),
+                    () => setNewName(""),
+                    "department-create",
+                    { departmentId: null, name },
+                  );
                 }}
               />
-            </label>
+            </div>
             {createNameError !== null && (
               <p role="alert" className={styles.error}>
                 {createNameError}
               </p>
             )}
             {nameCheckFailure(createNameCheck)}
-            <ActionButton
-              label={L(["新增部门", "Add department"])}
-              busy={
-                pendingAction === "department-create" ||
-                createNameCheck.checking
-              }
-              disabled={busy || !canCreateDepartment}
-              onRun={() => {
-                if (!canCreateDepartment) return;
-                setDuplicateNameError(null);
-                const name = newName;
-                void run(
-                  () =>
-                    directoryApi.department(client, {
-                      enterpriseKey: enterprise,
-                      operation: { kind: "create", name },
-                    }),
-                  () => setNewName(""),
-                  "department-create",
-                  { departmentId: null, name },
-                );
-              }}
-            />
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{L(["名称", "Name"])}</th>
-                  <th>{L(["状态", "Status"])}</th>
-                  <th>{L(["操作", "Actions"])}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {directory.data?.departments.map((d) => (
-                  <tr key={d.departmentId}>
-                    <td>{d.name}</td>
-                    <td>
-                      {d.status === "active"
-                        ? L(["有效", "Active"])
-                        : L(["已停用", "Retired"])}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          setConflict(false);
-                          setDuplicateNameError(null);
-                          setRename({
-                            kind: "department",
-                            id: d.departmentId,
-                            name: d.name,
-                            original: d.name,
-                            version: d.version,
-                          });
-                        }}
-                      >
-                        {L(["改名", "Rename"])}
-                      </button>
-                      <ActionButton
-                        label={
-                          d.status === "active"
-                            ? L(["停用", "Retire"])
-                            : L(["恢复", "Restore"])
-                        }
-                        busy={
-                          pendingAction ===
-                          `department:${d.departmentId}:${d.status === "active" ? "retire" : "restore"}`
-                        }
-                        disabled={busy}
-                        onRun={() => {
-                          const kind =
-                            d.status === "active" ? "retire" : "restore";
-                          if (
-                            window.confirm(
-                              kind === "retire"
-                                ? L([
-                                    "确定停用部门？",
-                                    "Retire this department?",
-                                  ])
-                                : L([
-                                    "确定恢复部门？",
-                                    "Restore this department?",
-                                  ]),
-                            )
-                          )
-                            changeDepartment({
-                              kind,
-                              departmentId: d.departmentId,
-                              expectedVersion: d.version,
-                            });
-                        }}
-                      />
-                    </td>
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>{L(["名称", "Name"])}</th>
+                    <th>{L(["状态", "Status"])}</th>
+                    <th>{L(["操作", "Actions"])}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {directory.data?.departments.map((d) => (
+                    <tr key={d.departmentId}>
+                      <td>{d.name}</td>
+                      <td>
+                        {d.status === "active"
+                          ? L(["有效", "Active"])
+                          : L(["已停用", "Retired"])}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            setConflict(false);
+                            setDuplicateNameError(null);
+                            setRename({
+                              kind: "department",
+                              id: d.departmentId,
+                              name: d.name,
+                              original: d.name,
+                              version: d.version,
+                            });
+                          }}
+                        >
+                          {L(["改名", "Rename"])}
+                        </button>
+                        <ActionButton
+                          label={
+                            d.status === "active"
+                              ? L(["停用", "Retire"])
+                              : L(["恢复", "Restore"])
+                          }
+                          busy={
+                            pendingAction ===
+                            `department:${d.departmentId}:${d.status === "active" ? "retire" : "restore"}`
+                          }
+                          disabled={busy}
+                          onRun={() => {
+                            const kind =
+                              d.status === "active" ? "retire" : "restore";
+                            if (
+                              window.confirm(
+                                kind === "retire"
+                                  ? L([
+                                      "确定停用部门？",
+                                      "Retire this department?",
+                                    ])
+                                  : L([
+                                      "确定恢复部门？",
+                                      "Restore this department?",
+                                    ]),
+                              )
+                            )
+                              changeDepartment({
+                                kind,
+                                departmentId: d.departmentId,
+                                expectedVersion: d.version,
+                              });
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

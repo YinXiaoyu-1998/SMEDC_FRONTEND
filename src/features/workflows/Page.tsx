@@ -155,10 +155,7 @@ export function WorkflowsPage() {
   }
 
   return (
-    <PageFrame
-      title={t("pages.workflows.title")}
-      {...(orgId === "" ? {} : { orgId })}
-    >
+    <PageFrame title={t("pages.workflows.title")} icon="tasks">
       {content}
     </PageFrame>
   );
