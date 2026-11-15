@@ -789,19 +789,27 @@ export const rWorkflowsGetWorkflowStatusSchema48Schema = z.enum([
 export const rWorkflowsGetWorkflowStatusSchema49Schema =
   rWorkflowsGetWorkflowStatusSchema41Schema;
 
+export const rWorkflowsGetWorkflowStatusSchema50Schema = z.strictObject({
+  source: z.number().int().max(100000).gt(0),
+  confirmed: z.number().int().min(0).max(9007199254740991),
+  skipped: z.number().int().min(0).max(9007199254740991),
+  pending: z.number().int().min(0).max(9007199254740991),
+});
+
 export const rWorkflowsGetWorkflowStatusSchema46Schema = z.strictObject({
   dataset: rWorkflowsGetWorkflowStatusSchema47Schema,
   storeName: rWorkflowsGetWorkflowStatusSchema8Schema,
   date: rWorkflowsGetWorkflowStatusSchema39Schema,
   status: rWorkflowsGetWorkflowStatusSchema48Schema,
   evidenceHash: rWorkflowsGetWorkflowStatusSchema49Schema.optional(),
+  receiptCounts: rWorkflowsGetWorkflowStatusSchema50Schema.optional(),
 });
 
 export const rWorkflowsGetWorkflowStatusSchema45Schema = z
   .array(rWorkflowsGetWorkflowStatusSchema46Schema)
   .max(100);
 
-export const rWorkflowsGetWorkflowStatusSchema51Schema = z.strictObject({
+export const rWorkflowsGetWorkflowStatusSchema52Schema = z.strictObject({
   code: z.enum([
     "WORKFLOW_CONFIGURATION_REQUIRED",
     "WORKFLOW_VERSION_INCOMPATIBLE",
@@ -821,11 +829,11 @@ export const rWorkflowsGetWorkflowStatusSchema51Schema = z.strictObject({
   nextStep: z.string().max(2000),
 });
 
-export const rWorkflowsGetWorkflowStatusSchema50Schema = z
-  .array(rWorkflowsGetWorkflowStatusSchema51Schema)
+export const rWorkflowsGetWorkflowStatusSchema51Schema = z
+  .array(rWorkflowsGetWorkflowStatusSchema52Schema)
   .max(100);
 
-export const rWorkflowsGetWorkflowStatusSchema52Schema = z.enum([
+export const rWorkflowsGetWorkflowStatusSchema53Schema = z.enum([
   "pending",
   "confirmed_files_cleaned",
   "retained",
@@ -2881,19 +2889,27 @@ export const bWorkflowsManageWorkflowRunSchema35Schema = z.enum([
 export const bWorkflowsManageWorkflowRunSchema36Schema =
   bWorkflowsManageWorkflowRunSchema8Schema;
 
+export const bWorkflowsManageWorkflowRunSchema37Schema = z.strictObject({
+  source: z.number().int().max(100000).gt(0),
+  confirmed: z.number().int().min(0).max(9007199254740991),
+  skipped: z.number().int().min(0).max(9007199254740991),
+  pending: z.number().int().min(0).max(9007199254740991),
+});
+
 export const bWorkflowsManageWorkflowRunSchema33Schema = z.strictObject({
   dataset: bWorkflowsManageWorkflowRunSchema34Schema,
   storeName: bWorkflowsManageWorkflowRunSchema12Schema,
   date: bWorkflowsManageWorkflowRunSchema3Schema,
   status: bWorkflowsManageWorkflowRunSchema35Schema,
   evidenceHash: bWorkflowsManageWorkflowRunSchema36Schema.optional(),
+  receiptCounts: bWorkflowsManageWorkflowRunSchema37Schema.optional(),
 });
 
 export const bWorkflowsManageWorkflowRunSchema32Schema = z
   .array(bWorkflowsManageWorkflowRunSchema33Schema)
   .max(100);
 
-export const bWorkflowsManageWorkflowRunSchema38Schema = z.strictObject({
+export const bWorkflowsManageWorkflowRunSchema39Schema = z.strictObject({
   code: z.enum([
     "WORKFLOW_CONFIGURATION_REQUIRED",
     "WORKFLOW_VERSION_INCOMPATIBLE",
@@ -2913,11 +2929,11 @@ export const bWorkflowsManageWorkflowRunSchema38Schema = z.strictObject({
   nextStep: z.string().max(2000),
 });
 
-export const bWorkflowsManageWorkflowRunSchema37Schema = z
-  .array(bWorkflowsManageWorkflowRunSchema38Schema)
+export const bWorkflowsManageWorkflowRunSchema38Schema = z
+  .array(bWorkflowsManageWorkflowRunSchema39Schema)
   .max(100);
 
-export const bWorkflowsManageWorkflowRunSchema39Schema = z.enum([
+export const bWorkflowsManageWorkflowRunSchema40Schema = z.enum([
   "pending",
   "confirmed_files_cleaned",
   "retained",
@@ -2928,8 +2944,8 @@ export const bWorkflowsManageWorkflowRunSchema29Schema = z.strictObject({
   phase: bWorkflowsManageWorkflowRunSchema30Schema,
   status: bWorkflowsManageWorkflowRunSchema31Schema,
   observations: bWorkflowsManageWorkflowRunSchema32Schema,
-  unresolved: bWorkflowsManageWorkflowRunSchema37Schema,
-  cleanup: bWorkflowsManageWorkflowRunSchema39Schema,
+  unresolved: bWorkflowsManageWorkflowRunSchema38Schema,
+  cleanup: bWorkflowsManageWorkflowRunSchema40Schema,
 });
 
 export const rWorkflowsManageWorkflowRunSchema0Schema = z
@@ -3261,19 +3277,27 @@ export const rWorkflowsManageWorkflowRunSchema58Schema = z.enum([
 export const rWorkflowsManageWorkflowRunSchema59Schema =
   rWorkflowsManageWorkflowRunSchema1Schema;
 
+export const rWorkflowsManageWorkflowRunSchema60Schema = z.strictObject({
+  source: z.number().int().max(100000).gt(0),
+  confirmed: z.number().int().min(0).max(9007199254740991),
+  skipped: z.number().int().min(0).max(9007199254740991),
+  pending: z.number().int().min(0).max(9007199254740991),
+});
+
 export const rWorkflowsManageWorkflowRunSchema56Schema = z.strictObject({
   dataset: rWorkflowsManageWorkflowRunSchema57Schema,
   storeName: rWorkflowsManageWorkflowRunSchema27Schema,
   date: rWorkflowsManageWorkflowRunSchema3Schema,
   status: rWorkflowsManageWorkflowRunSchema58Schema,
   evidenceHash: rWorkflowsManageWorkflowRunSchema59Schema.optional(),
+  receiptCounts: rWorkflowsManageWorkflowRunSchema60Schema.optional(),
 });
 
 export const rWorkflowsManageWorkflowRunSchema55Schema = z
   .array(rWorkflowsManageWorkflowRunSchema56Schema)
   .max(100);
 
-export const rWorkflowsManageWorkflowRunSchema61Schema = z.strictObject({
+export const rWorkflowsManageWorkflowRunSchema62Schema = z.strictObject({
   code: z.enum([
     "WORKFLOW_CONFIGURATION_REQUIRED",
     "WORKFLOW_VERSION_INCOMPATIBLE",
@@ -3293,11 +3317,11 @@ export const rWorkflowsManageWorkflowRunSchema61Schema = z.strictObject({
   nextStep: z.string().max(2000),
 });
 
-export const rWorkflowsManageWorkflowRunSchema60Schema = z
-  .array(rWorkflowsManageWorkflowRunSchema61Schema)
+export const rWorkflowsManageWorkflowRunSchema61Schema = z
+  .array(rWorkflowsManageWorkflowRunSchema62Schema)
   .max(100);
 
-export const rWorkflowsManageWorkflowRunSchema62Schema = z.enum([
+export const rWorkflowsManageWorkflowRunSchema63Schema = z.enum([
   "pending",
   "confirmed_files_cleaned",
   "retained",
@@ -3309,18 +3333,18 @@ export const rWorkflowsManageWorkflowRunSchema52Schema = z.union([
     phase: rWorkflowsManageWorkflowRunSchema53Schema,
     status: rWorkflowsManageWorkflowRunSchema54Schema,
     observations: rWorkflowsManageWorkflowRunSchema55Schema,
-    unresolved: rWorkflowsManageWorkflowRunSchema60Schema,
-    cleanup: rWorkflowsManageWorkflowRunSchema62Schema,
+    unresolved: rWorkflowsManageWorkflowRunSchema61Schema,
+    cleanup: rWorkflowsManageWorkflowRunSchema63Schema,
   }),
   z.null(),
 ]);
 
-export const rWorkflowsManageWorkflowRunSchema63Schema = z.union([
+export const rWorkflowsManageWorkflowRunSchema64Schema = z.union([
   rWorkflowsManageWorkflowRunSchema4Schema,
   z.null(),
 ]);
 
-export const rWorkflowsManageWorkflowRunSchema64Schema = z.string();
+export const rWorkflowsManageWorkflowRunSchema65Schema = z.string();
 
 export const bWorkflowsPrepareEnterpriseWorkflowChangeSchema0Schema = z
   .number()
@@ -6922,8 +6946,8 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
           phase: rWorkflowsGetWorkflowStatusSchema43Schema,
           status: rWorkflowsGetWorkflowStatusSchema44Schema,
           observations: rWorkflowsGetWorkflowStatusSchema45Schema,
-          unresolved: rWorkflowsGetWorkflowStatusSchema50Schema,
-          cleanup: rWorkflowsGetWorkflowStatusSchema52Schema,
+          unresolved: rWorkflowsGetWorkflowStatusSchema51Schema,
+          cleanup: rWorkflowsGetWorkflowStatusSchema53Schema,
         }),
         z.null(),
       ]),
@@ -7549,9 +7573,9 @@ export const workflowsManageWorkflowRunResponseSchema = z.union([
     summary: rWorkflowsManageWorkflowRunSchema52Schema,
     startedAt: rWorkflowsManageWorkflowRunSchema4Schema,
     renewedAt: rWorkflowsManageWorkflowRunSchema4Schema,
-    finishedAt: rWorkflowsManageWorkflowRunSchema63Schema,
+    finishedAt: rWorkflowsManageWorkflowRunSchema64Schema,
     retainUntil: rWorkflowsManageWorkflowRunSchema4Schema,
-    runId: rWorkflowsManageWorkflowRunSchema64Schema,
+    runId: rWorkflowsManageWorkflowRunSchema65Schema,
     leaseExpiresAt: rWorkflowsManageWorkflowRunSchema4Schema,
     renewAfterSeconds: z
       .number()
@@ -7587,9 +7611,9 @@ export const workflowsManageWorkflowRunResponseSchema = z.union([
     summary: rWorkflowsManageWorkflowRunSchema52Schema,
     startedAt: rWorkflowsManageWorkflowRunSchema4Schema,
     renewedAt: rWorkflowsManageWorkflowRunSchema4Schema,
-    finishedAt: rWorkflowsManageWorkflowRunSchema63Schema,
+    finishedAt: rWorkflowsManageWorkflowRunSchema64Schema,
     retainUntil: rWorkflowsManageWorkflowRunSchema4Schema,
-    runId: rWorkflowsManageWorkflowRunSchema64Schema,
+    runId: rWorkflowsManageWorkflowRunSchema65Schema,
   }),
 ]);
 
