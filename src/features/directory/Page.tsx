@@ -1,19 +1,17 @@
-import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { WebApiError } from "@/api/client";
 import { useSession } from "@/api/session";
 import { PageFrame } from "@/app/PageFrame";
 import { listEnterprises } from "@/features/workflows/api";
 import { useText } from "@/i18n/useText";
-import theme from "@/styles/AdminTheme.module.css";
 import { ActionButton } from "@/ui/ActionButton";
 import { AdminIcon } from "@/ui/AdminIcon";
 import { Button } from "@/ui/Button";
-import dialogStyles from "@/ui/ConfirmDialog.module.css";
 import { InlineError } from "@/ui/InlineError";
 import { directoryApi, type DirectoryApiClient } from "./api";
+import { CreateDialog } from "./CreateDialog";
 import styles from "./Page.module.css";
 import type {
   DirectoryListEmployeesResponse,
@@ -106,6 +104,7 @@ export function DirectoryPage() {
   const { orgId = "" } = useParams<"orgId">();
   const session = useSession().data;
   const { locale } = useText();
+  const queryClient = useQueryClient();
   const L = ([zh, en]: readonly [string, string]) =>
     locale === "en" ? en : zh;
   const client = useMemo(
@@ -126,11 +125,15 @@ export function DirectoryPage() {
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [storeFilter, setStoreFilter] = useState("");
-  const [cursor, setCursor] = useState("");
+  const [pageCursors, setPageCursors] = useState<string[]>([]);
+  const cursor = pageCursors.at(-1);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const employeeHeading = useRef<HTMLHeadingElement>(null);
-  const employeeEditorOpen = draft !== null && tab === "employees";
+  const employeeEditorOpen =
+    draft !== null && editing !== null && tab === "employees";
+  const employeeCreateOpen =
+    draft !== null && editing === null && tab === "employees";
   useEffect(() => {
     if (employeeEditorOpen) employeeHeading.current?.focus();
   }, [editing?.employeeUid, employeeEditorOpen]);
@@ -142,6 +145,7 @@ export function DirectoryPage() {
     useState<DepartmentNameConflict | null>(null);
   const [storeCreateOpen, setStoreCreateOpen] = useState(false);
   const [storeNameDraft, setStoreNameDraft] = useState("");
+  const [departmentCreateOpen, setDepartmentCreateOpen] = useState(false);
   const [departmentNameDraft, setDepartmentNameDraft] = useState("");
   const [createdUid, setCreatedUid] = useState("");
   const [rename, setRename] = useState<{
@@ -178,11 +182,14 @@ export function DirectoryPage() {
     },
   });
   const busy = pendingAction !== null || createStore.isPending;
+  const employeeQueryScope = [
+    "directory-employees",
+    orgId,
+    enterprise,
+  ] as const;
   const employees = useQuery({
     queryKey: [
-      "directory-employees",
-      orgId,
-      enterprise,
+      ...employeeQueryScope,
       status,
       search,
       departmentFilter,
@@ -197,16 +204,17 @@ export function DirectoryPage() {
         ...(departmentFilter ? { departmentId: departmentFilter } : {}),
         ...(storeFilter ? { storeId: storeFilter } : {}),
         ...(cursor ? { cursor } : {}),
-        limit: 100,
+        limit: 10,
       }),
     enabled: !!session && !!enterprise && tab === "employees",
     retry: false,
   });
+  const nextEmployeeCursor = employees.data?.nextCursor;
   const createInputIssue = departmentNameInputIssue(departmentNameDraft);
   const createNameCheck = useDepartmentNameCheck(
     client,
     enterprise,
-    session && enterprise && tab === "departments" && createInputIssue === null
+    session && enterprise && departmentCreateOpen && createInputIssue === null
       ? departmentNameDraft
       : null,
     directory.dataUpdatedAt,
@@ -230,7 +238,10 @@ export function DirectoryPage() {
   );
   if (!session) return null;
   const reload = async () => {
-    await Promise.all([directory.refetch(), employees.refetch()]);
+    await Promise.all([
+      directory.refetch(),
+      queryClient.invalidateQueries({ queryKey: employeeQueryScope }),
+    ]);
   };
   const run = async (
     action: () => Promise<unknown>,
@@ -370,6 +381,132 @@ export function DirectoryPage() {
     employees.data?.employees.find(
       (e) => e.employeeUid === editing.employeeUid,
     );
+  const canSaveEmployee =
+    !!draft &&
+    !busy &&
+    !conflict &&
+    !departureAssignmentChanged &&
+    !!draft.name.trim() &&
+    !!draft.departmentId &&
+    !!draft.ownership &&
+    (draft.ownership !== "store" || !!draft.storeId) &&
+    (!editing ||
+      draft.name !== editing.name ||
+      draft.departmentId !== editing.departmentId ||
+      draft.ownership !== editing.scope.ownership ||
+      draft.storeId !== (editing.scope.storeId ?? "") ||
+      draft.status !== editing.status);
+  const employeeFields = draft && (
+    <>
+      <label className={styles.field}>
+        {L(["姓名", "Name"])}
+        <input
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        />
+      </label>
+      <label className={styles.field}>
+        {L(["部门", "Department"])}
+        <select
+          value={draft.departmentId}
+          onChange={(e) => setDraft({ ...draft, departmentId: e.target.value })}
+        >
+          <option value="">{L(["请选择", "Choose"])}</option>
+          {directory.data?.departments
+            .filter((d) => d.status === "active")
+            .map((d) => (
+              <option key={d.departmentId} value={d.departmentId}>
+                {d.name}
+              </option>
+            ))}
+        </select>
+      </label>
+      <label className={styles.field}>
+        {L(["归属", "Assignment"])}
+        <select
+          value={draft.ownership}
+          onChange={(e) =>
+            setDraft({
+              ...draft,
+              ownership: e.target.value as Draft["ownership"],
+              storeId: "",
+            })
+          }
+        >
+          <option value="">{L(["请选择", "Choose"])}</option>
+          <option value="group">{L(["集团直属", "Group"])}</option>
+          <option value="store">{L(["门店", "Store"])}</option>
+        </select>
+      </label>
+      {draft.ownership === "store" && (
+        <label className={styles.field}>
+          {L(["门店", "Store"])}
+          <select
+            value={draft.storeId}
+            onChange={(e) => setDraft({ ...draft, storeId: e.target.value })}
+          >
+            <option value="">{L(["请选择", "Choose"])}</option>
+            {directory.data?.stores
+              .filter((s) => s.status === "confirmed")
+              .map((s) => (
+                <option key={s.storeId} value={s.storeId}>
+                  {s.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      )}
+      {editing && (
+        <label className={styles.field}>
+          {L(["状态", "Status"])}
+          <select
+            value={draft.status}
+            onChange={(e) =>
+              setDraft({
+                ...draft,
+                status: e.target.value as Draft["status"],
+              })
+            }
+          >
+            <option value="active">{L(["在职", "Active"])}</option>
+            <option value="departed">{L(["离职", "Departed"])}</option>
+          </select>
+        </label>
+      )}
+      {departureAssignmentChanged && (
+        <p>
+          {L([
+            "离职时保留原归属；请先单独保存调动，或恢复原归属。",
+            "Departure retains the original assignment; save the transfer separately or restore the original assignment.",
+          ])}
+        </p>
+      )}
+      {conflict && (
+        <div>
+          <p>
+            {L(["最新记录", "Latest record"])}:{" "}
+            {current
+              ? `${current.name} / ${current.departmentName} / ${current.scope.storeName ?? L(["集团直属", "Group"])} / ${current.status}`
+              : L(["无法在当前范围读取", "Not visible in current scope"])}
+          </p>
+          {current && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(current);
+                setConflict(false);
+              }}
+            >
+              {L([
+                "已比较，使用最新版本继续",
+                "Compared; continue with latest version",
+              ])}
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
   const departments = directory.data?.departments ?? [];
   const departmentNameMessage = (issue: DepartmentNameIssue) => {
     switch (issue) {
@@ -483,9 +620,10 @@ export function DirectoryPage() {
               setStoreCreateOpen(false);
               setStoreNameDraft("");
               createStore.reset();
+              setDepartmentCreateOpen(false);
               setDepartmentNameDraft("");
               setDuplicateNameError(null);
-              setCursor("");
+              setPageCursors([]);
             }}
           >
             {(enterprises.data?.enterprises ?? []).map((e) => (
@@ -529,7 +667,8 @@ export function DirectoryPage() {
             </button>
           ))}
         </div>
-        {(directory.isError || error !== null) && (
+        {(directory.isError ||
+          (error !== null && !employeeCreateOpen && !departmentCreateOpen)) && (
           <p role="alert" className={styles.error}>
             {error instanceof WebApiError && error.code === "DIRECTORY_IN_USE"
               ? L([
@@ -698,7 +837,7 @@ export function DirectoryPage() {
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
-                    setCursor("");
+                    setPageCursors([]);
                   }}
                 />
               </label>
@@ -708,7 +847,7 @@ export function DirectoryPage() {
                   value={status}
                   onChange={(e) => {
                     setStatus(e.target.value as "active" | "departed");
-                    setCursor("");
+                    setPageCursors([]);
                   }}
                 >
                   <option value="active">{L(["在职", "Active"])}</option>
@@ -721,7 +860,7 @@ export function DirectoryPage() {
                   value={departmentFilter}
                   onChange={(e) => {
                     setDepartmentFilter(e.target.value);
-                    setCursor("");
+                    setPageCursors([]);
                   }}
                 >
                   <option value="">{L(["全部", "All"])}</option>
@@ -738,7 +877,7 @@ export function DirectoryPage() {
                   value={storeFilter}
                   onChange={(e) => {
                     setStoreFilter(e.target.value);
-                    setCursor("");
+                    setPageCursors([]);
                   }}
                 >
                   <option value="">{L(["全部", "All"])}</option>
@@ -749,26 +888,12 @@ export function DirectoryPage() {
                   ))}
                 </select>
               </label>
-              <ActionButton
-                icon={<AdminIcon name="plus" />}
-                label={L(["新增员工", "Add employee"])}
-                onRun={() => {
-                  if (
-                    draft &&
-                    !window.confirm(
-                      L([
-                        "放弃当前草稿并新增？",
-                        "Discard the current draft and add a record?",
-                      ]),
-                    )
-                  )
-                    return;
-                  setEditing(null);
-                  setDraft(blank);
-                  setConflict(false);
-                }}
-              />
             </div>
+            {employees.isPending && (
+              <p role="status" className={styles.scopeHint}>
+                {L(["正在读取员工档案…", "Loading employees…"])}
+              </p>
+            )}
             {employees.isError && (
               <p role="alert">
                 {L(["无法读取员工档案。", "Unable to load employees."])}
@@ -780,150 +905,17 @@ export function DirectoryPage() {
                   {L(["当前筛选没有结果。", "No records match these filters."])}
                 </p>
               )}
-            {draft && (
+            {employeeEditorOpen && (
               <section className={`${styles.stack} ${styles.panel}`}>
                 <h2 ref={employeeHeading} tabIndex={-1}>
-                  {editing
-                    ? L(["编辑员工", "Edit employee"])
-                    : L(["新增员工", "Add employee"])}
+                  {L(["编辑员工", "Edit employee"])}
                 </h2>
-                <label className={styles.field}>
-                  {L(["姓名", "Name"])}
-                  <input
-                    value={draft.name}
-                    onChange={(e) =>
-                      setDraft({ ...draft, name: e.target.value })
-                    }
-                  />
-                </label>
-                <label className={styles.field}>
-                  {L(["部门", "Department"])}
-                  <select
-                    value={draft.departmentId}
-                    onChange={(e) =>
-                      setDraft({ ...draft, departmentId: e.target.value })
-                    }
-                  >
-                    <option value="">{L(["请选择", "Choose"])}</option>
-                    {directory.data?.departments
-                      .filter((d) => d.status === "active")
-                      .map((d) => (
-                        <option key={d.departmentId} value={d.departmentId}>
-                          {d.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label className={styles.field}>
-                  {L(["归属", "Assignment"])}
-                  <select
-                    value={draft.ownership}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        ownership: e.target.value as Draft["ownership"],
-                        storeId: "",
-                      })
-                    }
-                  >
-                    <option value="">{L(["请选择", "Choose"])}</option>
-                    <option value="group">{L(["集团直属", "Group"])}</option>
-                    <option value="store">{L(["门店", "Store"])}</option>
-                  </select>
-                </label>
-                {draft.ownership === "store" && (
-                  <label className={styles.field}>
-                    {L(["门店", "Store"])}
-                    <select
-                      value={draft.storeId}
-                      onChange={(e) =>
-                        setDraft({ ...draft, storeId: e.target.value })
-                      }
-                    >
-                      <option value="">{L(["请选择", "Choose"])}</option>
-                      {directory.data?.stores
-                        .filter((s) => s.status === "confirmed")
-                        .map((s) => (
-                          <option key={s.storeId} value={s.storeId}>
-                            {s.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                )}
-                {editing && (
-                  <label className={styles.field}>
-                    {L(["状态", "Status"])}
-                    <select
-                      value={draft.status}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          status: e.target.value as Draft["status"],
-                        })
-                      }
-                    >
-                      <option value="active">{L(["在职", "Active"])}</option>
-                      <option value="departed">
-                        {L(["离职", "Departed"])}
-                      </option>
-                    </select>
-                  </label>
-                )}
-                {departureAssignmentChanged && (
-                  <p>
-                    {L([
-                      "离职时保留原归属；请先单独保存调动，或恢复原归属。",
-                      "Departure retains the original assignment; save the transfer separately or restore the original assignment.",
-                    ])}
-                  </p>
-                )}
-                {conflict && (
-                  <div>
-                    <p>
-                      {L(["最新记录", "Latest record"])}:{" "}
-                      {current
-                        ? `${current.name} / ${current.departmentName} / ${current.scope.storeName ?? L(["集团直属", "Group"])} / ${current.status}`
-                        : L([
-                            "无法在当前范围读取",
-                            "Not visible in current scope",
-                          ])}
-                    </p>
-                    {current && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditing(current);
-                          setConflict(false);
-                        }}
-                      >
-                        {L([
-                          "已比较，使用最新版本继续",
-                          "Compared; continue with latest version",
-                        ])}
-                      </button>
-                    )}
-                  </div>
-                )}
+                {employeeFields}
                 <div className={styles.row}>
                   <ActionButton
                     label={L(["保存", "Save"])}
                     busy={pendingAction === "employee-save"}
-                    disabled={
-                      busy ||
-                      conflict ||
-                      departureAssignmentChanged ||
-                      (editing !== null &&
-                        draft.name === editing.name &&
-                        draft.departmentId === editing.departmentId &&
-                        draft.ownership === editing.scope.ownership &&
-                        draft.storeId === (editing.scope.storeId ?? "") &&
-                        draft.status === editing.status) ||
-                      !draft.name.trim() ||
-                      !draft.departmentId ||
-                      !draft.ownership ||
-                      (draft.ownership === "store" && !draft.storeId)
-                    }
+                    disabled={!canSaveEmployee}
                     onRun={save}
                   />
                   <button
@@ -999,19 +991,76 @@ export function DirectoryPage() {
                 </tbody>
               </table>
             </div>
-            {employees.data?.nextCursor && (
-              <button
-                type="button"
-                onClick={() => setCursor(employees.data!.nextCursor!)}
+            <div className={styles.listFooter}>
+              {(cursor || nextEmployeeCursor) && (
+                <nav
+                  className={styles.pagination}
+                  aria-label={L(["员工列表分页", "Employee pages"])}
+                >
+                  <Button
+                    variant="secondary"
+                    disabled={!cursor || busy}
+                    onClick={() =>
+                      setPageCursors((pages) => pages.slice(0, -1))
+                    }
+                  >
+                    {L(["上一页", "Previous page"])}
+                  </Button>
+                  <span aria-live="polite">
+                    {L([
+                      `第 ${pageCursors.length + 1} 页`,
+                      `Page ${pageCursors.length + 1}`,
+                    ])}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    disabled={
+                      !nextEmployeeCursor || employees.isFetching || busy
+                    }
+                    onClick={() => {
+                      if (nextEmployeeCursor)
+                        setPageCursors((pages) => [
+                          ...pages,
+                          nextEmployeeCursor,
+                        ]);
+                    }}
+                  >
+                    {L(["下一页", "Next page"])}
+                  </Button>
+                </nav>
+              )}
+              <CreateDialog
+                title={L(["新增员工", "Add employee"])}
+                open={employeeCreateOpen}
+                triggerDisabled={
+                  busy &&
+                  (editing !== null || pendingAction !== "employee-save")
+                }
+                submitting={pendingAction === "employee-save"}
+                saveDisabled={!canSaveEmployee}
+                onOpenChange={(open) => {
+                  if (
+                    open &&
+                    draft &&
+                    !window.confirm(
+                      L([
+                        "放弃当前草稿并新增？",
+                        "Discard the current draft and add a record?",
+                      ]),
+                    )
+                  )
+                    return;
+                  setDraft(open ? blank : null);
+                  setEditing(null);
+                  setConflict(false);
+                  setError(null);
+                }}
+                onSubmit={save}
               >
-                {L(["下一页", "Next page"])}
-              </button>
-            )}
-            {cursor && (
-              <button type="button" onClick={() => setCursor("")}>
-                {L(["返回首页", "First page"])}
-              </button>
-            )}
+                {employeeFields}
+                <InlineError error={error} />
+              </CreateDialog>
+            </div>
           </div>
         )}
         {enterprise && tab === "stores" && (
@@ -1050,7 +1099,7 @@ export function DirectoryPage() {
                     .map((s) => (
                       <tr key={s.storeId}>
                         <td>{s.name}</td>
-                        <td className={styles.storeActions}>
+                        <td className={styles.catalogActions}>
                           <button
                             type="button"
                             disabled={busy}
@@ -1152,127 +1201,41 @@ export function DirectoryPage() {
               </table>
             </div>
             {storeStatus === "confirmed" && (
-              <Dialog.Root
+              <CreateDialog
+                title={L(["新增门店", "Add store"])}
                 open={storeCreateOpen}
+                triggerDisabled={pendingAction !== null}
+                submitting={createStore.isPending}
+                saveDisabled={busy || !storeNameDraft.trim()}
                 onOpenChange={(open) => {
-                  if (busy) return;
                   if (!open) {
                     setStoreNameDraft("");
                     createStore.reset();
                   }
                   setStoreCreateOpen(open);
                 }}
+                onSubmit={() => {
+                  setSuccess("");
+                  setCreatedUid("");
+                  createStore.mutate(storeNameDraft);
+                }}
               >
-                <Dialog.Trigger asChild>
-                  <Button
-                    className={styles.addStore}
-                    disabled={pendingAction !== null}
-                  >
-                    <AdminIcon name="plus" />
-                    {L(["新增门店", "Add store"])}
-                  </Button>
-                </Dialog.Trigger>
-                <Dialog.Portal>
-                  <Dialog.Overlay className={dialogStyles.overlay} />
-                  <Dialog.Content
-                    className={`${theme.theme} ${dialogStyles.content}`}
-                    aria-describedby={undefined}
-                    onInteractOutside={(event) => event.preventDefault()}
-                  >
-                    <Dialog.Title className={dialogStyles.title}>
-                      {L(["新增门店", "Add store"])}
-                    </Dialog.Title>
-                    <form
-                      className={dialogStyles.body}
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        if (busy || !storeNameDraft.trim()) return;
-                        setSuccess("");
-                        setCreatedUid("");
-                        createStore.mutate(storeNameDraft);
-                      }}
-                    >
-                      <label className={styles.field}>
-                        {L(["新门店名称", "New store name"])}
-                        <input
-                          value={storeNameDraft}
-                          maxLength={255}
-                          readOnly={createStore.isPending}
-                          onChange={(event) =>
-                            setStoreNameDraft(event.target.value)
-                          }
-                        />
-                      </label>
-                      <InlineError error={createStore.error} />
-                      <div className={dialogStyles.actions}>
-                        <Dialog.Close asChild>
-                          <Button
-                            variant="secondary"
-                            disabled={createStore.isPending}
-                          >
-                            {L(["取消", "Cancel"])}
-                          </Button>
-                        </Dialog.Close>
-                        <Button
-                          type="submit"
-                          busy={createStore.isPending}
-                          disabled={busy || !storeNameDraft.trim()}
-                        >
-                          {L(["保存", "Save"])}
-                        </Button>
-                      </div>
-                    </form>
-                  </Dialog.Content>
-                </Dialog.Portal>
-              </Dialog.Root>
+                <label className={styles.field}>
+                  {L(["新门店名称", "New store name"])}
+                  <input
+                    value={storeNameDraft}
+                    maxLength={255}
+                    readOnly={createStore.isPending}
+                    onChange={(event) => setStoreNameDraft(event.target.value)}
+                  />
+                </label>
+                <InlineError error={createStore.error} />
+              </CreateDialog>
             )}
           </div>
         )}
         {enterprise && tab === "departments" && (
           <div className={styles.catalog}>
-            <div className={styles.createRow}>
-              <label className={styles.field}>
-                {L(["新部门名称", "New department name"])}
-                <input
-                  value={departmentNameDraft}
-                  aria-invalid={createNameError !== null}
-                  onChange={(e) => {
-                    setDepartmentNameDraft(e.target.value);
-                    setDuplicateNameError(null);
-                  }}
-                />
-              </label>
-              <ActionButton
-                icon={<AdminIcon name="plus" />}
-                label={L(["新增部门", "Add department"])}
-                busy={
-                  pendingAction === "department-create" ||
-                  createNameCheck.checking
-                }
-                disabled={busy || !canCreateDepartment}
-                onRun={() => {
-                  if (!canCreateDepartment) return;
-                  setDuplicateNameError(null);
-                  const name = departmentNameDraft;
-                  void run(
-                    () =>
-                      directoryApi.department(client, {
-                        enterpriseKey: enterprise,
-                        operation: { kind: "create", name },
-                      }),
-                    () => setDepartmentNameDraft(""),
-                    "department-create",
-                    { departmentId: null, name },
-                  );
-                }}
-              />
-            </div>
-            {createNameError !== null && (
-              <p role="alert" className={styles.error}>
-                {createNameError}
-              </p>
-            )}
-            {nameCheckFailure(createNameCheck)}
             <div className={styles.tableScroll}>
               <table className={styles.table}>
                 <thead>
@@ -1291,7 +1254,7 @@ export function DirectoryPage() {
                           ? L(["有效", "Active"])
                           : L(["已停用", "Retired"])}
                       </td>
-                      <td>
+                      <td className={styles.catalogActions}>
                         <button
                           type="button"
                           disabled={busy}
@@ -1349,6 +1312,58 @@ export function DirectoryPage() {
                 </tbody>
               </table>
             </div>
+            <CreateDialog
+              title={L(["新增部门", "Add department"])}
+              open={departmentCreateOpen}
+              triggerDisabled={busy && pendingAction !== "department-create"}
+              submitting={pendingAction === "department-create"}
+              checking={createNameCheck.checking}
+              saveDisabled={busy || !canCreateDepartment}
+              onOpenChange={(open) => {
+                setDepartmentCreateOpen(open);
+                setError(null);
+                if (!open) {
+                  setDepartmentNameDraft("");
+                  setDuplicateNameError(null);
+                }
+              }}
+              onSubmit={() => {
+                setDuplicateNameError(null);
+                const name = departmentNameDraft;
+                void run(
+                  () =>
+                    directoryApi.department(client, {
+                      enterpriseKey: enterprise,
+                      operation: { kind: "create", name },
+                    }),
+                  () => {
+                    setDepartmentNameDraft("");
+                    setDepartmentCreateOpen(false);
+                  },
+                  "department-create",
+                  { departmentId: null, name },
+                );
+              }}
+            >
+              <label className={styles.field}>
+                {L(["新部门名称", "New department name"])}
+                <input
+                  value={departmentNameDraft}
+                  aria-invalid={createNameError !== null}
+                  onChange={(event) => {
+                    setDepartmentNameDraft(event.target.value);
+                    setDuplicateNameError(null);
+                  }}
+                />
+              </label>
+              {createNameError !== null && (
+                <p role="alert" className={styles.error}>
+                  {createNameError}
+                </p>
+              )}
+              {nameCheckFailure(createNameCheck)}
+              <InlineError error={error} />
+            </CreateDialog>
           </div>
         )}
       </div>

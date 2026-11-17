@@ -138,6 +138,99 @@ it("adds a store from the confirmed directory in a dialog", async () => {
   });
 });
 
+it("requests employees in pages of ten and resets the cursor when searching", async () => {
+  const employees = Array.from({ length: 21 }, (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+    return {
+      employeeUid: `11111111-1111-4111-8111-1111111111${number}`,
+      name: `员工 ${number}`,
+      departmentId: "22222222-2222-4222-8222-222222222222",
+      departmentName: "前厅",
+      scope: { ownership: "group", storeId: null, storeName: null },
+      status: "active",
+      version: "1",
+    };
+  });
+  const list = vi.fn(
+    ({
+      cursor,
+      limit,
+      search,
+    }: {
+      cursor?: string;
+      limit: number;
+      search?: string;
+    }) => {
+      const start = employees.findIndex((e) => e.employeeUid === cursor) + 1;
+      const filtered = employees.filter(
+        (e) => !search || e.name.includes(search),
+      );
+      const page = filtered.slice(start, start + limit);
+      return jsonResponse({
+        employees: page,
+        access: "all",
+        nextCursor:
+          start + limit < filtered.length ? page.at(-1)?.employeeUid : null,
+      });
+    },
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("/enterprises"))
+        return jsonResponse({
+          authorizationVersion: "1",
+          enterprises: [
+            { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
+          ],
+        });
+      if (url.includes("/list_employees"))
+        return list(JSON.parse(String(init.body)));
+      return jsonResponse({
+        enterpriseKey: "enterprise-1",
+        enterpriseName: "示例企业",
+        stores: [],
+        departments: [],
+      });
+    }),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+
+  await screen.findByText("员工 01");
+  expect(screen.getAllByRole("row")).toHaveLength(11);
+  expect(list).toHaveBeenLastCalledWith({
+    enterpriseKey: "enterprise-1",
+    status: "active",
+    limit: 10,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "下一页" }));
+  await screen.findByText("员工 11");
+  expect(screen.getByText("第 2 页")).toBeInTheDocument();
+  expect(screen.getAllByRole("row")).toHaveLength(11);
+  expect(list).toHaveBeenLastCalledWith(
+    expect.objectContaining({ cursor: employees[9]!.employeeUid, limit: 10 }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "下一页" }));
+  await screen.findByText("员工 21");
+  expect(screen.getByRole("button", { name: "下一页" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "上一页" }));
+  await screen.findByText("员工 11");
+  fireEvent.change(screen.getByRole("textbox", { name: "姓名" }), {
+    target: { value: "01" },
+  });
+  await screen.findByText("员工 01");
+  expect(list).toHaveBeenLastCalledWith({
+    enterpriseKey: "enterprise-1",
+    status: "active",
+    search: "01",
+    limit: 10,
+  });
+  expect(screen.queryByRole("navigation", { name: "员工列表分页" })).toBeNull();
+});
+
 it("creates an employee without list access using the selected group scope", async () => {
   const calls: { url: string; init: RequestInit }[] = [];
   const departmentId = "11111111-1111-4111-8111-111111111111";
@@ -182,9 +275,7 @@ it("creates an employee without list access using the selected group scope", asy
     await screen.findByText("当前没有员工档案读取权限。仍可尝试新增。"),
   ).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "新增员工" }));
-  const form = screen
-    .getByRole("heading", { name: "新增员工" })
-    .closest("section")!;
+  const form = screen.getByRole("dialog", { name: "新增员工" });
   fireEvent.change(within(form).getByLabelText("姓名"), {
     target: { value: "小王" },
   });
@@ -533,7 +624,12 @@ function stubDepartmentDirectory(
 
 async function openDepartments() {
   fireEvent.click(await screen.findByRole("button", { name: "部门目录" }));
-  return await screen.findByLabelText("新部门名称");
+}
+
+async function openDepartmentCreate() {
+  await openDepartments();
+  fireEvent.click(await screen.findByRole("button", { name: "新增部门" }));
+  return screen.getByRole("textbox", { name: "新部门名称" });
 }
 
 it("blocks creating a department whose name duplicates an existing one", async () => {
@@ -554,15 +650,17 @@ it("blocks creating a department whose name duplicates an existing one", async (
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
-  const input = await openDepartments();
+  await openDepartments();
   await screen.findByRole("row", { name: /Ａ组/ });
+  fireEvent.click(screen.getByRole("button", { name: "新增部门" }));
+  const input = screen.getByRole("textbox", { name: "新部门名称" });
   fireEvent.change(input, { target: { value: "Ａ组" } });
   expect(screen.getByText("该部门名称已存在")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
 
   fireEvent.change(input, { target: { value: "A组" } });
   expect(await screen.findByText("该部门名称已存在")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   expect(check).toHaveBeenCalledWith({
     enterpriseKey: "enterprise-1",
     name: "A组",
@@ -583,10 +681,10 @@ it("blocks creating a department whose name has leading or trailing whitespace",
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
-  const input = await openDepartments();
+  const input = await openDepartmentCreate();
   fireEvent.change(input, { target: { value: " 后厨 " } });
   expect(screen.getByText("部门名称不能以空白开头或结尾")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   expect(calls).toHaveLength(0);
 });
 
@@ -596,11 +694,11 @@ it("blocks creating a department with a blank name", async () => {
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
-  const input = await openDepartments();
-  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  const input = await openDepartmentCreate();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   fireEvent.change(input, { target: { value: "   " } });
   expect(screen.getByText("请输入部门名称")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   expect(calls).toHaveLength(0);
 });
 
@@ -624,14 +722,14 @@ it("shows a duplicate-name error beside the name field when the server rejects a
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
-  const input = await openDepartments();
+  const input = await openDepartmentCreate();
   fireEvent.change(input, { target: { value: "后厨" } });
-  const button = screen.getByRole("button", { name: "新增部门" });
+  const button = screen.getByRole("button", { name: "保存" });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
   expect(await screen.findByText("该部门名称已存在")).toBeInTheDocument();
   expect(input).toHaveValue("后厨");
-  expect(screen.getByRole("button", { name: "新增部门" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
   expect(screen.queryByText(/数据已变化，草稿保留/)).not.toBeInTheDocument();
   expect(calls).toHaveLength(1);
 });
@@ -646,8 +744,8 @@ it("keeps a new draft submittable when an older request reports a duplicate", as
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
-  const input = await openDepartments();
-  const button = screen.getByRole("button", { name: "新增部门" });
+  const input = await openDepartmentCreate();
+  const button = screen.getByRole("button", { name: "保存" });
   fireEvent.change(input, { target: { value: "前厅" } });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
@@ -787,13 +885,18 @@ it("keeps submission disabled while the database check is unavailable and can re
     session: adminSession,
     initialEntries: ["/admin/org-1/directory"],
   });
-  const input = await openDepartments();
+  const input = await openDepartmentCreate();
   fireEvent.change(input, { target: { value: "新部门" } });
-  const button = screen.getByRole("button", { name: "新增部门" });
+  const button = screen.getByRole("button", { name: "保存" });
   expect(button).toBeDisabled();
   const retry = await screen.findByRole("button", { name: "重试检查" });
   expect(button).toBeDisabled();
   fireEvent.click(retry);
   await waitFor(() => expect(button).toBeEnabled());
   expect(calls).toHaveLength(0);
+  fireEvent.click(button);
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "新增部门" })).toBeNull(),
+  );
+  expect(calls).toHaveLength(1);
 });
