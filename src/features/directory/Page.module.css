@@ -26,24 +26,29 @@
 
 .tabs {
   display: flex;
-  gap: var(--space-5);
-  overflow-x: auto;
-  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.tabs button {
-  flex: none;
-  padding: var(--space-2) 0 var(--space-3);
+.tab {
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-text-muted);
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.tabs button[aria-pressed="true"] {
-  border-bottom-color: var(--color-accent);
+.tab:hover {
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+.tab[aria-pressed="true"] {
+  background: var(--color-accent-soft);
   color: var(--color-accent-strong);
 }
 
@@ -76,6 +81,10 @@
 
 .createRow .field {
   flex: 0 1 20rem;
+}
+
+.addStore {
+  justify-self: end;
 }
 
 .tableScroll {
@@ -116,6 +125,10 @@
 .table th:last-child,
 .table td:last-child {
   text-align: right;
+}
+
+.storeActions > button + button {
+  margin-inline-start: var(--space-3);
 }
 
 .employeeName {
@@ -200,10 +213,6 @@
 }
 
 @media (max-width: 34rem) {
-  .tabs {
-    gap: var(--space-4);
-  }
-
   .table td,
   .table th {
     padding-inline: var(--space-2);

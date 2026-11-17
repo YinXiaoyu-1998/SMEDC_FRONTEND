@@ -1,14 +1,18 @@
+import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { WebApiError } from "@/api/client";
 import { useSession } from "@/api/session";
 import { PageFrame } from "@/app/PageFrame";
 import { listEnterprises } from "@/features/workflows/api";
 import { useText } from "@/i18n/useText";
+import theme from "@/styles/AdminTheme.module.css";
 import { ActionButton } from "@/ui/ActionButton";
 import { AdminIcon } from "@/ui/AdminIcon";
 import { Button } from "@/ui/Button";
+import dialogStyles from "@/ui/ConfirmDialog.module.css";
+import { InlineError } from "@/ui/InlineError";
 import { directoryApi, type DirectoryApiClient } from "./api";
 import styles from "./Page.module.css";
 import type {
@@ -131,17 +135,14 @@ export function DirectoryPage() {
     if (employeeEditorOpen) employeeHeading.current?.focus();
   }, [editing?.employeeUid, employeeEditorOpen]);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-  const busy = pendingAction !== null;
   const [error, setError] = useState<unknown>(null);
   const [success, setSuccess] = useState("");
   const [conflict, setConflict] = useState(false);
   const [duplicateNameError, setDuplicateNameError] =
     useState<DepartmentNameConflict | null>(null);
+  const [storeCreateOpen, setStoreCreateOpen] = useState(false);
   const [storeNameDraft, setStoreNameDraft] = useState("");
   const [departmentNameDraft, setDepartmentNameDraft] = useState("");
-  const newName = tab === "stores" ? storeNameDraft : departmentNameDraft;
-  const setNewName =
-    tab === "stores" ? setStoreNameDraft : setDepartmentNameDraft;
   const [createdUid, setCreatedUid] = useState("");
   const [rename, setRename] = useState<{
     kind: "store" | "department";
@@ -163,6 +164,20 @@ export function DirectoryPage() {
     enabled: !!session && !!enterprise,
     retry: false,
   });
+  const createStore = useMutation({
+    mutationFn: (name: string) =>
+      directoryApi.store(client, {
+        enterpriseKey: enterprise,
+        operation: { kind: "create", name },
+      }),
+    onSuccess: async () => {
+      await directory.refetch();
+      setStoreNameDraft("");
+      setStoreCreateOpen(false);
+      setSuccess(L(["门店已新增", "Store added"]));
+    },
+  });
+  const busy = pendingAction !== null || createStore.isPending;
   const employees = useQuery({
     queryKey: [
       "directory-employees",
@@ -465,7 +480,9 @@ export function DirectoryPage() {
               setDraft(null);
               setEditing(null);
               setRename(null);
+              setStoreCreateOpen(false);
               setStoreNameDraft("");
+              createStore.reset();
               setDepartmentNameDraft("");
               setDuplicateNameError(null);
               setCursor("");
@@ -494,6 +511,7 @@ export function DirectoryPage() {
           {(["employees", "stores", "departments"] as const).map((key, i) => (
             <button
               type="button"
+              className={styles.tab}
               key={key}
               aria-pressed={tab === key}
               onClick={() => {
@@ -1018,33 +1036,6 @@ export function DirectoryPage() {
                 ),
               )}
             </div>
-            <div className={styles.createRow}>
-              <label className={styles.field}>
-                {L(["新门店名称", "New store name"])}
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
-              </label>
-              <ActionButton
-                icon={<AdminIcon name="plus" />}
-                label={L(["新增门店", "Add store"])}
-                busy={pendingAction === "store-create"}
-                disabled={busy || !newName.trim()}
-                onRun={() => {
-                  const name = newName;
-                  void run(
-                    () =>
-                      directoryApi.store(client, {
-                        enterpriseKey: enterprise,
-                        operation: { kind: "create", name },
-                      }),
-                    () => setNewName(""),
-                    "store-create",
-                  );
-                }}
-              />
-            </div>
             <div className={styles.tableScroll}>
               <table className={styles.table}>
                 <thead>
@@ -1059,7 +1050,7 @@ export function DirectoryPage() {
                     .map((s) => (
                       <tr key={s.storeId}>
                         <td>{s.name}</td>
-                        <td>
+                        <td className={styles.storeActions}>
                           <button
                             type="button"
                             disabled={busy}
@@ -1160,6 +1151,81 @@ export function DirectoryPage() {
                 </tbody>
               </table>
             </div>
+            {storeStatus === "confirmed" && (
+              <Dialog.Root
+                open={storeCreateOpen}
+                onOpenChange={(open) => {
+                  if (busy) return;
+                  if (!open) {
+                    setStoreNameDraft("");
+                    createStore.reset();
+                  }
+                  setStoreCreateOpen(open);
+                }}
+              >
+                <Dialog.Trigger asChild>
+                  <Button
+                    className={styles.addStore}
+                    disabled={pendingAction !== null}
+                  >
+                    <AdminIcon name="plus" />
+                    {L(["新增门店", "Add store"])}
+                  </Button>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className={dialogStyles.overlay} />
+                  <Dialog.Content
+                    className={`${theme.theme} ${dialogStyles.content}`}
+                    aria-describedby={undefined}
+                    onInteractOutside={(event) => event.preventDefault()}
+                  >
+                    <Dialog.Title className={dialogStyles.title}>
+                      {L(["新增门店", "Add store"])}
+                    </Dialog.Title>
+                    <form
+                      className={dialogStyles.body}
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (busy || !storeNameDraft.trim()) return;
+                        setSuccess("");
+                        setCreatedUid("");
+                        createStore.mutate(storeNameDraft);
+                      }}
+                    >
+                      <label className={styles.field}>
+                        {L(["新门店名称", "New store name"])}
+                        <input
+                          value={storeNameDraft}
+                          maxLength={255}
+                          readOnly={createStore.isPending}
+                          onChange={(event) =>
+                            setStoreNameDraft(event.target.value)
+                          }
+                        />
+                      </label>
+                      <InlineError error={createStore.error} />
+                      <div className={dialogStyles.actions}>
+                        <Dialog.Close asChild>
+                          <Button
+                            variant="secondary"
+                            disabled={createStore.isPending}
+                          >
+                            {L(["取消", "Cancel"])}
+                          </Button>
+                        </Dialog.Close>
+                        <Button
+                          type="submit"
+                          busy={createStore.isPending}
+                          disabled={busy || !storeNameDraft.trim()}
+                        >
+                          {L(["保存", "Save"])}
+                        </Button>
+                      </div>
+                    </form>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
+            )}
           </div>
         )}
         {enterprise && tab === "departments" && (
@@ -1168,10 +1234,10 @@ export function DirectoryPage() {
               <label className={styles.field}>
                 {L(["新部门名称", "New department name"])}
                 <input
-                  value={newName}
+                  value={departmentNameDraft}
                   aria-invalid={createNameError !== null}
                   onChange={(e) => {
-                    setNewName(e.target.value);
+                    setDepartmentNameDraft(e.target.value);
                     setDuplicateNameError(null);
                   }}
                 />
@@ -1187,14 +1253,14 @@ export function DirectoryPage() {
                 onRun={() => {
                   if (!canCreateDepartment) return;
                   setDuplicateNameError(null);
-                  const name = newName;
+                  const name = departmentNameDraft;
                   void run(
                     () =>
                       directoryApi.department(client, {
                         enterpriseKey: enterprise,
                         operation: { kind: "create", name },
                       }),
-                    () => setNewName(""),
+                    () => setDepartmentNameDraft(""),
                     "department-create",
                     { departmentId: null, name },
                   );
