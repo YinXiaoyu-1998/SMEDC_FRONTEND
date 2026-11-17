@@ -5,8 +5,7 @@
   gap: var(--space-3);
 }
 
-.row,
-.createRow {
+.row {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
@@ -67,24 +66,25 @@
 
 .employeeFilters {
   display: grid;
-  grid-template-columns:
-    minmax(10rem, 1.2fr) minmax(5rem, 0.6fr) repeat(2, minmax(7rem, 1fr))
-    auto;
+  grid-template-columns: minmax(10rem, 1.2fr) minmax(5rem, 0.6fr) repeat(
+      2,
+      minmax(7rem, 1fr)
+    );
   align-items: end;
   gap: var(--space-3);
 }
 
-.employeeFilters > button,
-.createRow > button {
-  justify-self: start;
+.listFooter,
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.createRow .field {
-  flex: 0 1 20rem;
-}
-
-.addStore {
+.createTrigger {
   justify-self: end;
+  margin-inline-start: auto;
 }
 
 .tableScroll {
@@ -127,7 +127,7 @@
   text-align: right;
 }
 
-.storeActions > button + button {
+.catalogActions > button + button {
   margin-inline-start: var(--space-3);
 }
 
