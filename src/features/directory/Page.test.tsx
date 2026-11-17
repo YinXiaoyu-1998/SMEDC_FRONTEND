@@ -44,6 +44,100 @@ it("shows the enterprise directory and its three sections", async () => {
   expect(screen.getByRole("button", { name: "部门目录" })).toBeInTheDocument();
 });
 
+it("adds a store from the confirmed directory in a dialog", async () => {
+  const storeId = "33333333-3333-4333-8333-333333333333";
+  const storeName = "新街口店";
+  const submit = vi
+    .fn<(body: unknown) => Response>()
+    .mockReturnValueOnce(
+      jsonResponse(
+        { error: { code: "INTERNAL_ERROR", message: "Failed" } },
+        500,
+      ),
+    )
+    .mockReturnValue(jsonResponse({ storeId, version: "0" }));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("/enterprises"))
+        return jsonResponse({
+          authorizationVersion: "1",
+          enterprises: [
+            { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
+          ],
+        });
+      if (url.includes("/list_directory"))
+        return jsonResponse({
+          enterpriseKey: "enterprise-1",
+          enterpriseName: "示例企业",
+          stores:
+            submit.mock.calls.length === 2
+              ? [
+                  {
+                    storeId,
+                    name: storeName,
+                    status: "confirmed",
+                    version: "0",
+                  },
+                ]
+              : [],
+          departments: [],
+        });
+      if (url.includes("/list_employees"))
+        return jsonResponse({
+          employees: [],
+          access: "none",
+          nextCursor: null,
+        });
+      if (url.includes("/manage_store"))
+        return submit(JSON.parse(String(init.body)));
+      return jsonResponse({});
+    }),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+
+  fireEvent.click(await screen.findByRole("button", { name: "门店目录" }));
+  for (const status of ["待确认", "已停用", "历史记录"]) {
+    fireEvent.click(screen.getByRole("button", { name: status }));
+    expect(screen.queryByRole("button", { name: "新增门店" })).toBeNull();
+  }
+  fireEvent.click(screen.getByRole("button", { name: "正式门店" }));
+  expect(screen.queryByLabelText("新门店名称")).toBeNull();
+  const trigger = screen.getByRole("button", { name: "新增门店" });
+  fireEvent.click(trigger);
+  const dialog = within(screen.getByRole("dialog", { name: "新增门店" }));
+  fireEvent.change(dialog.getByLabelText("新门店名称"), {
+    target: { value: "放弃的草稿" },
+  });
+  fireEvent.click(dialog.getByRole("button", { name: "取消" }));
+  expect(submit).not.toHaveBeenCalled();
+  await waitFor(() => expect(trigger).toHaveFocus());
+
+  fireEvent.click(trigger);
+  const reopened = within(screen.getByRole("dialog", { name: "新增门店" }));
+  const name = reopened.getByLabelText("新门店名称");
+  const save = reopened.getByRole("button", { name: "保存" });
+  expect(name).toHaveValue("");
+  expect(save).toBeDisabled();
+  fireEvent.change(name, { target: { value: storeName } });
+  fireEvent.click(save);
+  expect(await reopened.findByRole("alert")).toBeInTheDocument();
+  expect(name).toHaveValue(storeName);
+
+  fireEvent.click(save);
+  expect(
+    await screen.findByRole("row", { name: /新街口店/ }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(submit).toHaveBeenLastCalledWith({
+    enterpriseKey: "enterprise-1",
+    operation: { kind: "create", name: storeName },
+  });
+});
+
 it("creates an employee without list access using the selected group scope", async () => {
   const calls: { url: string; init: RequestInit }[] = [];
   const departmentId = "11111111-1111-4111-8111-111111111111";
@@ -299,10 +393,6 @@ it("shows progress only on the pending directory row action", async () => {
   expect(action).toHaveAttribute("aria-busy", "true");
   expect(within(action).getByTestId("button-spinner")).toBeInTheDocument();
   expect(within(row).getByRole("button", { name: "保留历史" })).toBeDisabled();
-  expect(screen.getByRole("button", { name: "新增门店" })).not.toHaveAttribute(
-    "aria-busy",
-    "true",
-  );
   finish(jsonResponse({ storeId, version: "2" }));
   await waitFor(() => expect(action).not.toHaveAttribute("aria-busy", "true"));
 });

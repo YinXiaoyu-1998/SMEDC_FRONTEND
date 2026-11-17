@@ -83,6 +83,10 @@
   flex: 0 1 20rem;
 }
 
+.addStore {
+  justify-self: end;
+}
+
 .tableScroll {
   min-width: 0;
   overflow-x: auto;
