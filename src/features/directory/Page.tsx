@@ -494,6 +494,7 @@ export function DirectoryPage() {
           {(["employees", "stores", "departments"] as const).map((key, i) => (
             <button
               type="button"
+              className={styles.tab}
               key={key}
               aria-pressed={tab === key}
               onClick={() => {
@@ -1059,7 +1060,7 @@ export function DirectoryPage() {
                     .map((s) => (
                       <tr key={s.storeId}>
                         <td>{s.name}</td>
-                        <td>
+                        <td className={styles.storeActions}>
                           <button
                             type="button"
                             disabled={busy}
