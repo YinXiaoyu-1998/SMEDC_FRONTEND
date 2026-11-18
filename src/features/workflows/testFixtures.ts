@@ -12,6 +12,7 @@ import type {
   WorkflowConfiguration,
   WorkflowView,
 } from "@/features/workflows/model";
+import { defaultConfiguration } from "@/features/workflows/model";
 import { jsonResponse } from "@/test/http";
 
 export const TIMESTAMP = "2026-01-01T00:00:00.000Z";
@@ -78,6 +79,82 @@ export function dailyView(
     authorizations: [],
     ...overrides,
   };
+}
+
+function enabledConfiguration(
+  type: WorkflowView["workflowType"],
+): WorkflowConfiguration {
+  const config = defaultConfiguration(type);
+  if (config.type === "meituan-daily-ingestion") return dailyConfiguration();
+  if (config.type === "meituan-review-operations")
+    return { ...config, channels: ["dianping"] };
+  return config;
+}
+
+export function viewsWithSources() {
+  const accounts = [
+    {
+      product: "meituan_erp",
+      accountRef: "erp-main",
+      displayName: "管家账号",
+      sourceEnterpriseName: "示例企业",
+    },
+    {
+      product: "meituan_reviews",
+      accountRef: "reviews-main",
+      displayName: "经营宝账号",
+      sourceEnterpriseName: "示例企业",
+    },
+  ] as const;
+  const sources = [
+    {
+      product: "meituan_erp",
+      accountRef: "erp-main",
+      channel: "erp",
+      sourceStoreName: "管家来源门店",
+    },
+    {
+      product: "meituan_reviews",
+      accountRef: "reviews-main",
+      channel: "dianping",
+      sourceStoreName: "点评来源门店",
+    },
+  ] as const;
+  const record = integrationRecord();
+  const integration = {
+    ...record,
+    configuration: {
+      ...record.configuration,
+      sourceAccounts: [...accounts],
+      storeMappings: sources.map((source) => ({ source, storeName: "门店A" })),
+      exclusions: sources.map((source) => ({
+        source: {
+          ...source,
+          sourceStoreName: source.sourceStoreName + "（排除）",
+        },
+        reason: "示例排除原因",
+      })),
+    },
+  };
+
+  return (
+    [
+      "meituan-daily-ingestion",
+      "meituan-review-operations",
+      "weekly-business-report",
+    ] as const
+  ).map((workflowType) =>
+    dailyView({
+      workflowId: workflowType,
+      workflowType,
+      capability: capability(workflowType),
+      configuration: {
+        ...enabledConfiguration(workflowType),
+        storeNames: ["门店A"],
+      },
+      integration,
+    }),
+  );
 }
 
 export function sampleAuthorizations(): WorkflowView["authorizations"] {

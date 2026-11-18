@@ -11,6 +11,7 @@ import {
   dailyView,
   previewResponse,
   sampleAuthorizations,
+  viewsWithSources,
   type ApiCall,
 } from "@/features/workflows/testFixtures";
 import { adminSession } from "@/test/fixtures";
@@ -19,11 +20,14 @@ import { renderApp } from "@/test/renderApp";
 
 const ENTERPRISE_PATH = "/admin/org-1/workflows/enterprise-1";
 
-function renderDeepLink(api: ReturnType<typeof createWorkflowApi>) {
+function renderDeepLink(
+  api: ReturnType<typeof createWorkflowApi>,
+  path = ENTERPRISE_PATH,
+) {
   api.install();
   return renderApp({
     session: adminSession,
-    initialEntries: [ENTERPRISE_PATH],
+    initialEntries: [path],
   });
 }
 
@@ -155,11 +159,11 @@ describe("自动任务页", () => {
     expect(configSaveButton()).toBeDisabled();
   });
 
-  it("保存任务设置后保留共用来源的未提交草稿", async () => {
+  it("保存任务设置后保留来源的未提交草稿", async () => {
     const api = createWorkflowApi();
     renderDeepLink(api);
-    await screen.findByRole("heading", { name: "企业共用来源设置" });
-    const source = within(sectionByHeading("企业共用来源设置"));
+    await screen.findByRole("heading", { name: "美团管家来源设置" });
+    const source = within(sectionByHeading("美团管家来源设置"));
     fireEvent.click(source.getAllByRole("button", { name: "添加" })[0]!);
     fireEvent.change(source.getByLabelText("账号显示名称"), {
       target: { value: "未保存的来源" },
@@ -445,8 +449,8 @@ describe("自动任务页", () => {
     const api = createWorkflowApi();
     renderDeepLink(api);
 
-    await screen.findByRole("heading", { name: "企业共用来源设置" });
-    const section = sectionByHeading("企业共用来源设置");
+    await screen.findByRole("heading", { name: "美团管家来源设置" });
+    const section = sectionByHeading("美团管家来源设置");
     const add = within(section).getAllByRole("button", { name: "添加" });
     const firstAdd = add[0];
     if (firstAdd === undefined) throw new Error("缺少来源账号添加按钮");
@@ -491,6 +495,210 @@ describe("自动任务页", () => {
           },
         ],
       },
+    });
+  });
+
+  it("按任务显示来源设置并通过 URL 恢复周报标签页", async () => {
+    const api = createWorkflowApi({ views: viewsWithSources() });
+    const { router, unmount } = renderDeepLink(api);
+    await screen.findByRole("heading", { name: "美团管家来源设置" });
+
+    expect(
+      screen.queryByRole("button", { name: "读取最新状态" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "账号显示名称" })).toHaveValue(
+      "管家账号",
+    );
+    expect(screen.queryByDisplayValue("经营宝账号")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
+    const reviewSource = within(sectionByHeading("经营宝来源设置"));
+    expect(
+      reviewSource.getByRole("textbox", { name: "账号显示名称" }),
+    ).toHaveValue("经营宝账号");
+    expect(
+      reviewSource.queryByRole("option", { name: "管家账号" }),
+    ).not.toBeInTheDocument();
+    expect(reviewSource.getByDisplayValue("点评来源门店")).toBeInTheDocument();
+    expect(
+      reviewSource.getAllByRole("combobox", { name: "来源渠道" })[0],
+    ).toHaveValue("dianping");
+    expect(screen.queryByDisplayValue("管家来源门店")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "自然周经营周报" }));
+    const { pathname, search } = router.state.location;
+    expect(search).toBe("?task=weekly-business-report");
+    unmount();
+
+    renderDeepLink(api, pathname + search);
+    await screen.findByRole("heading", { name: "任务业务设置" });
+    expect(
+      screen.getByRole("button", { name: "自然周经营周报" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.queryByRole("button", { name: "保存来源设置" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "周报邮件交付" }),
+    ).toBeInTheDocument();
+    const download = within(sectionByHeading("持续授权"));
+    expect(
+      download.getByRole("checkbox", { name: "店内订单明细" }),
+    ).toBeInTheDocument();
+    expect(
+      download.queryByRole("checkbox", { name: "平台外卖订单明细" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("来源保存冲突重试保留另一来源的服务端新值和本地草稿", async () => {
+    const views = viewsWithSources();
+    const initial = views[0]!.integration;
+    const remote = {
+      ...initial,
+      version: initial.version + 1,
+      configuration: {
+        ...initial.configuration,
+        sourceAccounts: initial.configuration.sourceAccounts.map((account) =>
+          account.product === "meituan_reviews"
+            ? { ...account, displayName: "经营宝远程改名" }
+            : account,
+        ),
+        storeMappings: initial.configuration.storeMappings.map((mapping) =>
+          mapping.source.product === "meituan_reviews"
+            ? { ...mapping, storeName: "门店B" }
+            : mapping,
+        ),
+        exclusions: initial.configuration.exclusions.map((exclusion) =>
+          exclusion.source.product === "meituan_reviews"
+            ? { ...exclusion, reason: "远程排除原因" }
+            : exclusion,
+        ),
+      },
+    };
+    const api = createWorkflowApi({
+      views,
+      prepare: (body) =>
+        body.expectedIntegrationVersion !==
+        api.state.views[0]!.integration.version
+          ? jsonResponse(
+              {
+                error: {
+                  code: "WORKFLOW_VERSION_CONFLICT",
+                  message: "conflict",
+                },
+              },
+              409,
+            )
+          : undefined,
+    });
+    renderDeepLink(api);
+    await screen.findByRole("heading", { name: "美团管家来源设置" });
+    fireEvent.change(screen.getByRole("textbox", { name: "账号显示名称" }), {
+      target: { value: "管家本地改名" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "账号显示名称" }), {
+      target: { value: "经营宝本地草稿" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "每日数据采集入库" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "保存来源设置" }));
+    const preview = await screen.findByRole("dialog");
+    expect(
+      within(preview).queryByText("经营宝本地草稿"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(preview).getByRole("button", { name: "取消" }));
+
+    api.state.views = views.map((view) => ({ ...view, integration: remote }));
+    fireEvent.click(screen.getByRole("button", { name: "保存来源设置" }));
+    await screen.findByRole("heading", { name: "版本冲突" });
+    fireEvent.click(screen.getByRole("button", { name: "用我的改动重新提交" }));
+    await screen.findByRole("heading", { name: "核对本次变更" });
+
+    const prepares = api.calls
+      .filter((call) =>
+        call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
+      )
+      .map((call) =>
+        bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(call),
+      );
+    expect(prepares[0]).toMatchObject({
+      expectedIntegrationVersion: initial.version,
+      change: {
+        configuration: {
+          sourceAccounts: expect.arrayContaining([
+            expect.objectContaining({ displayName: "经营宝账号" }),
+          ]),
+        },
+      },
+    });
+    const retry = prepares.at(-1)!;
+    expect(retry.expectedIntegrationVersion).toBe(remote.version);
+    expect(retry.change).toEqual({
+      kind: "integration",
+      configuration: {
+        ...remote.configuration,
+        sourceAccounts: expect.arrayContaining(
+          remote.configuration.sourceAccounts.map((account) =>
+            account.product === "meituan_erp"
+              ? { ...account, displayName: "管家本地改名" }
+              : account,
+          ),
+        ),
+        storeMappings: expect.arrayContaining(
+          remote.configuration.storeMappings,
+        ),
+        exclusions: expect.arrayContaining(remote.configuration.exclusions),
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
+    await screen.findByText("已保存。配置保存不代表任务已安装或启用。");
+    fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
+    expect(screen.getByRole("textbox", { name: "账号显示名称" })).toHaveValue(
+      "经营宝本地草稿",
+    );
+    expect(screen.getByRole("button", { name: "保存来源设置" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "每日数据采集入库" }));
+    expect(screen.getByRole("textbox", { name: "账号显示名称" })).toHaveValue(
+      "管家本地改名",
+    );
+    expect(screen.getByRole("button", { name: "保存来源设置" })).toBeDisabled();
+  });
+
+  it.each([
+    ["评价处理", "评价新稿通知", "周报交付", "review_drafts"],
+    ["自然周经营周报", "周报交付", "评价新稿通知", "weekly_report"],
+  ])("%s按实际任务生成邮件授权", async (task, label, otherLabel, purpose) => {
+    const api = createWorkflowApi({ views: viewsWithSources() });
+    renderDeepLink(api);
+    await screen.findByRole("heading", { name: "任务业务设置" });
+    fireEvent.click(screen.getByRole("button", { name: task }));
+    const authorization = within(sectionByHeading("持续授权"));
+    fireEvent.change(authorization.getByLabelText("授权动作"), {
+      target: { value: "email" },
+    });
+    expect(authorization.getByText(label)).toBeInTheDocument();
+    expect(authorization.queryByText(otherLabel)).not.toBeInTheDocument();
+    expect(authorization.queryByText("异常通知")).not.toBeInTheDocument();
+
+    fireEvent.click(authorization.getByRole("checkbox", { name: "门店A" }));
+    fireEvent.change(authorization.getByLabelText("收件人（每行一个）"), {
+      target: { value: "boss@example.com" },
+    });
+    fireEvent.change(authorization.getByLabelText("允许的发件邮箱"), {
+      target: { value: "robot@example.com" },
+    });
+    fireEvent.click(authorization.getByRole("button", { name: "新增授权" }));
+    await screen.findByRole("heading", { name: "核对本次变更" });
+
+    const prepare = api.calls.find((call) =>
+      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
+    )!;
+    expect(
+      bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(prepare).change,
+    ).toMatchObject({
+      kind: "authorization",
+      grant: [{ kind: "email", purpose }],
     });
   });
 

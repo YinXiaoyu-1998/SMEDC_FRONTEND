@@ -74,11 +74,6 @@ export function WorkflowsPage() {
     [enterpriseKey, orgId, queryClient],
   );
 
-  const reloadBundle = useCallback(async () => {
-    const result = await bundleQuery.refetch();
-    if (result.error !== null) throw result.error;
-  }, [bundleQuery]);
-
   const stores = useMemo(
     () =>
       (storesQuery.data?.stores ?? [])
@@ -143,13 +138,13 @@ export function WorkflowsPage() {
   } else if (bundleQuery.data !== undefined) {
     content = (
       <WorkflowEditor
+        key={JSON.stringify([orgId, enterpriseKey])}
         client={client}
         enterpriseKey={enterpriseKey}
         enterpriseName={enterprise.enterpriseName}
         stores={stores}
         bundle={bundleQuery.data}
         onUpdateBundle={updateBundle}
-        onReloadBundle={reloadBundle}
       />
     );
   }

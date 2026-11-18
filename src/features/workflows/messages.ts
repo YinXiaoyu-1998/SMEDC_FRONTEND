@@ -7,8 +7,8 @@ export const workflowMessages = {
   affectedWorkflows: ["受影响任务", "Affected tasks"],
   workflowType: ["任务类型", "Task type"],
   installHelp: [
-    "保存业务设置后，请在自己的 Codex 安装所选自动任务并运行准备检查。来源登录、邮件连接与文件验证在执行电脑完成。",
-    "After saving settings, install the selected task in your Codex and run preparation checks. Source sign-in, mail connections and file verification happen on the execution computer.",
+    "保存业务设置后，请在执行电脑的 Codex 中安装此任务并完成准备检查。",
+    "After saving settings, install this task in Codex on the computer that will run it and complete the preparation checks.",
   ],
   noEnterprises: [
     "请先在权限设置登记业务企业，再设置自动任务。",
@@ -22,7 +22,6 @@ export const workflowMessages = {
   enterprise: ["业务企业", "Business enterprise"],
   choose: ["请选择", "Choose"],
   loading: ["正在读取…", "Loading…"],
-  refresh: ["读取最新状态", "Refresh status"],
   compare: ["比较最新配置", "Compare latest settings"],
   keep: ["保留草稿", "Keep draft"],
   discard: ["采用最新配置并放弃草稿", "Use latest and discard draft"],
@@ -63,7 +62,12 @@ export const workflowMessages = {
   "meituan-daily-ingestion": ["每日数据采集入库", "Daily data ingestion"],
   "meituan-review-operations": ["评价处理", "Review operations"],
   "weekly-business-report": ["自然周经营周报", "Weekly business report"],
-  integration: ["企业共用来源设置", "Shared enterprise sources"],
+  integration: ["来源设置", "Source settings"],
+  erpSourceSettings: ["美团管家来源设置", "Meituan ERP source settings"],
+  reviewSourceSettings: [
+    "经营宝来源设置",
+    "Business management source settings",
+  ],
   sourceHelp: [
     "多个来源店铺可对应同一家标准门店。来源身份必须精确，不自动合并相似名称。排除项必须填写原因。",
     "Several source stores may map to one standard store. Exact identities are required; similar names are never merged automatically. Exclusions require a reason.",

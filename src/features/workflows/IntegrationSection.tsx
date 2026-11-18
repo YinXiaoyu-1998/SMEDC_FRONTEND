@@ -11,9 +11,10 @@ import {
   withSourceAccount,
 } from "@/features/workflows/formValues";
 import type {
-  IntegrationConfiguration,
   SourceAccount,
   SourceExclusion,
+  SourceProduct,
+  SourceSettings,
   SourceStoreMapping,
   WorkflowStore,
 } from "@/features/workflows/model";
@@ -23,9 +24,11 @@ import { useWorkflowText } from "@/features/workflows/text";
 import styles from "@/features/workflows/Page.module.css";
 
 export interface IntegrationSectionProps {
-  readonly configuration: IntegrationConfiguration;
+  readonly product: SourceProduct;
+  readonly settings: SourceSettings;
+  readonly limits: Record<keyof SourceSettings, number>;
   readonly stores: readonly WorkflowStore[];
-  readonly onChange: (next: IntegrationConfiguration) => void;
+  readonly onChange: (next: SourceSettings) => void;
   readonly disabled: boolean;
   readonly dirty: boolean;
   readonly busy: boolean;
@@ -33,7 +36,9 @@ export interface IntegrationSectionProps {
 }
 
 export function IntegrationSection({
-  configuration,
+  product,
+  settings,
+  limits,
   stores,
   onChange,
   disabled,
@@ -43,26 +48,27 @@ export function IntegrationSection({
 }: IntegrationSectionProps) {
   const { w } = useWorkflowText();
 
-  const update = (patch: Partial<IntegrationConfiguration>) =>
-    onChange({
-      schemaVersion: 1,
-      timezone: "Asia/Shanghai",
-      sourceAccounts: patch.sourceAccounts ?? configuration.sourceAccounts,
-      storeMappings: patch.storeMappings ?? configuration.storeMappings,
-      exclusions: patch.exclusions ?? configuration.exclusions,
-    });
+  const update = (patch: Partial<SourceSettings>) =>
+    onChange({ ...settings, ...patch });
 
   return (
-    <PageSection title={w("integration")} description={w("sourceHelp")}>
+    <PageSection
+      title={w(
+        product === "meituan_erp"
+          ? "erpSourceSettings"
+          : "reviewSourceSettings",
+      )}
+      description={w("sourceHelp")}
+    >
       <p className={styles.hint}>{w("sourceAccountHelp")}</p>
 
       <EditableList<SourceAccount>
         title={w("sourceAccounts")}
-        items={configuration.sourceAccounts}
-        maximum={100}
+        items={settings.sourceAccounts}
+        maximum={limits.sourceAccounts}
         disabled={disabled}
         create={() => ({
-          product: "meituan_erp",
+          product,
           accountRef: "",
           displayName: "",
           sourceEnterpriseName: "",
@@ -70,25 +76,6 @@ export function IntegrationSection({
         onChange={(sourceAccounts) => update({ sourceAccounts })}
         renderItem={(account, replace) => (
           <div className={styles.row}>
-            <SelectField
-              label={w("product")}
-              value={account.product}
-              options={[
-                { value: "meituan_erp", label: w("meituan_erp") },
-                { value: "meituan_reviews", label: w("meituan_reviews") },
-              ]}
-              disabled={disabled}
-              onChange={(value) =>
-                replace(
-                  withSourceAccount(account, {
-                    product:
-                      value === "meituan_erp"
-                        ? "meituan_erp"
-                        : "meituan_reviews",
-                  }),
-                )
-              }
-            />
             <TextField
               label={w("accountRef")}
               value={account.accountRef}
@@ -131,17 +118,16 @@ export function IntegrationSection({
 
       <EditableList<SourceStoreMapping>
         title={w("storeMappings")}
-        items={configuration.storeMappings}
-        maximum={2000}
+        items={settings.storeMappings}
+        maximum={limits.storeMappings}
         disabled={disabled}
-        create={() => ({ source: newSourceIdentity(false), storeName: "" })}
+        create={() => ({ source: newSourceIdentity(product), storeName: "" })}
         onChange={(storeMappings) => update({ storeMappings })}
         renderItem={(mapping, replace) => (
           <div className={styles.stack}>
             <SourceFields
               source={mapping.source}
-              accounts={configuration.sourceAccounts}
-              reviewsOnly={false}
+              accounts={settings.sourceAccounts}
               disabled={disabled}
               onChange={(source) => replace({ ...mapping, source })}
             />
@@ -162,17 +148,16 @@ export function IntegrationSection({
 
       <EditableList<SourceExclusion>
         title={w("exclusions")}
-        items={configuration.exclusions}
-        maximum={2000}
+        items={settings.exclusions}
+        maximum={limits.exclusions}
         disabled={disabled}
-        create={() => ({ source: newSourceIdentity(false), reason: "" })}
+        create={() => ({ source: newSourceIdentity(product), reason: "" })}
         onChange={(exclusions) => update({ exclusions })}
         renderItem={(exclusion, replace) => (
           <div className={styles.stack}>
             <SourceFields
               source={exclusion.source}
-              accounts={configuration.sourceAccounts}
-              reviewsOnly={false}
+              accounts={settings.sourceAccounts}
               disabled={disabled}
               onChange={(source) => replace({ ...exclusion, source })}
             />

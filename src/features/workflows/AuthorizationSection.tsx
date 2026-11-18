@@ -19,9 +19,11 @@ import type {
   WorkflowView,
 } from "@/features/workflows/model";
 import {
+  WEEKLY_DOWNLOAD_DATASETS,
   authorizationActions,
   isActiveAuthorization,
   validateAuthorizationDraft,
+  workflowEmailPurpose,
 } from "@/features/workflows/model";
 import { useWorkflowText } from "@/features/workflows/text";
 
@@ -34,15 +36,7 @@ const UPLOAD_DATASETS: readonly Dataset[] = [
   "takeaway_orders",
   "delivery_ledger",
 ];
-const DOWNLOAD_DATASETS: readonly Dataset[] = [
-  "business",
-  "dishes",
-  "in_store_orders",
-  "takeaway_orders",
-];
 const REVIEW_CHANNELS: readonly ReviewChannel[] = ["meituan", "dianping"];
-const PURPOSES = ["review_drafts", "weekly_report", "exception"] as const;
-
 export interface AuthorizationSectionProps {
   readonly view: WorkflowView | undefined;
   readonly type: WorkflowType;
@@ -77,6 +71,7 @@ export function AuthorizationSection({
     view?.authorizations ?? [];
   const active = authorizations.filter(isActiveAuthorization);
   const errors = validateAuthorizationDraft(draft);
+  const emailPurpose = workflowEmailPurpose(type);
   const scopeError = errors.scope === undefined ? undefined : w(errors.scope);
 
   const toggleRevocation = (authorizationId: string, checked: boolean) => {
@@ -97,7 +92,7 @@ export function AuthorizationSection({
   );
 
   const datasetChoices =
-    draft.kind === "upload" ? UPLOAD_DATASETS : DOWNLOAD_DATASETS;
+    draft.kind === "upload" ? UPLOAD_DATASETS : WEEKLY_DOWNLOAD_DATASETS;
 
   return (
     <PageSection
@@ -198,8 +193,10 @@ export function AuthorizationSection({
                 kind,
                 datasets:
                   kind === "download"
-                    ? draft.datasets.filter(
-                        (dataset) => dataset !== "delivery_ledger",
+                    ? draft.datasets.filter((dataset) =>
+                        WEEKLY_DOWNLOAD_DATASETS.some(
+                          (candidate) => candidate === dataset,
+                        ),
                       )
                     : draft.datasets,
               });
@@ -254,28 +251,9 @@ export function AuthorizationSection({
             />
           ) : null}
 
-          {draft.kind === "email" ? (
+          {draft.kind === "email" && emailPurpose !== null ? (
             <div className={styles.stack}>
-              <SelectField
-                label={w("purpose")}
-                value={draft.purpose}
-                options={PURPOSES.map((purpose) => ({
-                  value: purpose,
-                  label: w(purpose),
-                }))}
-                disabled={disabled}
-                onChange={(purpose) =>
-                  onDraftChange({
-                    ...draft,
-                    purpose:
-                      purpose === "review_drafts" ||
-                      purpose === "weekly_report" ||
-                      purpose === "exception"
-                        ? purpose
-                        : "weekly_report",
-                  })
-                }
-              />
+              <p className={styles.hint}>{w(emailPurpose)}</p>
               <RecipientsField
                 value={draft.recipients}
                 error={
