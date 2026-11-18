@@ -425,7 +425,6 @@ export function EditableList<Item>({
 export interface SourceFieldsProps {
   readonly source: SourceIdentity;
   readonly accounts: readonly SourceAccount[];
-  readonly reviewsOnly: boolean;
   readonly disabled?: boolean | undefined;
   readonly onChange: (next: SourceIdentity) => void;
 }
@@ -433,24 +432,10 @@ export interface SourceFieldsProps {
 export function SourceFields({
   source,
   accounts,
-  reviewsOnly,
   disabled = false,
   onChange,
 }: SourceFieldsProps) {
   const { w } = useWorkflowText();
-  const productOptions: SelectOption[] = reviewsOnly
-    ? [{ value: "meituan_reviews", label: w("meituan_reviews") }]
-    : [
-        { value: "meituan_erp", label: w("meituan_erp") },
-        { value: "meituan_reviews", label: w("meituan_reviews") },
-      ];
-  const channelOptions: SelectOption[] =
-    source.product === "meituan_erp"
-      ? [{ value: "erp", label: w("erp") }]
-      : [
-          { value: "meituan", label: w("meituan") },
-          { value: "dianping", label: w("dianping") },
-        ];
   const accountOptions = accounts
     .filter((account) => account.product === source.product)
     .map((account) => ({
@@ -468,41 +453,24 @@ export function SourceFields({
 
   return (
     <div className={styles.stack}>
-      <div className={styles.row}>
-        <SelectField
-          label={w("product")}
-          value={source.product}
-          options={productOptions}
-          disabled={disabled}
-          onChange={(value) =>
-            onChange(
-              withSource(source, {
-                product:
-                  value === "meituan_erp" ? "meituan_erp" : "meituan_reviews",
-                channel: value === "meituan_erp" ? "erp" : "meituan",
-              }),
-            )
-          }
-        />
+      {source.product === "meituan_reviews" ? (
         <SelectField
           label={w("channel")}
           value={source.channel}
-          options={channelOptions}
+          options={[
+            { value: "meituan", label: w("meituan") },
+            { value: "dianping", label: w("dianping") },
+          ]}
           disabled={disabled}
           onChange={(value) =>
             onChange(
               withSource(source, {
-                channel:
-                  value === "erp"
-                    ? "erp"
-                    : value === "dianping"
-                      ? "dianping"
-                      : "meituan",
+                channel: value === "dianping" ? "dianping" : "meituan",
               }),
             )
           }
         />
-      </div>
+      ) : null}
       <SelectField
         label={w("sourceAccounts")}
         value={source.accountRef}

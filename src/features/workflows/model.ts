@@ -35,6 +35,11 @@ export type WorkflowAuthorization = WorkflowView["authorizations"][number];
 export type AuthorizationScope = WorkflowAuthorization["scope"];
 export type AuthorizationAction = AuthorizationScope["kind"];
 export type Dataset = DailyIngestionConfiguration["datasets"][number];
+export const WEEKLY_DOWNLOAD_DATASETS = [
+  "business",
+  "dishes",
+  "in_store_orders",
+] as const;
 export type ReviewChannel = ReviewOperationsConfiguration["channels"][number];
 export type MailConfiguration =
   ReviewOperationsConfiguration["draftNotification"];
@@ -49,17 +54,17 @@ export type WorkflowStore = {
 export type SourceIdentity =
   IntegrationConfiguration["storeMappings"][number]["source"];
 export type SourceAccount = IntegrationConfiguration["sourceAccounts"][number];
+export type SourceProduct = SourceAccount["product"];
+export type SourceSettings = Pick<
+  IntegrationConfiguration,
+  "sourceAccounts" | "storeMappings" | "exclusions"
+>;
 export type SourceStoreMapping =
   IntegrationConfiguration["storeMappings"][number];
 export type SourceExclusion = IntegrationConfiguration["exclusions"][number];
 export type IgnoredReviewIdentity =
   ReviewOperationsConfiguration["ignoredReviewIdentities"][number];
 export type ReportGroup = WeeklyReportConfiguration["groups"][number];
-
-export interface DraftState {
-  readonly configurations: Record<WorkflowType, WorkflowConfiguration>;
-  readonly integration: IntegrationConfiguration;
-}
 
 export function configurationFor(
   views: Readonly<Partial<Record<WorkflowType, WorkflowView>>>,
@@ -126,33 +131,66 @@ export function defaultIntegrationConfiguration(): IntegrationConfiguration {
   };
 }
 
-export function defaultDraftState(
-  views: Readonly<Partial<Record<WorkflowType, WorkflowView>>>,
-  integration: IntegrationConfiguration,
-): DraftState {
+export function workflowSourceProduct(
+  type: WorkflowType,
+): SourceProduct | null {
+  const products = {
+    "meituan-daily-ingestion": "meituan_erp",
+    "meituan-review-operations": "meituan_reviews",
+    "weekly-business-report": null,
+  } as const;
+  return products[type];
+}
+
+export function sourceSettingsFor(
+  configuration: IntegrationConfiguration,
+  product: SourceProduct,
+): SourceSettings {
   return {
-    configurations: {
-      "meituan-daily-ingestion": configurationFor(
-        views,
-        "meituan-daily-ingestion",
-      ),
-      "meituan-review-operations": configurationFor(
-        views,
-        "meituan-review-operations",
-      ),
-      "weekly-business-report": configurationFor(
-        views,
-        "weekly-business-report",
-      ),
-    },
-    integration,
+    sourceAccounts: configuration.sourceAccounts.filter(
+      (item) => item.product === product,
+    ),
+    storeMappings: configuration.storeMappings.filter(
+      (item) => item.source.product === product,
+    ),
+    exclusions: configuration.exclusions.filter(
+      (item) => item.source.product === product,
+    ),
   };
 }
 
-export function newSourceIdentity(reviews: boolean): SourceIdentity {
+export function replaceSourceSettings(
+  configuration: IntegrationConfiguration,
+  product: SourceProduct,
+  settings: SourceSettings,
+): IntegrationConfiguration {
   return {
-    product: reviews ? "meituan_reviews" : "meituan_erp",
-    channel: reviews ? "meituan" : "erp",
+    ...configuration,
+    sourceAccounts: [
+      ...configuration.sourceAccounts.filter(
+        (item) => item.product !== product,
+      ),
+      ...settings.sourceAccounts,
+    ],
+    storeMappings: [
+      ...configuration.storeMappings.filter(
+        (item) => item.source.product !== product,
+      ),
+      ...settings.storeMappings,
+    ],
+    exclusions: [
+      ...configuration.exclusions.filter(
+        (item) => item.source.product !== product,
+      ),
+      ...settings.exclusions,
+    ],
+  };
+}
+
+export function newSourceIdentity(product: SourceProduct): SourceIdentity {
+  return {
+    product,
+    channel: product === "meituan_reviews" ? "meituan" : "erp",
     accountRef: "",
     sourceStoreName: "",
   };
@@ -304,7 +342,6 @@ export interface AuthorizationDraft {
   readonly storeNames: readonly string[];
   readonly datasets: readonly Dataset[];
   readonly channels: readonly ReviewChannel[];
-  readonly purpose: EmailPurpose;
   readonly recipients: readonly string[];
   readonly allowedSender: string;
   readonly deliveryVersion: number;
@@ -327,6 +364,12 @@ export function authorizationActions(
   return ["download", "email"];
 }
 
+export function workflowEmailPurpose(type: WorkflowType): EmailPurpose | null {
+  if (type === "meituan-review-operations") return "review_drafts";
+  if (type === "weekly-business-report") return "weekly_report";
+  return null;
+}
+
 export function defaultAuthorizationDraft(
   type: WorkflowType,
 ): AuthorizationDraft {
@@ -335,8 +378,6 @@ export function defaultAuthorizationDraft(
     storeNames: [],
     datasets: [],
     channels: [],
-    purpose:
-      type === "meituan-review-operations" ? "review_drafts" : "weekly_report",
     recipients: [],
     allowedSender: "",
     deliveryVersion: 1,
@@ -402,9 +443,14 @@ export function hasAuthorizationErrors(
 }
 
 export function buildAuthorizationScope(
+  type: WorkflowType,
   draft: AuthorizationDraft,
 ): AuthorizationScope | null {
-  if (hasAuthorizationErrors(validateAuthorizationDraft(draft))) return null;
+  if (
+    !authorizationActions(type).includes(draft.kind) ||
+    hasAuthorizationErrors(validateAuthorizationDraft(draft))
+  )
+    return null;
 
   if (draft.kind === "upload") {
     return {
@@ -415,8 +461,8 @@ export function buildAuthorizationScope(
   }
   if (draft.kind === "download") {
     const datasets = draft.datasets.filter(
-      (dataset): dataset is Exclude<Dataset, "delivery_ledger"> =>
-        dataset !== "delivery_ledger",
+      (dataset): dataset is (typeof WEEKLY_DOWNLOAD_DATASETS)[number] =>
+        WEEKLY_DOWNLOAD_DATASETS.some((candidate) => candidate === dataset),
     );
     if (datasets.length === 0) return null;
     return { kind: "download", storeNames: [...draft.storeNames], datasets };
@@ -435,9 +481,11 @@ export function buildAuthorizationScope(
       channels: [...draft.channels],
     };
   }
+  const purpose = workflowEmailPurpose(type);
+  if (purpose === null) return null;
   return {
     kind: "email",
-    purpose: draft.purpose,
+    purpose,
     storeNames: [...draft.storeNames],
     recipients: [...draft.recipients],
     allowedSender: draft.allowedSender,

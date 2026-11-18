@@ -257,7 +257,7 @@ function ReviewFields({
         maximum={2000}
         disabled={disabled}
         create={() => ({
-          source: newSourceIdentity(true),
+          source: newSourceIdentity("meituan_reviews"),
           feedbackId: "",
           reason: "",
           purpose: "exclude_source_record" as const,
@@ -270,7 +270,6 @@ function ReviewFields({
             <SourceFields
               source={identity.source}
               accounts={accounts}
-              reviewsOnly
               disabled={disabled}
               onChange={(source) => replace({ ...identity, source })}
             />
