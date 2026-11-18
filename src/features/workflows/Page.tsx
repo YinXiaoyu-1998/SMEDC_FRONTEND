@@ -64,11 +64,16 @@ export function WorkflowsPage() {
   });
 
   const updateBundle = useCallback(
-    (next: WorkflowBundle) => {
+    (next: WorkflowBundle | ((current: WorkflowBundle) => WorkflowBundle)) => {
       if (enterpriseKey === undefined) return;
-      queryClient.setQueryData(
+      queryClient.setQueryData<WorkflowBundle>(
         workflowQueryKeys.bundle(orgId, enterpriseKey),
-        next,
+        (current) =>
+          typeof next === "function"
+            ? current === undefined
+              ? current
+              : next(current)
+            : next,
       );
     },
     [enterpriseKey, orgId, queryClient],

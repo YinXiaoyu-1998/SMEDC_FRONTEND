@@ -313,7 +313,7 @@ export function RecipientsField({
 }
 
 export interface MailFieldsProps {
-  readonly title: string;
+  readonly title?: string;
   readonly mail: MailConfiguration;
   readonly onChange: (next: MailConfiguration) => void;
   readonly errors: {
@@ -334,7 +334,9 @@ export function MailFields({
 
   return (
     <div className={styles.stack}>
-      <h3 className={styles.subheading}>{title}</h3>
+      {title === undefined ? null : (
+        <h3 className={styles.subheading}>{title}</h3>
+      )}
       <CheckboxField
         label={w("mailEnabled")}
         checked={mail.enabled}
