@@ -123,7 +123,7 @@ export function WorkflowEditDialog({
             )}
             {error instanceof WorkflowEditError ? (
               <p role="alert" className={styles.error}>
-                {w(error.message)}
+                {w(error.message)} {error.details}
               </p>
             ) : (
               <ErrorNotice error={error} />

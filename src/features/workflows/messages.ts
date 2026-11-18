@@ -95,6 +95,42 @@ export const workflowMessages = {
   reason: ["原因", "Reason"],
   add: ["添加", "Add"],
   remove: ["移除", "Remove"],
+  sourceAccountInUse: [
+    "此账号仍被引用。请先移除或修改下列引用。",
+    "This account is still in use. Remove or update the references below first.",
+  ],
+  sourceAccountUnavailable: [
+    "请选择一个已保存的来源账号。",
+    "Select a saved source account.",
+  ],
+  sourceLimitsReached: [
+    "来源设置已达到企业级配置上限。",
+    "Source settings exceed the enterprise-wide configuration limit.",
+  ],
+  authorizationScopeChanged: [
+    "当前任务允许的授权范围已变更，请按最新范围调整后再保存。",
+    "The allowed authorization scope changed. Update the draft to match the latest task settings.",
+  ],
+  recordSaveTaskFirst: [
+    "请先保存有效的任务设置。",
+    "Save valid task settings first.",
+  ],
+  recordLimit: [
+    "已达到此类记录的数量上限。",
+    "This record list has reached its limit.",
+  ],
+  reviewExclusionInvalid: [
+    "请填写精确的来源身份、评价编号和排除原因。",
+    "Enter the exact source identity, review number, and exclusion reason.",
+  ],
+  reviewExclusionAccountRequired: [
+    "请选择已保存的经营宝来源账号。",
+    "Choose a saved Business management source account.",
+  ],
+  reportGroupNoStores: [
+    "没有可加入新分组的处理门店。",
+    "No selected stores are available for a new group.",
+  ],
   recordEdit: ["编辑", "Edit"],
   recordSave: ["保存", "Save"],
   recordConfirmRemove: ["确认移除", "Confirm removal"],

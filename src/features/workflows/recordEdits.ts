@@ -27,7 +27,14 @@ export type SubmitWorkflowEdit = (
   edit: WorkflowEdit,
 ) => Promise<WorkflowEditResult>;
 
-export class WorkflowEditError extends Error {}
+export class WorkflowEditError extends Error {
+  readonly details?: string;
+
+  constructor(message: string, details?: string) {
+    super(message);
+    if (details !== undefined) this.details = details;
+  }
+}
 
 export function listWorkflowEdit<T>({
   operation,

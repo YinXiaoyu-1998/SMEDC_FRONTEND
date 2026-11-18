@@ -59,6 +59,7 @@ export interface WorkflowRecordListProps<T> {
   readonly canRemove?: (item: T) => boolean;
   readonly removeLabel?: string;
   readonly removeConfirmLabel?: string;
+  readonly removeHelp?: string;
   readonly disabled?: boolean;
 }
 
@@ -79,6 +80,7 @@ export function WorkflowRecordList<T>({
   canRemove,
   removeLabel,
   removeConfirmLabel,
+  removeHelp,
   disabled = false,
 }: WorkflowRecordListProps<T>) {
   const { w } = useWorkflowText();
@@ -182,6 +184,7 @@ export function WorkflowRecordList<T>({
               {details(operation.original)}
               <p>
                 {removeBlockedReason?.(operation.original) ??
+                  removeHelp ??
                   w("recordRemoveHelp")}
               </p>
             </div>
