@@ -15,10 +15,6 @@ export interface ControlSectionProps {
   readonly reason: string;
   readonly onReasonChange: (reason: string) => void;
   readonly showOrderScopeHelp: boolean;
-  readonly disabled: boolean;
-  readonly activeBusy: boolean;
-  readonly pauseBusy: boolean;
-  readonly revokeBusy: boolean;
   readonly onRequest: (state: ControlState) => void;
 }
 
@@ -27,10 +23,6 @@ export function ControlSection({
   reason,
   onReasonChange,
   showOrderScopeHelp,
-  disabled,
-  activeBusy,
-  pauseBusy,
-  revokeBusy,
   onRequest,
 }: ControlSectionProps) {
   const { w } = useWorkflowText();
@@ -51,25 +43,21 @@ export function ControlSection({
   const targets: readonly {
     readonly state: ControlState;
     readonly label: string;
-    readonly busy: boolean;
     readonly variant: "primary" | "secondary";
   }[] = [
     {
       state: "active",
       label: w("activate"),
-      busy: activeBusy,
       variant: "primary",
     },
     {
       state: "paused",
       label: w("pause"),
-      busy: pauseBusy,
       variant: "secondary",
     },
     {
       state: "revoked",
       label: w("revokeControl"),
-      busy: revokeBusy,
       variant: "secondary",
     },
   ];
@@ -92,7 +80,6 @@ export function ControlSection({
           rows={3}
           maxLength={2000}
           hint={reasonMissing ? w("reasonRequired") : w("reasonHint")}
-          disabled={disabled}
           onChange={onReasonChange}
         />
       </div>
@@ -112,8 +99,7 @@ export function ControlSection({
               label={target.label}
               variant={target.variant}
               className={target.state === "revoked" ? styles.danger : undefined}
-              busy={target.busy}
-              disabled={disabled || unavailable}
+              disabled={unavailable}
               {...(disabledReason === undefined
                 ? {}
                 : { disabledReason, title: disabledReason })}

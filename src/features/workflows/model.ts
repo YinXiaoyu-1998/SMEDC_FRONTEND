@@ -159,34 +159,6 @@ export function sourceSettingsFor(
   };
 }
 
-export function replaceSourceSettings(
-  configuration: IntegrationConfiguration,
-  product: SourceProduct,
-  settings: SourceSettings,
-): IntegrationConfiguration {
-  return {
-    ...configuration,
-    sourceAccounts: [
-      ...configuration.sourceAccounts.filter(
-        (item) => item.product !== product,
-      ),
-      ...settings.sourceAccounts,
-    ],
-    storeMappings: [
-      ...configuration.storeMappings.filter(
-        (item) => item.source.product !== product,
-      ),
-      ...settings.storeMappings,
-    ],
-    exclusions: [
-      ...configuration.exclusions.filter(
-        (item) => item.source.product !== product,
-      ),
-      ...settings.exclusions,
-    ],
-  };
-}
-
 export function newSourceIdentity(product: SourceProduct): SourceIdentity {
   return {
     product,
@@ -289,10 +261,10 @@ export function validateConfiguration(
     }
     validateMail(configuration.draftNotification, errors);
   } else {
-    const names = configuration.groups.map((group) => group.name.trim());
+    const names = configuration.groups.map((group) => group.name);
     const stores = configuration.groups.flatMap((group) => group.storeNames);
     if (
-      names.some((name) => name === "") ||
+      names.some((name) => name.trim() === "") ||
       new Set(names).size !== names.length ||
       configuration.groups.some((group) => group.storeNames.length === 0) ||
       stores.some((name) => !configuration.storeNames.includes(name)) ||

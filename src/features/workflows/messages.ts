@@ -95,7 +95,75 @@ export const workflowMessages = {
   reason: ["原因", "Reason"],
   add: ["添加", "Add"],
   remove: ["移除", "Remove"],
-  saveIntegration: ["保存来源设置", "Save source settings"],
+  sourceAccountInUse: [
+    "此账号仍被引用。请先移除或修改下列引用。",
+    "This account is still in use. Remove or update the references below first.",
+  ],
+  sourceAccountUnavailable: [
+    "请选择一个已保存的来源账号。",
+    "Select a saved source account.",
+  ],
+  sourceLimitsReached: [
+    "来源设置已达到企业级配置上限。",
+    "Source settings exceed the enterprise-wide configuration limit.",
+  ],
+  authorizationScopeChanged: [
+    "当前任务允许的授权范围已变更，请按最新范围调整后再保存。",
+    "The allowed authorization scope changed. Update the draft to match the latest task settings.",
+  ],
+  recordSaveTaskFirst: [
+    "请先保存有效的任务设置。",
+    "Save valid task settings first.",
+  ],
+  recordLimit: [
+    "已达到此类记录的数量上限。",
+    "This record list has reached its limit.",
+  ],
+  reviewExclusionInvalid: [
+    "请填写精确的来源身份、评价编号和排除原因。",
+    "Enter the exact source identity, review number, and exclusion reason.",
+  ],
+  reviewExclusionAccountRequired: [
+    "请选择已保存的经营宝来源账号。",
+    "Choose a saved Business management source account.",
+  ],
+  reportGroupNoStores: [
+    "没有可加入新分组的处理门店。",
+    "No selected stores are available for a new group.",
+  ],
+  dailySettingsScope: ["采集范围", "Ingestion scope"],
+  reviewSettingsScope: ["评价处理范围", "Review scope"],
+  weeklySettingsScope: ["周报范围", "Report scope"],
+  reviewReplySettings: ["回复规则", "Reply guidance"],
+  settingDisabled: ["已关闭", "Off"],
+  scopeGroupsInUse: [
+    "请先从这些分组移除将退出周报范围的门店。",
+    "Remove these stores from the affected groups before changing the report scope.",
+  ],
+  scopePublicationInUse: [
+    "请先从自动回复名单移除将退出评价范围的门店。",
+    "Remove these stores from automatic replies before changing the review scope.",
+  ],
+  recordEdit: ["编辑", "Edit"],
+  recordSave: ["保存", "Save"],
+  recordConfirmRemove: ["确认移除", "Confirm removal"],
+  recordRemoveHelp: [
+    "确认后将移除此条记录。",
+    "Confirm to remove this record.",
+  ],
+  recordBackToEdit: ["返回编辑", "Back to editing"],
+  recordMissing: [
+    "此条记录已被移除。请关闭弹窗后查看最新列表。",
+    "This record was removed. Close the dialog to see the latest list.",
+  ],
+  recordDuplicate: [
+    "已有相同的记录，请检查标识。",
+    "A record with this identity already exists.",
+  ],
+  recordImpactReview: [
+    "此变更影响任务执行。请核对影响范围后确认。",
+    "This change affects task execution. Review the impact before confirming.",
+  ],
   configuration: ["任务业务设置", "Task settings"],
   stores: ["处理门店", "Stores to process"],
   storesRequired: ["请至少选择一家处理门店。", "Select at least one store."],
@@ -173,7 +241,6 @@ export const workflowMessages = {
     "未启用邮件时，仍可在本机生成周报；仅保留最终报告。",
     "A local report can be generated without email; retain the final report only.",
   ],
-  saveConfiguration: ["保存任务设置", "Save task settings"],
   preview: ["核对本次变更", "Review this change"],
   before: ["变更前", "Before"],
   after: ["变更后", "After"],
@@ -320,10 +387,6 @@ export const workflowMessages = {
     "此页面不授予账号资料读取权限；权限设置仍需分别完成。",
     "This page does not grant account data access. Configure permissions separately.",
   ],
-  revokeSelection: [
-    "选择撤销此授权",
-    "Select this authorization for revocation",
-  ],
   sourceAccountHelp: [
     "账号标记只是来源的非秘密称呼，请勿填写密码、令牌或 Cookie。",
     "An account reference is a non-secret source label. Never enter passwords, tokens or cookies.",
@@ -345,7 +408,6 @@ export const workflowMessages = {
   xhigh: ["更高", "Extra high"],
   max: ["最高", "Maximum"],
   ultra: ["超高", "Ultra"],
-  previewGrant: ["新增授权", "Add authorization"],
 
   // 页面补充：加载、选择、校验与状态提示
   loadingFailed: ["读取失败，请重试。", "Could not load. Try again."],
@@ -369,10 +431,6 @@ export const workflowMessages = {
   scopeIncomplete: [
     "请选择门店以及数据或渠道范围。",
     "Select stores and a dataset or channel scope.",
-  ],
-  revokeRequired: [
-    "请至少勾选一条仍有效的授权。",
-    "Select at least one active authorization.",
   ],
   deliveryVersionInvalid: [
     "交付批次必须是大于等于 0 的整数。",

@@ -7,7 +7,6 @@ import type {
 } from "@/api/generated/contract";
 import {
   createWorkflowApi,
-  dailyConfiguration,
   dailyView,
   previewResponse,
   sampleAuthorizations,
@@ -43,18 +42,25 @@ function sectionByHeading(name: string): HTMLElement {
   return section;
 }
 
-function configurationSection(): HTMLElement {
-  return sectionByHeading("任务业务设置");
+const savedNotice = "已保存。配置保存不代表任务已安装或启用。";
+
+function prepareCalls(api: ReturnType<typeof createWorkflowApi>) {
+  return api.calls
+    .filter((call) =>
+      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
+    )
+    .map((call) => bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(call));
 }
 
-function configCheckbox(name: string): HTMLElement {
-  return within(configurationSection()).getByRole("checkbox", { name });
+function saveCalls(api: ReturnType<typeof createWorkflowApi>) {
+  return api.calls
+    .filter((call) => call.url.endsWith("/workflows/save_enterprise_workflow"))
+    .map((call) => bodyOf<WorkflowsSaveEnterpriseWorkflowBody>(call));
 }
 
-function configSaveButton(): HTMLElement {
-  return within(configurationSection()).getByRole("button", {
-    name: "保存任务设置",
-  });
+async function openIngestionScope() {
+  fireEvent.click(await screen.findByRole("button", { name: "编辑 采集范围" }));
+  return within(screen.getByRole("dialog", { name: "编辑 · 采集范围" }));
 }
 
 beforeEach(() => {
@@ -77,11 +83,18 @@ describe("自动任务页", () => {
     expect(
       screen.getByRole("button", { name: "每日数据采集入库" }),
     ).toHaveAttribute("aria-current", "page");
-    expect(configCheckbox("门店A")).toBeChecked();
+    expect(
+      within(sectionByHeading("采集范围")).getByText("门店A"),
+    ).toBeInTheDocument();
+    expect(
+      within(sectionByHeading("任务业务设置")).queryByRole("checkbox"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "指定电脑与最近状态" }),
     ).toBeInTheDocument();
-    expect(configSaveButton()).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "保存任务设置" }),
+    ).not.toBeInTheDocument();
 
     const listCall = api.calls.find((call) =>
       call.url.endsWith("/workflows/list_enterprise_workflows"),
@@ -144,256 +157,70 @@ describe("自动任务页", () => {
     ).toBeInTheDocument();
   });
 
-  it("门店选回原范围后保持保存置灰", async () => {
-    const api = createWorkflowApi({
-      views: [
-        dailyView({ configuration: dailyConfiguration(["门店A", "门店B"]) }),
-      ],
-    });
-    renderDeepLink(api);
-    await screen.findByRole("heading", { name: "任务业务设置" });
-
-    fireEvent.click(configCheckbox("门店A"));
-    expect(configSaveButton()).toBeEnabled();
-    fireEvent.click(configCheckbox("门店A"));
-    expect(configSaveButton()).toBeDisabled();
-  });
-
-  it("保存任务设置后保留来源的未提交草稿", async () => {
+  it("任务范围仅在弹窗修改和保存，取消及无改动不提交", async () => {
     const api = createWorkflowApi();
     renderDeepLink(api);
-    await screen.findByRole("heading", { name: "美团管家来源设置" });
-    const source = within(sectionByHeading("美团管家来源设置"));
-    fireEvent.click(source.getAllByRole("button", { name: "添加" })[0]!);
-    fireEvent.change(source.getByLabelText("账号显示名称"), {
-      target: { value: "未保存的来源" },
-    });
+    let editor = await openIngestionScope();
+    expect(editor.getByRole("button", { name: "保存" })).toBeDisabled();
+    fireEvent.click(editor.getByRole("checkbox", { name: "门店A" }));
+    expect(editor.getByText("请至少选择一家处理门店。")).toBeInTheDocument();
+    expect(editor.getByRole("button", { name: "保存" })).toBeDisabled();
+    fireEvent.click(editor.getByRole("checkbox", { name: "门店B" }));
+    fireEvent.click(editor.getByRole("button", { name: "取消" }));
+    expect(prepareCalls(api)).toHaveLength(0);
 
-    fireEvent.click(configCheckbox("门店B"));
-    fireEvent.click(configSaveButton());
-    await screen.findByRole("heading", { name: "核对本次变更" });
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-    await screen.findByText("已保存。配置保存不代表任务已安装或启用。");
-
-    expect(source.getByLabelText("账号显示名称")).toHaveValue("未保存的来源");
-    expect(configSaveButton()).toBeDisabled();
-  });
-
-  it("保存任务设置成功时走准备、确认与提交", async () => {
-    const api = createWorkflowApi();
-    renderDeepLink(api);
-
-    await screen.findByRole("heading", { name: "任务业务设置" });
-    const save = configSaveButton();
-
-    fireEvent.click(configCheckbox("门店B"));
-    await waitFor(() => expect(save).toBeEnabled());
-
-    fireEvent.click(save);
-    expect(
-      await screen.findByRole("heading", { name: "核对本次变更" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-
-    expect(
-      await screen.findByText("已保存。配置保存不代表任务已安装或启用。"),
-    ).toBeInTheDocument();
-
-    const prepareCall = api.calls.find((call) =>
-      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
-    );
-    expect(prepareCall).toBeDefined();
-    if (prepareCall === undefined) return;
-    const prepareBody =
-      bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(prepareCall);
-    expect(prepareBody).toMatchObject({
-      enterpriseKey: "enterprise-1",
-      workflowType: "meituan-daily-ingestion",
-      expectedVersion: 2,
-      expectedIntegrationVersion: 3,
-      expectedControlVersion: 1,
-    });
-    expect(prepareBody.change).toMatchObject({
-      kind: "configuration",
-      configuration: { storeNames: ["门店A", "门店B"] },
-    });
-
-    const saveCall = api.calls.find((call) =>
-      call.url.endsWith("/workflows/save_enterprise_workflow"),
-    );
-    expect(saveCall).toBeDefined();
-    if (saveCall === undefined) return;
-    expect(bodyOf<WorkflowsSaveEnterpriseWorkflowBody>(saveCall)).toMatchObject(
+    editor = await openIngestionScope();
+    expect(editor.getByRole("checkbox", { name: "门店A" })).toBeChecked();
+    expect(editor.getByRole("checkbox", { name: "门店B" })).not.toBeChecked();
+    fireEvent.click(editor.getByRole("checkbox", { name: "门店B" }));
+    fireEvent.click(editor.getByRole("button", { name: "保存" }));
+    await screen.findByText(savedNotice);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(prepareCalls(api)).toMatchObject([
       {
-        previewId: "preview-1",
-        confirmationDigest: "a".repeat(64),
+        expectedVersion: 2,
+        change: {
+          kind: "configuration",
+          configuration: {
+            storeNames: ["门店A", "门店B"],
+            datasets: ["business"],
+          },
+        },
       },
-    );
-
-    await waitFor(() => expect(configSaveButton()).toBeDisabled());
-    expect(configCheckbox("门店B")).toBeChecked();
+    ]);
+    expect(saveCalls(api)).toMatchObject([
+      { previewId: "preview-1", expectedVersion: 2 },
+    ]);
   });
 
-  it("版本冲突时保留草稿并可用服务端最新值恢复", async () => {
+  it("准备期间防止重复提交，保存失败时保留表单填写值", async () => {
+    let release: (() => void) | undefined;
     const api = createWorkflowApi({
+      prepare: (request) =>
+        new Promise((resolve) => {
+          release = () => resolve(previewResponse(request));
+        }),
       save: () =>
         jsonResponse(
-          {
-            error: {
-              code: "WORKFLOW_VERSION_CONFLICT",
-              message: "conflict",
-            },
-          },
-          409,
+          { error: { code: "INTERNAL_ERROR", message: "server error" } },
+          500,
         ),
     });
     renderDeepLink(api);
-
-    await screen.findByRole("heading", { name: "任务业务设置" });
-    const save = configSaveButton();
-    fireEvent.click(configCheckbox("门店B"));
-    await waitFor(() => expect(save).toBeEnabled());
+    const editor = await openIngestionScope();
+    fireEvent.click(editor.getByRole("checkbox", { name: "门店B" }));
+    const save = editor.getByRole("button", { name: "保存" });
     fireEvent.click(save);
-    await screen.findByRole("heading", { name: "核对本次变更" });
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-
-    // 服务端在这期间被其他人改成了版本 3
-    api.state.views = [
-      dailyView({ version: 3, configuration: dailyConfiguration(["门店A"]) }),
-    ];
-
-    expect(
-      await screen.findByRole("heading", { name: "版本冲突" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "配置已被其他操作更改。草稿已保留；请比较最新配置后重新确认。",
-      ),
-    ).toBeInTheDocument();
-    expect(configCheckbox("门店B")).toBeChecked();
-
-    fireEvent.click(screen.getByRole("button", { name: "重新加载" }));
-
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("heading", { name: "版本冲突" }),
-      ).not.toBeInTheDocument(),
-    );
-    expect(configCheckbox("门店A")).toBeChecked();
-    expect(configCheckbox("门店B")).not.toBeChecked();
-  });
-
-  it("版本冲突后可用草稿重新准备并提交", async () => {
-    let attempts = 0;
-    const api = createWorkflowApi({
-      save: () => {
-        attempts += 1;
-        if (attempts === 1) {
-          return jsonResponse(
-            {
-              error: {
-                code: "WORKFLOW_VERSION_CONFLICT",
-                message: "conflict",
-              },
-            },
-            409,
-          );
-        }
-        return undefined;
-      },
-    });
-    renderDeepLink(api);
-
-    await screen.findByRole("heading", { name: "任务业务设置" });
-    const save = configSaveButton();
-    fireEvent.click(configCheckbox("门店B"));
-    await waitFor(() => expect(save).toBeEnabled());
     fireEvent.click(save);
-    await screen.findByRole("heading", { name: "核对本次变更" });
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-
-    api.state.views = [
-      dailyView({ version: 3, configuration: dailyConfiguration(["门店A"]) }),
-    ];
-    await screen.findByRole("heading", { name: "版本冲突" });
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "用我的改动重新提交",
-      }),
-    );
-
-    await screen.findByRole("heading", { name: "核对本次变更" });
-    const prepareCalls = api.calls.filter((call) =>
-      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
-    );
-    expect(prepareCalls).toHaveLength(2);
-    const retry = prepareCalls[1];
-    if (retry === undefined) return;
-    expect(
-      bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(retry),
-    ).toMatchObject({
-      expectedVersion: 3,
-      expectedControlVersion: 1,
-      change: {
-        kind: "configuration",
-        configuration: { storeNames: ["门店A", "门店B"] },
-      },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-    expect(
-      await screen.findByText("已保存。配置保存不代表任务已安装或启用。"),
-    ).toBeInTheDocument();
-
-    const saveCalls = api.calls.filter((call) =>
-      call.url.endsWith("/workflows/save_enterprise_workflow"),
-    );
-    const finalSave = saveCalls[1];
-    if (finalSave === undefined) return;
-    expect(
-      bodyOf<WorkflowsSaveEnterpriseWorkflowBody>(finalSave),
-    ).toMatchObject({
-      expectedVersion: 3,
-    });
-  });
-
-  it("必填校验失败时置灰保存按钮并给出字段错误，提交期间保持忙碌", async () => {
-    let release: (() => void) | null = null;
-    const api = createWorkflowApi({
-      prepare: (request) =>
-        new Promise<Response>((resolve) => {
-          release = () => resolve(previewResponse(request));
-        }),
-    });
-    renderDeepLink(api);
-
-    await screen.findByRole("heading", { name: "任务业务设置" });
-    const save = configSaveButton();
-
-    fireEvent.click(configCheckbox("门店A"));
-    await waitFor(() =>
-      expect(
-        within(configurationSection()).getByRole("alert"),
-      ).toHaveTextContent("请至少选择一家处理门店。"),
-    );
     expect(save).toBeDisabled();
+    expect(prepareCalls(api)).toHaveLength(1);
+    release!();
 
-    fireEvent.click(configCheckbox("门店A"));
-    fireEvent.click(configCheckbox("门店B"));
-    await waitFor(() => expect(save).toBeEnabled());
-    fireEvent.click(save);
-
-    await waitFor(() => expect(save).toHaveAttribute("aria-busy", "true"));
-    expect(save).toBeDisabled();
-
-    expect(release).not.toBeNull();
-    const resume = release as (() => void) | null;
-    if (resume !== null) resume();
-    expect(
-      await screen.findByRole("heading", { name: "核对本次变更" }),
-    ).toBeInTheDocument();
+    expect(await editor.findByRole("alert")).toHaveTextContent(
+      "服务器暂时无法处理该操作",
+    );
+    expect(editor.getByRole("checkbox", { name: "门店B" })).toBeChecked();
+    expect(save).toBeEnabled();
   });
 
   it("切换英文后使用英文文案而业务名称保持原样", async () => {
@@ -410,7 +237,7 @@ describe("自动任务页", () => {
       screen.getByRole("button", { name: "Daily data ingestion" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Save task settings" }),
+      screen.getByRole("button", { name: "Edit Ingestion scope" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "示例企业" }),
@@ -445,60 +272,181 @@ describe("自动任务页", () => {
     expect(bodyOf<{ limit: number }>(first)).toMatchObject({ limit: 1 });
   });
 
-  it("来源设置可编辑并通过准备-确认保存", async () => {
-    const api = createWorkflowApi();
+  it("来源账号在弹窗内直接新增，收起后显示完整字段", async () => {
+    const api = createWorkflowApi({ views: viewsWithSources() });
     renderDeepLink(api);
-
-    await screen.findByRole("heading", { name: "美团管家来源设置" });
-    const section = sectionByHeading("美团管家来源设置");
-    const add = within(section).getAllByRole("button", { name: "添加" });
-    const firstAdd = add[0];
-    if (firstAdd === undefined) throw new Error("缺少来源账号添加按钮");
-    fireEvent.click(firstAdd);
-
-    fireEvent.change(
-      within(section).getByLabelText("账号标记（用于区分来源账号）"),
-      { target: { value: "erp-main" } },
-    );
-    fireEvent.change(within(section).getByLabelText("账号显示名称"), {
-      target: { value: "美团管家主账号" },
-    });
-    fireEvent.change(within(section).getByLabelText("来源企业名称"), {
-      target: { value: "示例企业" },
-    });
-
-    const save = within(section).getByRole("button", {
-      name: "保存来源设置",
-    });
-    await waitFor(() => expect(save).toBeEnabled());
-    fireEvent.click(save);
-
-    await screen.findByRole("heading", { name: "核对本次变更" });
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-    await screen.findByText("已保存。配置保存不代表任务已安装或启用。");
-
-    const prepareCall = api.calls.find((call) =>
-      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
-    );
-    if (prepareCall === undefined) return;
     expect(
-      bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(prepareCall).change,
-    ).toMatchObject({
+      await screen.findByRole("heading", { name: "美团管家来源设置" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "保存来源设置" }),
+    ).not.toBeInTheDocument();
+    const accounts = within(sectionByHeading("来源账号"));
+    expect(accounts.getByText("erp-main")).toBeInTheDocument();
+    expect(accounts.queryByRole("textbox")).not.toBeInTheDocument();
+    fireEvent.click(accounts.getByRole("button", { name: "添加" }));
+
+    const editor = within(screen.getByRole("dialog"));
+    for (const [label, value] of [
+      ["账号标记（用于区分来源账号）", "erp-east"],
+      ["账号显示名称", "华东管家账号"],
+      ["来源企业名称", "华东企业"],
+      ["来源集团名称（可选）", "集团名称"],
+    ] as const) {
+      fireEvent.change(editor.getByRole("textbox", { name: label }), {
+        target: { value },
+      });
+    }
+    fireEvent.click(editor.getByRole("button", { name: "保存" }));
+    await screen.findByText(savedNotice);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const row = within(
+      accounts
+        .getByRole("button", { name: /编辑 华东管家账号/ })
+        .closest("li")!,
+    );
+    for (const value of [
+      "美团管家",
+      "erp-east",
+      "华东管家账号",
+      "华东企业",
+      "集团名称",
+    ]) {
+      expect(row.getByText(value)).toBeInTheDocument();
+    }
+    expect(row.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(prepareCalls(api)[0]?.change).toMatchObject({
       kind: "integration",
       configuration: {
-        sourceAccounts: [
-          {
-            product: "meituan_erp",
-            accountRef: "erp-main",
-            displayName: "美团管家主账号",
-            sourceEnterpriseName: "示例企业",
-          },
-        ],
+        sourceAccounts: expect.arrayContaining([
+          expect.objectContaining({ accountRef: "erp-main" }),
+          expect.objectContaining({ accountRef: "erp-east" }),
+          expect.objectContaining({ accountRef: "reviews-main" }),
+        ]),
       },
     });
+    expect(saveCalls(api)).toHaveLength(1);
   });
 
-  it("按任务显示来源设置并通过 URL 恢复周报标签页", async () => {
+  it.each(["prepare", "save"] as const)(
+    "来源保存冲突（%s）按条重试并保留其他人的记录",
+    async (conflictAt) => {
+      const views = viewsWithSources();
+      const initial = views[0]!.integration;
+      const latest = {
+        ...initial,
+        version: initial.version + 1,
+        configuration: {
+          ...initial.configuration,
+          sourceAccounts: initial.configuration.sourceAccounts
+            .map((account) => ({
+              ...account,
+              displayName:
+                account.product === "meituan_erp"
+                  ? "同一账号的服务端新值"
+                  : "经营宝的新值",
+            }))
+            .concat({
+              product: "meituan_erp",
+              accountRef: "another-erp",
+              displayName: "另一个管理员新增",
+              sourceEnterpriseName: "示例企业",
+            }),
+        },
+      };
+      const conflict = () => {
+        api.state.views = views.map((view) => ({
+          ...view,
+          integration: latest,
+        }));
+        return jsonResponse(
+          { error: { code: "WORKFLOW_VERSION_CONFLICT", message: "conflict" } },
+          409,
+        );
+      };
+      const api = createWorkflowApi({
+        views,
+        prepare: (body) =>
+          body.expectedIntegrationVersion === initial.version &&
+          conflictAt === "prepare"
+            ? conflict()
+            : undefined,
+        save: (body) =>
+          body.expectedIntegrationVersion === initial.version &&
+          conflictAt === "save"
+            ? conflict()
+            : undefined,
+      });
+      renderDeepLink(api);
+      fireEvent.click(
+        await screen.findByRole("button", { name: "编辑 管家账号 / erp-main" }),
+      );
+      const editor = within(screen.getByRole("dialog"));
+      fireEvent.change(editor.getByRole("textbox", { name: "账号显示名称" }), {
+        target: { value: "本地修改" },
+      });
+      fireEvent.click(editor.getByRole("button", { name: "保存" }));
+
+      expect(
+        await editor.findByText("同一账号的服务端新值"),
+      ).toBeInTheDocument();
+      expect(editor.getByText("本地修改")).toBeInTheDocument();
+      expect(prepareCalls(api)).toHaveLength(1);
+      expect(saveCalls(api)).toHaveLength(conflictAt === "prepare" ? 0 : 1);
+      fireEvent.click(editor.getByRole("button", { name: "确认本次变更" }));
+      await screen.findByText(savedNotice);
+
+      const retry = prepareCalls(api).at(-1)!;
+      expect(retry.expectedIntegrationVersion).toBe(latest.version);
+      expect(retry.change).toEqual({
+        kind: "integration",
+        configuration: {
+          ...latest.configuration,
+          sourceAccounts: latest.configuration.sourceAccounts.map((account) =>
+            account.accountRef === "erp-main"
+              ? { ...account, displayName: "本地修改" }
+              : account,
+          ),
+        },
+      });
+    },
+  );
+
+  it("移除来源对应先确认目标，受影响任务在同一弹窗核对", async () => {
+    const api = createWorkflowApi({
+      views: viewsWithSources(),
+      prepare: (request) =>
+        previewResponse(request, [
+          { workflowType: "meituan-daily-ingestion", storeNames: ["门店A"] },
+        ]),
+    });
+    renderDeepLink(api);
+    const remove = await screen.findByRole("button", {
+      name: /移除 管家来源门店 \/ 美团管家/,
+    });
+    fireEvent.click(remove);
+    let editor = within(screen.getByRole("dialog"));
+    expect(editor.getByText("管家来源门店")).toBeInTheDocument();
+    fireEvent.click(editor.getByRole("button", { name: "取消" }));
+    expect(prepareCalls(api)).toHaveLength(0);
+    fireEvent.click(remove);
+
+    editor = within(screen.getByRole("dialog"));
+    fireEvent.click(editor.getByRole("button", { name: "确认移除" }));
+    await editor.findByText("变更影响");
+    expect(saveCalls(api)).toHaveLength(0);
+    fireEvent.click(editor.getByRole("button", { name: "确认本次变更" }));
+    await screen.findByText(savedNotice);
+    expect(
+      screen.queryByText("管家来源门店", { exact: true }),
+    ).not.toBeInTheDocument();
+    const integration = api.state.views[0]!.integration.configuration;
+    expect(
+      integration.storeMappings.map((mapping) => mapping.source.product),
+    ).toEqual(["meituan_reviews"]);
+  });
+
+  it("浏览器刷新恢复周报标签页，保留任务专属信息和授权范围", async () => {
     const api = createWorkflowApi({ views: viewsWithSources() });
     const { router, unmount } = renderDeepLink(api);
     await screen.findByRole("heading", { name: "美团管家来源设置" });
@@ -506,24 +454,14 @@ describe("自动任务页", () => {
     expect(
       screen.queryByRole("button", { name: "读取最新状态" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "账号显示名称" })).toHaveValue(
-      "管家账号",
-    );
-    expect(screen.queryByDisplayValue("经营宝账号")).not.toBeInTheDocument();
-
     fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
-    const reviewSource = within(sectionByHeading("经营宝来源设置"));
     expect(
-      reviewSource.getByRole("textbox", { name: "账号显示名称" }),
-    ).toHaveValue("经营宝账号");
+      within(sectionByHeading("经营宝来源设置")).getByText("点评来源门店"),
+    ).toBeInTheDocument();
     expect(
-      reviewSource.queryByRole("option", { name: "管家账号" }),
+      screen.queryByText("管家来源门店", { exact: true }),
     ).not.toBeInTheDocument();
-    expect(reviewSource.getByDisplayValue("点评来源门店")).toBeInTheDocument();
-    expect(
-      reviewSource.getAllByRole("combobox", { name: "来源渠道" })[0],
-    ).toHaveValue("dianping");
-    expect(screen.queryByDisplayValue("管家来源门店")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "自然周经营周报" }));
     const { pathname, search } = router.state.location;
     expect(search).toBe("?task=weekly-business-report");
@@ -535,171 +473,58 @@ describe("自动任务页", () => {
       screen.getByRole("button", { name: "自然周经营周报" }),
     ).toHaveAttribute("aria-current", "page");
     expect(
-      screen.queryByRole("button", { name: "保存来源设置" }),
+      screen.queryByRole("heading", { name: /来源设置/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "周报邮件交付" }),
     ).toBeInTheDocument();
-    const download = within(sectionByHeading("持续授权"));
+    fireEvent.click(
+      within(sectionByHeading("授权记录")).getByRole("button", {
+        name: "添加",
+      }),
+    );
+    const authorization = within(screen.getByRole("dialog"));
     expect(
-      download.getByRole("checkbox", { name: "店内订单明细" }),
+      authorization.getByRole("checkbox", { name: "店内订单明细" }),
     ).toBeInTheDocument();
     expect(
-      download.queryByRole("checkbox", { name: "平台外卖订单明细" }),
+      authorization.queryByRole("checkbox", { name: "平台外卖订单明细" }),
     ).not.toBeInTheDocument();
   });
 
-  it("来源保存冲突重试保留另一来源的服务端新值和本地草稿", async () => {
-    const views = viewsWithSources();
-    const initial = views[0]!.integration;
-    const remote = {
-      ...initial,
-      version: initial.version + 1,
-      configuration: {
-        ...initial.configuration,
-        sourceAccounts: initial.configuration.sourceAccounts.map((account) =>
-          account.product === "meituan_reviews"
-            ? { ...account, displayName: "经营宝远程改名" }
-            : account,
-        ),
-        storeMappings: initial.configuration.storeMappings.map((mapping) =>
-          mapping.source.product === "meituan_reviews"
-            ? { ...mapping, storeName: "门店B" }
-            : mapping,
-        ),
-        exclusions: initial.configuration.exclusions.map((exclusion) =>
-          exclusion.source.product === "meituan_reviews"
-            ? { ...exclusion, reason: "远程排除原因" }
-            : exclusion,
-        ),
-      },
-    };
-    const api = createWorkflowApi({
-      views,
-      prepare: (body) =>
-        body.expectedIntegrationVersion !==
-        api.state.views[0]!.integration.version
-          ? jsonResponse(
-              {
-                error: {
-                  code: "WORKFLOW_VERSION_CONFLICT",
-                  message: "conflict",
-                },
-              },
-              409,
-            )
-          : undefined,
-    });
-    renderDeepLink(api);
-    await screen.findByRole("heading", { name: "美团管家来源设置" });
-    fireEvent.change(screen.getByRole("textbox", { name: "账号显示名称" }), {
-      target: { value: "管家本地改名" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "账号显示名称" }), {
-      target: { value: "经营宝本地草稿" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "每日数据采集入库" }));
-
-    fireEvent.click(screen.getByRole("button", { name: "保存来源设置" }));
-    const preview = await screen.findByRole("dialog");
-    expect(
-      within(preview).queryByText("经营宝本地草稿"),
-    ).not.toBeInTheDocument();
-    fireEvent.click(within(preview).getByRole("button", { name: "取消" }));
-
-    api.state.views = views.map((view) => ({ ...view, integration: remote }));
-    fireEvent.click(screen.getByRole("button", { name: "保存来源设置" }));
-    await screen.findByRole("heading", { name: "版本冲突" });
-    fireEvent.click(screen.getByRole("button", { name: "用我的改动重新提交" }));
-    await screen.findByRole("heading", { name: "核对本次变更" });
-
-    const prepares = api.calls
-      .filter((call) =>
-        call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
-      )
-      .map((call) =>
-        bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(call),
-      );
-    expect(prepares[0]).toMatchObject({
-      expectedIntegrationVersion: initial.version,
-      change: {
+  it("缩小周报范围时指出依赖的分组并阻止整条设置提交", async () => {
+    const views = viewsWithSources().map((view) => {
+      const configuration = view.configuration;
+      if (configuration?.type !== "weekly-business-report") return view;
+      return {
+        ...view,
         configuration: {
-          sourceAccounts: expect.arrayContaining([
-            expect.objectContaining({ displayName: "经营宝账号" }),
-          ]),
+          ...configuration,
+          storeNames: ["门店A", "门店B"],
+          groups: [{ name: "东区", storeNames: ["门店A", "门店B"] }],
         },
-      },
+      };
     });
-    const retry = prepares.at(-1)!;
-    expect(retry.expectedIntegrationVersion).toBe(remote.version);
-    expect(retry.change).toEqual({
-      kind: "integration",
-      configuration: {
-        ...remote.configuration,
-        sourceAccounts: expect.arrayContaining(
-          remote.configuration.sourceAccounts.map((account) =>
-            account.product === "meituan_erp"
-              ? { ...account, displayName: "管家本地改名" }
-              : account,
-          ),
-        ),
-        storeMappings: expect.arrayContaining(
-          remote.configuration.storeMappings,
-        ),
-        exclusions: expect.arrayContaining(remote.configuration.exclusions),
-      },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-    await screen.findByText("已保存。配置保存不代表任务已安装或启用。");
-    fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
-    expect(screen.getByRole("textbox", { name: "账号显示名称" })).toHaveValue(
-      "经营宝本地草稿",
-    );
-    expect(screen.getByRole("button", { name: "保存来源设置" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "每日数据采集入库" }));
-    expect(screen.getByRole("textbox", { name: "账号显示名称" })).toHaveValue(
-      "管家本地改名",
-    );
-    expect(screen.getByRole("button", { name: "保存来源设置" })).toBeDisabled();
-  });
-
-  it.each([
-    ["评价处理", "评价新稿通知", "周报交付", "review_drafts"],
-    ["自然周经营周报", "周报交付", "评价新稿通知", "weekly_report"],
-  ])("%s按实际任务生成邮件授权", async (task, label, otherLabel, purpose) => {
-    const api = createWorkflowApi({ views: viewsWithSources() });
+    const api = createWorkflowApi({ views });
     renderDeepLink(api);
-    await screen.findByRole("heading", { name: "任务业务设置" });
-    fireEvent.click(screen.getByRole("button", { name: task }));
-    const authorization = within(sectionByHeading("持续授权"));
-    fireEvent.change(authorization.getByLabelText("授权动作"), {
-      target: { value: "email" },
-    });
-    expect(authorization.getByText(label)).toBeInTheDocument();
-    expect(authorization.queryByText(otherLabel)).not.toBeInTheDocument();
-    expect(authorization.queryByText("异常通知")).not.toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "自然周经营周报" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "编辑 周报范围" }));
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.click(dialog.getByRole("checkbox", { name: "门店B" }));
+    expect(dialog.getByText(/请先从这些分组移除.*东区/)).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "保存" })).toBeDisabled();
+    expect(prepareCalls(api)).toHaveLength(0);
 
-    fireEvent.click(authorization.getByRole("checkbox", { name: "门店A" }));
-    fireEvent.change(authorization.getByLabelText("收件人（每行一个）"), {
-      target: { value: "boss@example.com" },
-    });
-    fireEvent.change(authorization.getByLabelText("允许的发件邮箱"), {
-      target: { value: "robot@example.com" },
-    });
-    fireEvent.click(authorization.getByRole("button", { name: "新增授权" }));
-    await screen.findByRole("heading", { name: "核对本次变更" });
-
-    const prepare = api.calls.find((call) =>
-      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
-    )!;
+    fireEvent.click(dialog.getByRole("button", { name: "取消" }));
+    fireEvent.click(screen.getByRole("button", { name: "评价处理" }));
     expect(
-      bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(prepare).change,
-    ).toMatchObject({
-      kind: "authorization",
-      grant: [{ kind: "email", purpose }],
-    });
+      screen.queryByRole("heading", { name: "可选门店分组" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { name: "任务业务设置" }),
+    ).toHaveLength(1);
   });
 
   it("执行控制在缺少原因或状态未变化时置灰，填写原因后可提交", async () => {
@@ -741,40 +566,31 @@ describe("自动任务页", () => {
     });
   });
 
-  it("持续授权只允许撤销仍有效的授权", async () => {
+  it("持续授权逐条确认撤销，已撤销授权保持只读", async () => {
     const api = createWorkflowApi({
       views: [dailyView({ authorizations: sampleAuthorizations() })],
     });
     renderDeepLink(api);
-
-    await screen.findByRole("heading", { name: "任务业务设置" });
-    const revoke = screen.getByRole("button", {
-      name: "撤销选中授权",
+    const revoke = await screen.findByRole("button", {
+      name: "撤销授权 下载经营数据 auth-1",
     });
-    expect(revoke).toBeDisabled();
-
-    const checkbox = screen.getByRole("checkbox", {
-      name: /选择撤销此授权 下载经营数据 auth-1/,
-    });
-    fireEvent.click(checkbox);
-    await waitFor(() => expect(revoke).toBeEnabled());
-    fireEvent.click(revoke);
-
-    await screen.findByRole("heading", { name: "核对本次变更" });
-    fireEvent.click(screen.getByRole("button", { name: "确认本次变更" }));
-    await screen.findByText("已保存。配置保存不代表任务已安装或启用。");
-
-    const prepareCall = api.calls.find((call) =>
-      call.url.endsWith("/workflows/prepare_enterprise_workflow_change"),
-    );
-    if (prepareCall === undefined) return;
     expect(
-      bodyOf<WorkflowsPrepareEnterpriseWorkflowChangeBody>(prepareCall).change,
-    ).toMatchObject({
+      screen.queryByRole("button", { name: /撤销授权 .*auth-2/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(revoke);
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("auth-1")).toBeInTheDocument();
+    expect(saveCalls(api)).toHaveLength(0);
+    fireEvent.click(dialog.getByRole("button", { name: "确认撤销" }));
+    await screen.findByText(savedNotice);
+
+    expect(prepareCalls(api)[0]?.change).toEqual({
       kind: "authorization",
       grant: [],
       revokeAuthorizationIds: ["auth-1"],
     });
-    await waitFor(() => expect(revoke).toBeDisabled());
+    expect(
+      screen.queryByRole("button", { name: /撤销授权 .*auth-1/ }),
+    ).not.toBeInTheDocument();
   });
 });

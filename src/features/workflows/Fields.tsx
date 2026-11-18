@@ -1,8 +1,5 @@
 import { useId, useState } from "react";
-import type { ReactNode } from "react";
 
-import { AdminIcon } from "@/ui/AdminIcon";
-import { ActionButton } from "@/ui/ActionButton";
 import { Field } from "@/ui/Field";
 import type {
   MailConfiguration,
@@ -313,7 +310,6 @@ export function RecipientsField({
 }
 
 export interface MailFieldsProps {
-  readonly title: string;
   readonly mail: MailConfiguration;
   readonly onChange: (next: MailConfiguration) => void;
   readonly errors: {
@@ -324,7 +320,6 @@ export interface MailFieldsProps {
 }
 
 export function MailFields({
-  title,
   mail,
   onChange,
   errors,
@@ -334,7 +329,6 @@ export function MailFields({
 
   return (
     <div className={styles.stack}>
-      <h3 className={styles.subheading}>{title}</h3>
       <CheckboxField
         label={w("mailEnabled")}
         checked={mail.enabled}
@@ -357,67 +351,6 @@ export function MailFields({
           onChange(withMail(mail, { allowedSender }))
         }
       />
-    </div>
-  );
-}
-
-export interface EditableListProps<Item> {
-  readonly title: string;
-  readonly items: readonly Item[];
-  readonly maximum: number;
-  readonly disabled?: boolean | undefined;
-  readonly create: () => Item;
-  readonly onChange: (items: Item[]) => void;
-  readonly renderItem: (item: Item, update: (next: Item) => void) => ReactNode;
-}
-
-export function EditableList<Item>({
-  title,
-  items,
-  maximum,
-  disabled = false,
-  create,
-  onChange,
-  renderItem,
-}: EditableListProps<Item>) {
-  const { w } = useWorkflowText();
-
-  return (
-    <div className={styles.stack}>
-      <div className={styles.listHeading}>
-        <h3 className={styles.subheading}>{title}</h3>
-        <ActionButton
-          label={w("add")}
-          icon={<AdminIcon name="plus" />}
-          variant="secondary"
-          disabled={disabled || items.length >= maximum}
-          onRun={() => onChange([...items, create()])}
-        />
-      </div>
-      {items.map((item, index) => (
-        <div className={styles.subpanel} key={index}>
-          {renderItem(item, (next) =>
-            onChange(
-              items.map((current, position) =>
-                position === index ? next : current,
-              ),
-            ),
-          )}
-          <div className={styles.actionsRow}>
-            <ActionButton
-              label={w("remove")}
-              variant="ghost"
-              className={styles.removeAction}
-              disabled={disabled}
-              onRun={() =>
-                onChange(
-                  items.filter((_current, position) => position !== index),
-                )
-              }
-            />
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
