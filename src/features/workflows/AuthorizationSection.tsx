@@ -11,7 +11,6 @@ import {
   authorizationRecord,
   authorizationRecordEdit,
   authorizationScopeAllowed,
-  maximumDeliveryVersion,
   reviewChannels,
   type AuthorizationRecord,
 } from "@/features/workflows/authorizationEdits";
@@ -54,8 +53,6 @@ const messages = {
   grantedBy: ["授权人", "Granted by"],
   grantorNameUnavailable: ["姓名不可用", "Name unavailable"],
   authorizationId: ["授权编号", "Authorization ID"],
-  configurationVersion: ["授权时的配置版本", "Configuration version at grant"],
-  controlVersion: ["授权时的控制版本", "Control version at grant"],
   storeScope: ["授权门店", "Authorized stores"],
   datasetScope: ["授权数据", "Authorized datasets"],
   channelScope: ["授权渠道", "Authorized channels"],
@@ -67,10 +64,6 @@ const messages = {
   invalidFields: [
     "请检查邮件授权字段。",
     "Check the email authorization fields.",
-  ],
-  deliveryVersionRange: [
-    "交付批次必须是 0 至 4294967295 之间的整数。",
-    "Delivery revision must be an integer between 0 and 4294967295.",
   ],
 } satisfies TextDictionary;
 
@@ -142,10 +135,7 @@ export function AuthorizationSection({
           if (errors.scope !== undefined) return w(errors.scope);
           if (
             errors.recipients !== undefined ||
-            errors.allowedSender !== undefined ||
-            errors.deliveryVersion !== undefined ||
-            (record.draft.kind === "email" &&
-              record.draft.deliveryVersion > maximumDeliveryVersion)
+            errors.allowedSender !== undefined
           ) {
             return text("invalidFields");
           }
@@ -185,12 +175,6 @@ function AuthorizationDetails({
   };
   const fields = [
     { label: w("action"), value: w(scope.kind) },
-    {
-      label: text("status"),
-      value: w(
-        revokedAt === null ? "authorizationGranted" : "authorizationRevoked",
-      ),
-    },
     { label: text("storeScope"), value: scope.storeNames.join("\n") },
   ];
   if ("datasets" in scope) {
@@ -208,7 +192,6 @@ function AuthorizationDetails({
       { label: w("purpose"), value: w(scope.purpose) },
       { label: w("recipients"), value: scope.recipients.join("\n") },
       { label: w("allowedSender"), value: scope.allowedSender },
-      { label: w("deliveryVersion"), value: String(scope.deliveryVersion) },
     );
   }
   fields.push(
@@ -216,21 +199,14 @@ function AuthorizationDetails({
       label: text("grantedBy"),
       value: grantorName?.trim() ? grantorName : text("grantorNameUnavailable"),
     },
-    { label: w("grantedAt"), value: formatDate(authorization.grantedAt) },
-  );
-  if (revokedAt !== null)
-    fields.push({ label: w("revokedAt"), value: formatDate(revokedAt) });
-  fields.push(
     { label: text("authorizationId"), value: authorization.authorizationId },
-    {
-      label: text("configurationVersion"),
-      value: String(authorization.configurationVersion),
-    },
-    {
-      label: text("controlVersion"),
-      value: String(authorization.controlVersion),
-    },
   );
+  if (revokedAt !== null) {
+    fields.push(
+      { label: text("status"), value: w("authorizationRevoked") },
+      { label: w("revokedAt"), value: formatDate(revokedAt) },
+    );
+  }
 
   return <RecordDetails fields={fields} />;
 }
@@ -385,32 +361,6 @@ function AuthorizationFields({
             disabled={disabled}
             onChange={(allowedSender) =>
               onChange({ ...record, draft: { ...draft, allowedSender } })
-            }
-          />
-          <TextField
-            label={w("deliveryVersion")}
-            value={
-              Number.isNaN(draft.deliveryVersion)
-                ? ""
-                : String(draft.deliveryVersion)
-            }
-            type="number"
-            min={0}
-            error={
-              errors.deliveryVersion !== undefined ||
-              draft.deliveryVersion > maximumDeliveryVersion
-                ? text("deliveryVersionRange")
-                : undefined
-            }
-            disabled={disabled}
-            onChange={(value) =>
-              onChange({
-                ...record,
-                draft: {
-                  ...draft,
-                  deliveryVersion: value === "" ? NaN : Number(value),
-                },
-              })
             }
           />
         </>

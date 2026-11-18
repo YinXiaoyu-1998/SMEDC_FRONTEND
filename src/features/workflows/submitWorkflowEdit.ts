@@ -38,8 +38,10 @@ export function createWorkflowSubmit({
     latest: WorkflowBundle,
   ): WorkflowEditResult => ({
     status: "conflict",
-    before: edit.current(latest),
-    after: edit.after,
+    ...(edit.review?.(latest) ?? {
+      before: edit.current(latest),
+      after: edit.after,
+    }),
     confirm: () => attempt(edit, latest),
   });
 
@@ -54,7 +56,6 @@ export function createWorkflowSubmit({
     base: WorkflowBundle,
   ): Promise<WorkflowEditResult> => {
     try {
-      const current = edit.current(base);
       const change = edit.change(base);
       const binding = {
         enterpriseKey,
@@ -86,8 +87,10 @@ export function createWorkflowSubmit({
       if (preview.impact?.affectedWorkflows.length) {
         return {
           status: "impact",
-          before: current,
-          after: edit.after,
+          ...(edit.review?.(base) ?? {
+            before: edit.current(base),
+            after: edit.after,
+          }),
           impact: preview.impact,
           confirm: commit,
         };

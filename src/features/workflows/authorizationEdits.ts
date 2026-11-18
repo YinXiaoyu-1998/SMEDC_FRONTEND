@@ -32,7 +32,6 @@ const uploadDatasets: readonly Dataset[] = [
   "delivery_ledger",
 ];
 export const reviewChannels: readonly ReviewChannel[] = ["meituan", "dianping"];
-export const maximumDeliveryVersion = 4_294_967_295;
 
 export interface AuthorizationRecord {
   readonly saved: WorkflowAuthorization | null;
@@ -59,7 +58,6 @@ export function authorizationRecord(
         ...draft,
         recipients: scope.recipients,
         allowedSender: scope.allowedSender,
-        deliveryVersion: scope.deliveryVersion,
       },
     };
   }
@@ -115,6 +113,12 @@ export function authorizationScopeAllowed(
   return draft.channels.every((channel) => reviewChannels.includes(channel));
 }
 
+function scopeForReview(scope: AuthorizationScope) {
+  if (scope.kind !== "email") return scope;
+  const { kind, purpose, storeNames, recipients, allowedSender } = scope;
+  return { kind, purpose, storeNames, recipients, allowedSender };
+}
+
 export function authorizationRecordEdit(
   type: WorkflowType,
   stores: readonly WorkflowStore[],
@@ -123,8 +127,12 @@ export function authorizationRecordEdit(
   const original = operation.kind === "add" ? null : operation.original.saved;
   const targetId = original?.authorizationId;
   const value = operation.kind === "remove" ? null : operation.value;
-  const scope: AuthorizationScope | null =
-    value === null ? null : buildAuthorizationScope(type, value.draft);
+  const deliveryVersion =
+    original?.scope.kind === "email" ? original.scope.deliveryVersion : 1;
+  const scope =
+    value === null
+      ? null
+      : buildAuthorizationScope(type, value.draft, deliveryVersion);
 
   const current = (bundle: WorkflowBundle): WorkflowAuthorization | null =>
     bundle.views[type]?.authorizations.find(
@@ -135,6 +143,21 @@ export function authorizationRecordEdit(
     before: original,
     after: scope === null ? null : { scope },
     current,
+    review: (bundle) => {
+      const saved = current(bundle);
+      return {
+        before:
+          saved === null
+            ? null
+            : {
+                scope: scopeForReview(saved.scope),
+                ...(saved.revokedAt === null
+                  ? {}
+                  : { revokedAt: saved.revokedAt }),
+              },
+        after: scope === null ? null : { scope: scopeForReview(scope) },
+      };
+    },
     change: (bundle) => {
       if (operation.kind !== "add") {
         const target = current(bundle);
@@ -145,8 +168,6 @@ export function authorizationRecordEdit(
       if (
         value !== null &&
         (scope === null ||
-          (value.draft.kind === "email" &&
-            value.draft.deliveryVersion > maximumDeliveryVersion) ||
           !authorizationScopeAllowed(
             type,
             allowedAuthorizationStores(bundle.views[type], stores),
