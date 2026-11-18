@@ -28,6 +28,8 @@ import type { WorkflowType } from "@/features/workflows/model";
 export const workflowQueryKeys = {
   enterprises: (orgId: string) => ["workflows", "enterprises", orgId] as const,
   stores: (orgId: string) => ["workflows", "stores", orgId] as const,
+  grantorNames: (orgId: string) =>
+    ["workflows", "grantor-names", orgId] as const,
   bundle: (orgId: string, enterpriseKey: string) =>
     ["workflows", "bundle", orgId, enterpriseKey] as const,
 };

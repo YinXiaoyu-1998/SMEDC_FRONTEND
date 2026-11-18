@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 
 import type {
+  PermissionsAccountsListResponse,
   WorkflowsGetEnterpriseWorkflowResponse,
   WorkflowsGetWorkflowStatusResponse,
   WorkflowsListEnterpriseWorkflowsResponse,
@@ -267,6 +268,7 @@ export interface WorkflowApiOptions {
     name: string;
     retired: boolean;
   }[];
+  readonly accounts?: readonly PermissionsAccountsListResponse["accounts"][number][];
   readonly views?: readonly WorkflowView[];
   readonly needsConfiguration?: boolean;
   readonly status?: WorkflowsGetWorkflowStatusResponse;
@@ -369,6 +371,9 @@ export function createWorkflowApi(options: WorkflowApiOptions = {}) {
           authorizationVersion: "1",
           stores: options.stores ?? defaultStores,
         });
+      }
+      if (method === "GET" && url.endsWith("/permissions/accounts")) {
+        return jsonResponse({ accounts: options.accounts ?? [] });
       }
       if (url.endsWith("/workflows/list_enterprise_workflows")) {
         if (options.listFailure !== undefined) {

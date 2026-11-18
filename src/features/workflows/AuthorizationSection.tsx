@@ -52,6 +52,7 @@ const messages = {
   ],
   status: ["授权状态", "Authorization status"],
   grantedBy: ["授权人", "Granted by"],
+  grantorNameUnavailable: ["姓名不可用", "Name unavailable"],
   authorizationId: ["授权编号", "Authorization ID"],
   configurationVersion: ["授权时的配置版本", "Configuration version at grant"],
   controlVersion: ["授权时的控制版本", "Control version at grant"],
@@ -77,6 +78,7 @@ export interface AuthorizationSectionProps {
   readonly view: WorkflowView | undefined;
   readonly type: WorkflowType;
   readonly stores: readonly WorkflowStore[];
+  readonly grantorNames: ReadonlyMap<string, string> | undefined;
   readonly disabled: boolean;
   readonly submitEdit: SubmitWorkflowEdit;
 }
@@ -85,6 +87,7 @@ export function AuthorizationSection({
   view,
   type,
   stores,
+  grantorNames,
   disabled,
   submitEdit,
 }: AuthorizationSectionProps) {
@@ -111,7 +114,12 @@ export function AuthorizationSection({
           `${w(draft.kind)} ${saved?.authorizationId ?? ""}`
         }
         details={({ saved }) =>
-          saved === null ? null : <AuthorizationDetails authorization={saved} />
+          saved === null ? null : (
+            <AuthorizationDetails
+              authorization={saved}
+              grantorName={grantorNames?.get(saved.grantedBy)}
+            />
+          )
         }
         create={() => authorizationRecord(type)}
         fields={(record, onChange) => (
@@ -160,8 +168,10 @@ export function AuthorizationSection({
 
 function AuthorizationDetails({
   authorization,
+  grantorName,
 }: {
   readonly authorization: WorkflowAuthorization;
+  readonly grantorName: string | undefined;
 }) {
   const { locale, w } = useWorkflowText();
   const text = (key: keyof typeof messages) =>
@@ -202,7 +212,10 @@ function AuthorizationDetails({
     );
   }
   fields.push(
-    { label: text("grantedBy"), value: authorization.grantedBy },
+    {
+      label: text("grantedBy"),
+      value: grantorName?.trim() ? grantorName : text("grantorNameUnavailable"),
+    },
     { label: w("grantedAt"), value: formatDate(authorization.grantedAt) },
   );
   if (revokedAt !== null)

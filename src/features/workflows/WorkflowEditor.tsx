@@ -48,6 +48,7 @@ export interface WorkflowEditorProps {
   readonly enterpriseKey: string;
   readonly enterpriseName: string;
   readonly stores: readonly WorkflowStore[];
+  readonly grantorNames: ReadonlyMap<string, string> | undefined;
   readonly bundle: WorkflowBundle;
   readonly onUpdateBundle: (
     next: WorkflowBundle | ((current: WorkflowBundle) => WorkflowBundle),
@@ -93,6 +94,7 @@ export function WorkflowEditor({
   enterpriseKey,
   enterpriseName,
   stores,
+  grantorNames,
   bundle,
   onUpdateBundle,
 }: WorkflowEditorProps) {
@@ -211,6 +213,7 @@ export function WorkflowEditor({
         view={view}
         type={selected}
         stores={stores}
+        grantorNames={grantorNames}
         submitEdit={submitEdit}
         disabled={false}
       />
