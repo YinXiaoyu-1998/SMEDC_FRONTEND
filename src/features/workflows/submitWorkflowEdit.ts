@@ -31,10 +31,7 @@ export function createWorkflowSubmit({
   readonly workflowType: WorkflowType;
   readonly bundle: WorkflowBundle;
   readonly onRefresh: (next: WorkflowBundle) => void;
-  readonly onSaved: (
-    saved: WorkflowsSaveEnterpriseWorkflowResponse,
-    base: WorkflowBundle,
-  ) => void;
+  readonly onSaved: (saved: WorkflowsSaveEnterpriseWorkflowResponse) => void;
 }): SubmitWorkflowEdit {
   const conflict = (
     edit: WorkflowEdit,
@@ -78,7 +75,7 @@ export function createWorkflowSubmit({
             previewId: preview.previewId,
             confirmationDigest: preview.confirmationDigest,
           });
-          onSaved(saved, base);
+          onSaved(saved);
           return { status: "saved" };
         } catch (error) {
           if (isVersionConflict(error)) return reloadForConflict(edit);

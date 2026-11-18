@@ -176,8 +176,9 @@ export function WorkflowRecordList<T>({
           }
           onClose={() => setOperation(null)}
           onSubmit={() => submitEdit(editFor(operation))}
-          trigger={trigger.current}
-          fallbackFocus={() => section.current}
+          fallbackFocus={() =>
+            trigger.current?.isConnected ? trigger.current : section.current
+          }
         >
           {operation.kind === "remove" ? (
             <div className={styles.list}>

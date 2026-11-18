@@ -16,6 +16,7 @@ import {
   type RecordOperation,
   type SubmitWorkflowEdit,
 } from "@/features/workflows/recordEdits";
+import { sourceIdentityKey } from "@/features/workflows/sourceRecordEdits";
 import { useWorkflowText } from "@/features/workflows/text";
 import {
   RecordDetails,
@@ -41,15 +42,7 @@ function hasValidSetup(configuration: ReviewOperationsConfiguration | null) {
 }
 
 function reviewIdentity({ source, feedbackId }: IgnoredReviewIdentity) {
-  return JSON.stringify([
-    source.product,
-    source.channel,
-    source.accountRef,
-    source.sourceStoreId === undefined
-      ? ["name", source.sourceStoreName]
-      : ["id", source.sourceStoreId],
-    feedbackId,
-  ]);
+  return JSON.stringify([sourceIdentityKey(source), feedbackId]);
 }
 
 function reviewAccounts(accounts: readonly SourceAccount[]) {

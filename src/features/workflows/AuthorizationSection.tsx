@@ -46,6 +46,10 @@ const messages = {
     "确认后将撤销此条授权。",
     "Confirm to revoke this authorization.",
   ],
+  replaceHelp: [
+    "保存后将撤销原授权，并按此范围创建一条新授权。",
+    "Saving revokes the original authorization and creates a new one with this scope.",
+  ],
   status: ["授权状态", "Authorization status"],
   grantedBy: ["授权人", "Granted by"],
   authorizationId: ["授权编号", "Authorization ID"],
@@ -254,6 +258,9 @@ function AuthorizationFields({
 
   return (
     <div className={styles.stack}>
+      {record.saved === null ? null : (
+        <p className={styles.hint}>{text("replaceHelp")}</p>
+      )}
       <SelectField
         label={w("action")}
         value={draft.kind}

@@ -173,22 +173,6 @@
   list-style: disc;
 }
 
-.authRow {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.authMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
 .runRow {
   display: flex;
   flex-wrap: wrap;
@@ -210,17 +194,6 @@
   gap: var(--space-2);
 }
 
-.dialogBody {
-  display: grid;
-  gap: var(--space-3);
-  max-height: 50vh;
-  overflow: auto;
-}
-
-.dialogHeading {
-  font-size: var(--font-size-md);
-}
-
 .danger {
   border-color: var(--color-danger);
   color: var(--color-danger);
@@ -230,18 +203,6 @@
   min-width: 0;
   padding: clamp(0.875rem, 2vw, 1.3125rem);
   box-shadow: var(--admin-card-shadow);
-}
-
-.listHeading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.removeAction {
-  color: var(--color-danger);
 }
 
 .pickerField {

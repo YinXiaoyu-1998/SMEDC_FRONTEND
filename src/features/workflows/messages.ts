@@ -164,7 +164,6 @@ export const workflowMessages = {
     "此变更影响任务执行。请核对影响范围后确认。",
     "This change affects task execution. Review the impact before confirming.",
   ],
-  saveIntegration: ["保存来源设置", "Save source settings"],
   configuration: ["任务业务设置", "Task settings"],
   stores: ["处理门店", "Stores to process"],
   storesRequired: ["请至少选择一家处理门店。", "Select at least one store."],
@@ -242,7 +241,6 @@ export const workflowMessages = {
     "未启用邮件时，仍可在本机生成周报；仅保留最终报告。",
     "A local report can be generated without email; retain the final report only.",
   ],
-  saveConfiguration: ["保存任务设置", "Save task settings"],
   preview: ["核对本次变更", "Review this change"],
   before: ["变更前", "Before"],
   after: ["变更后", "After"],
@@ -389,10 +387,6 @@ export const workflowMessages = {
     "此页面不授予账号资料读取权限；权限设置仍需分别完成。",
     "This page does not grant account data access. Configure permissions separately.",
   ],
-  revokeSelection: [
-    "选择撤销此授权",
-    "Select this authorization for revocation",
-  ],
   sourceAccountHelp: [
     "账号标记只是来源的非秘密称呼，请勿填写密码、令牌或 Cookie。",
     "An account reference is a non-secret source label. Never enter passwords, tokens or cookies.",
@@ -414,7 +408,6 @@ export const workflowMessages = {
   xhigh: ["更高", "Extra high"],
   max: ["最高", "Maximum"],
   ultra: ["超高", "Ultra"],
-  previewGrant: ["新增授权", "Add authorization"],
 
   // 页面补充：加载、选择、校验与状态提示
   loadingFailed: ["读取失败，请重试。", "Could not load. Try again."],
@@ -438,10 +431,6 @@ export const workflowMessages = {
   scopeIncomplete: [
     "请选择门店以及数据或渠道范围。",
     "Select stores and a dataset or channel scope.",
-  ],
-  revokeRequired: [
-    "请至少勾选一条仍有效的授权。",
-    "Select at least one active authorization.",
   ],
   deliveryVersionInvalid: [
     "交付批次必须是大于等于 0 的整数。",

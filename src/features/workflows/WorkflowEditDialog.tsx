@@ -20,6 +20,7 @@ export function WorkflowEditDialog({
   actionLabel,
   disabled = false,
   onClose,
+  onSaved,
   onSubmit,
   trigger,
   fallbackFocus,
@@ -30,6 +31,7 @@ export function WorkflowEditDialog({
   readonly actionLabel: string;
   readonly disabled?: boolean;
   readonly onClose: () => void;
+  readonly onSaved?: () => void;
   readonly onSubmit: () => Promise<WorkflowEditResult>;
   readonly trigger?: HTMLElement | null;
   readonly fallbackFocus?: () => HTMLElement | null;
@@ -52,8 +54,12 @@ export function WorkflowEditDialog({
     setError(null);
     try {
       const result = await (review?.confirm ?? onSubmit)();
-      if (result.status === "saved") onClose();
-      else setReview(result);
+      if (result.status === "saved") {
+        onSaved?.();
+        onClose();
+      } else {
+        setReview(result);
+      }
     } catch (caught) {
       setError(caught);
     } finally {
@@ -73,7 +79,9 @@ export function WorkflowEditDialog({
         <Dialog.Overlay className={dialog.overlay} />
         <Dialog.Content
           className={`${theme.theme} ${dialog.content} ${styles.dialog}`}
-          aria-describedby={undefined}
+          {...(description === undefined
+            ? { "aria-describedby": undefined }
+            : {})}
           onInteractOutside={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => {
             const destination = trigger?.isConnected
@@ -87,7 +95,9 @@ export function WorkflowEditDialog({
         >
           <Dialog.Title className={dialog.title}>{title}</Dialog.Title>
           {description === undefined ? null : (
-            <div className={dialog.description}>{description}</div>
+            <Dialog.Description className={dialog.description}>
+              {description}
+            </Dialog.Description>
           )}
           <form
             className={dialog.body}

@@ -243,17 +243,16 @@ export interface ApiCall {
 
 export function previewResponse(
   body: WorkflowsPrepareEnterpriseWorkflowChangeBody,
+  affectedWorkflows: { workflowType: string; storeNames: string[] }[] = [],
 ): Response {
   return jsonResponse({
     ...body,
     previewId: "preview-1",
     confirmationDigest: "a".repeat(64),
     expiresAt: TIMESTAMP,
-    impact: {
-      affectedWorkflows: [
-        { workflowType: body.workflowType, storeNames: ["门店A"] },
-      ],
-    },
+    ...(body.change.kind === "integration"
+      ? { impact: { affectedWorkflows } }
+      : {}),
   });
 }
 
@@ -310,7 +309,6 @@ function applyChange(view: WorkflowView, change: WorkflowChange): WorkflowView {
   if (change.kind === "integration") {
     return {
       ...view,
-      version: view.version + 1,
       integration: {
         ...view.integration,
         version: view.integration.version + 1,
@@ -332,7 +330,7 @@ function applyChange(view: WorkflowView, change: WorkflowChange): WorkflowView {
       : authorization,
   );
   const grants = change.grant.map((scope, index) => ({
-    authorizationId: `auth-${index + 1}`,
+    authorizationId: `grant-${view.controlVersion}-${index + 1}`,
     scope,
     configurationVersion: view.version,
     controlVersion: view.controlVersion,
@@ -342,7 +340,7 @@ function applyChange(view: WorkflowView, change: WorkflowChange): WorkflowView {
   }));
   return {
     ...view,
-    version: view.version + 1,
+    controlVersion: view.controlVersion + 1,
     authorizations: [...revoked, ...grants],
   };
 }

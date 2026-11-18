@@ -12,7 +12,10 @@ import { StatusSection } from "@/features/workflows/StatusSection";
 import { WorkflowEditDialog } from "@/features/workflows/WorkflowEditDialog";
 import { RecordDetails } from "@/features/workflows/WorkflowRecordList";
 import { createWorkflowSubmit } from "@/features/workflows/submitWorkflowEdit";
-import { WorkflowEditError } from "@/features/workflows/recordEdits";
+import {
+  WorkflowEditError,
+  type SubmitWorkflowEdit,
+} from "@/features/workflows/recordEdits";
 import type { WorkflowBundle, WorkflowClient } from "@/features/workflows/api";
 import type {
   WorkflowStore,
@@ -106,7 +109,7 @@ export function WorkflowEditor({
   const product = workflowSourceProduct(selected);
   const integration =
     bundle.integration?.configuration ?? defaultIntegrationConfiguration();
-  const submitEdit = createWorkflowSubmit({
+  const saveEdit = createWorkflowSubmit({
     client,
     enterpriseKey,
     workflowType: selected,
@@ -118,6 +121,10 @@ export function WorkflowEditor({
       setStatusRevision((current) => current + 1);
     },
   });
+  const submitEdit: SubmitWorkflowEdit = (edit) => {
+    setSavedNotice(null);
+    return saveEdit(edit);
+  };
 
   return (
     <div className={styles.page}>
@@ -176,7 +183,7 @@ export function WorkflowEditor({
       )}
 
       <ConfigurationSection
-        key={selected}
+        key={`settings:${selected}`}
         configuration={configuration}
         configured={view?.configuration != null}
         accounts={integration.sourceAccounts.filter(
@@ -200,7 +207,7 @@ export function WorkflowEditor({
       )}
 
       <AuthorizationSection
-        key={selected}
+        key={`authorization:${selected}`}
         view={view}
         type={selected}
         stores={stores}
@@ -209,7 +216,7 @@ export function WorkflowEditor({
       />
 
       <WorkflowControls
-        key={selected}
+        key={`controls:${selected}`}
         view={view}
         type={selected}
         submitEdit={submitEdit}
@@ -237,7 +244,7 @@ function WorkflowControls({
 }: {
   readonly view: WorkflowView | undefined;
   readonly type: WorkflowType;
-  readonly submitEdit: ReturnType<typeof createWorkflowSubmit>;
+  readonly submitEdit: SubmitWorkflowEdit;
   readonly showOrderScopeHelp: boolean;
 }) {
   const { w } = useWorkflowText();
@@ -271,8 +278,9 @@ function WorkflowControls({
           actionLabel={w("confirm")}
           trigger={edit.trigger}
           onClose={() => setEdit(null)}
-          onSubmit={async () => {
-            const result = await submitEdit({
+          onSaved={() => setReason("")}
+          onSubmit={() =>
+            submitEdit({
               before: { state: edit.original },
               after: { state: edit.state, reason: edit.reason },
               current: (latest) => ({
@@ -287,10 +295,8 @@ function WorkflowControls({
                   reason: edit.reason,
                 };
               },
-            });
-            if (result.status === "saved") setReason("");
-            return result;
-          }}
+            })
+          }
         >
           <RecordDetails
             fields={[
