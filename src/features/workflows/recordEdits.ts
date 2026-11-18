@@ -11,6 +11,10 @@ export interface WorkflowEdit {
   readonly after: unknown;
   readonly current: (bundle: WorkflowBundle) => unknown;
   readonly change: (bundle: WorkflowBundle) => WorkflowChange;
+  readonly review?: (bundle: WorkflowBundle) => {
+    readonly before: unknown;
+    readonly after: unknown;
+  };
 }
 
 export type WorkflowEditResult =

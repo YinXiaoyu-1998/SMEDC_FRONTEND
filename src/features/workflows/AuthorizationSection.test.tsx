@@ -103,10 +103,10 @@ describe("standing authorization records", () => {
     expect(record.getByText("门店A 旧门店")).toBeVisible();
     expect(record.getByText("one@example.com two@example.com")).toBeVisible();
     expect(record.getByText("sender@example.com")).toBeVisible();
-    expect(record.getByText("42")).toBeVisible();
+    expect(record.queryByText("本次交付批次")).not.toBeInTheDocument();
     expect(record.getByText("授权管理员")).toBeVisible();
     expect(record.queryByText("granting-admin")).not.toBeInTheDocument();
-    expect(record.getByText("授权时间")).toBeVisible();
+    expect(record.queryByText("授权时间")).not.toBeInTheDocument();
     expect(record.getByText("撤销时间")).toBeVisible();
     expect(record.queryByRole("button")).toBeNull();
   });
@@ -171,7 +171,7 @@ describe("standing authorization records", () => {
     ).toThrow("authorizationScopeChanged");
   });
 
-  it("saves a new email grant with the task-specific purpose", async () => {
+  it("saves a new email grant with the task-specific purpose and batch 1", async () => {
     const view = reportView([]);
     const submitEdit = vi.fn<SubmitWorkflowEdit>(async () => ({
       status: "saved",
@@ -186,6 +186,9 @@ describe("standing authorization records", () => {
     const purpose = dialog.getByRole("combobox", { name: "用途" });
     expect(within(purpose).getAllByRole("option")).toHaveLength(1);
     expect(purpose).toHaveValue("weekly_report");
+    expect(
+      dialog.queryByRole("spinbutton", { name: "本次交付批次" }),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(dialog.getByRole("checkbox", { name: "门店B" }));
     fireEvent.change(
@@ -219,6 +222,60 @@ describe("standing authorization records", () => {
       revokeAuthorizationIds: [],
     });
   });
+
+  it.each([0, 42])(
+    "preserves the saved batch %s even after switching authorization actions",
+    async (deliveryVersion) => {
+      const activeEmail = {
+        ...revokedEmail,
+        revokedAt: null,
+        scope: {
+          ...revokedEmail.scope,
+          purpose: "weekly_report",
+          storeNames: ["门店A"],
+          deliveryVersion,
+        },
+      } satisfies WorkflowAuthorization;
+      const view = reportView([activeEmail]);
+      const submitEdit = vi.fn<SubmitWorkflowEdit>(async () => ({
+        status: "saved",
+      }));
+      renderAuthorization(view, submitEdit);
+
+      fireEvent.click(screen.getByRole("button", { name: /编辑.*auth-email/ }));
+      const dialog = within(screen.getByRole("dialog"));
+      const action = dialog.getByRole("combobox", { name: "授权动作" });
+      fireEvent.change(action, { target: { value: "download" } });
+      fireEvent.change(action, { target: { value: "email" } });
+      expect(
+        dialog.queryByRole("spinbutton", { name: "本次交付批次" }),
+      ).not.toBeInTheDocument();
+
+      fireEvent.change(
+        dialog.getByRole("textbox", { name: "收件人（每行一个）" }),
+        {
+          target: { value: "updated@example.com" },
+        },
+      );
+      fireEvent.change(
+        dialog.getByRole("textbox", { name: "允许的发件邮箱" }),
+        {
+          target: { value: "sender@example.com" },
+        },
+      );
+      fireEvent.click(dialog.getByRole("button", { name: "保存" }));
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+
+      const [edit] = submitEdit.mock.calls[0]!;
+      expect(edit.change(bundle(view))).toEqual({
+        kind: "authorization",
+        grant: [{ ...activeEmail.scope, recipients: ["updated@example.com"] }],
+        revokeAuthorizationIds: [activeEmail.authorizationId],
+      });
+    },
+  );
 
   it("revokes only the selected active record after confirmation", async () => {
     const view = reportView([legacyDownload, revokedEmail]);

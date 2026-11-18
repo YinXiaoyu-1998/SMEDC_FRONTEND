@@ -432,10 +432,6 @@ export const workflowMessages = {
     "请选择门店以及数据或渠道范围。",
     "Select stores and a dataset or channel scope.",
   ],
-  deliveryVersionInvalid: [
-    "交付批次必须是大于等于 0 的整数。",
-    "Delivery revision must be a non-negative integer.",
-  ],
   reasonRequired: ["请填写原因。", "Enter a reason."],
   reasonHint: [
     "填写原因后才能选择目标状态。",
@@ -473,7 +469,6 @@ export const workflowMessages = {
   pendingEmpty: ["没有未解决动作。", "No unresolved actions."],
   loadingMore: ["正在加载更多…", "Loading more…"],
   confirmed: ["已确认", "Confirmed"],
-  authorizationGranted: ["已授予", "Granted"],
   authorizationRevoked: ["已撤销", "Revoked"],
   scopeKind: ["授权动作", "Action"],
   workflowSectionIntro: [

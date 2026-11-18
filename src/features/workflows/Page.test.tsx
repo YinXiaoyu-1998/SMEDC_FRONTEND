@@ -647,6 +647,59 @@ describe("自动任务页", () => {
     ).toHaveLength(1);
   });
 
+  it("在邮件授权列表、撤销确认及冲突核对中隐藏内部字段", async () => {
+    const activeEmail = { ...sampleAuthorizations()[1]!, revokedAt: null };
+    const api = createWorkflowApi({
+      views: viewsWithSources().map((view) =>
+        view.workflowType === "weekly-business-report"
+          ? { ...view, authorizations: [activeEmail] }
+          : view,
+      ),
+      prepare: () =>
+        jsonResponse(
+          {
+            error: { code: "WORKFLOW_VERSION_CONFLICT", message: "conflict" },
+          },
+          409,
+        ),
+    });
+    renderDeepLink(api, ENTERPRISE_PATH + "?task=weekly-business-report");
+
+    const revoke = await screen.findByRole("button", {
+      name: "撤销授权 发送邮件 auth-2",
+    });
+    const internalFields = [
+      "授权时的配置版本",
+      "授权时的控制版本",
+      "本次交付批次",
+      "已授予",
+      "授权时间",
+    ];
+    const row = within(revoke.closest("li")!);
+    for (const label of internalFields) {
+      expect(row.queryByText(label)).not.toBeInTheDocument();
+    }
+
+    fireEvent.click(revoke);
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("boss@example.com")).toBeVisible();
+    for (const label of internalFields) {
+      expect(dialog.queryByText(label)).not.toBeInTheDocument();
+    }
+
+    fireEvent.click(dialog.getByRole("button", { name: "确认撤销" }));
+    const current = await dialog.findByRole("heading", {
+      name: "服务端最新配置",
+    });
+    expect(
+      within(current.closest("section")!).getByText("boss@example.com"),
+    ).toBeVisible();
+    for (const label of internalFields) {
+      expect(dialog.queryByText(label)).not.toBeInTheDocument();
+    }
+    expect(saveCalls(api)).toHaveLength(0);
+  });
+
   it("持续授权逐条确认撤销，已撤销授权保持只读", async () => {
     const api = createWorkflowApi({
       views: [dailyView({ authorizations: sampleAuthorizations() })],

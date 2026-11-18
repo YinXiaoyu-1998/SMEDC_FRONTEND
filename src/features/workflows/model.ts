@@ -316,14 +316,12 @@ export interface AuthorizationDraft {
   readonly channels: readonly ReviewChannel[];
   readonly recipients: readonly string[];
   readonly allowedSender: string;
-  readonly deliveryVersion: number;
 }
 
 export interface AuthorizationDraftErrors {
   readonly scope?: string;
   readonly recipients?: string;
   readonly allowedSender?: string;
-  readonly deliveryVersion?: string;
 }
 
 export function authorizationActions(
@@ -352,7 +350,6 @@ export function defaultAuthorizationDraft(
     channels: [],
     recipients: [],
     allowedSender: "",
-    deliveryVersion: 1,
   };
 }
 
@@ -363,7 +360,6 @@ export function validateAuthorizationDraft(
     scope?: string;
     recipients?: string;
     allowedSender?: string;
-    deliveryVersion?: string;
   } = {};
   const mailAction = draft.kind === "email";
 
@@ -394,10 +390,6 @@ export function validateAuthorizationDraft(
     if (!isValidEmail(draft.allowedSender)) {
       errors.allowedSender = "mailInvalid";
     }
-    // 契约里 deliveryVersion 是 uint32，0 也是合法值
-    if (!Number.isInteger(draft.deliveryVersion) || draft.deliveryVersion < 0) {
-      errors.deliveryVersion = "deliveryVersionInvalid";
-    }
   }
 
   return errors;
@@ -409,14 +401,14 @@ export function hasAuthorizationErrors(
   return (
     errors.scope !== undefined ||
     errors.recipients !== undefined ||
-    errors.allowedSender !== undefined ||
-    errors.deliveryVersion !== undefined
+    errors.allowedSender !== undefined
   );
 }
 
 export function buildAuthorizationScope(
   type: WorkflowType,
   draft: AuthorizationDraft,
+  deliveryVersion: number,
 ): AuthorizationScope | null {
   if (
     !authorizationActions(type).includes(draft.kind) ||
@@ -461,7 +453,7 @@ export function buildAuthorizationScope(
     storeNames: [...draft.storeNames],
     recipients: [...draft.recipients],
     allowedSender: draft.allowedSender,
-    deliveryVersion: draft.deliveryVersion,
+    deliveryVersion,
   };
 }
 
