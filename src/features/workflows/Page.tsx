@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 
+import { listAccounts } from "@/api/permissions";
 import { useSession } from "@/api/session";
 import { PageFrame } from "@/app/PageFrame";
 import { appPaths } from "@/app/paths";
@@ -60,6 +61,25 @@ export function WorkflowsPage() {
     queryKey: workflowQueryKeys.bundle(orgId, enterpriseKey ?? ""),
     queryFn: () => loadEnterpriseWorkflows(client, enterpriseKey ?? ""),
     enabled: enabled && enterpriseKey !== undefined && enterpriseKnown,
+    retry: false,
+  });
+
+  const grantorNamesQuery = useQuery({
+    queryKey: workflowQueryKeys.grantorNames(orgId),
+    queryFn: async () => {
+      const { accounts } = await listAccounts(orgId);
+      return new Map(
+        accounts.map(({ userAccountId, displayName }) => [
+          userAccountId,
+          displayName,
+        ]),
+      );
+    },
+    enabled:
+      enabled &&
+      Object.values(bundleQuery.data?.views ?? {}).some(
+        (view) => view.authorizations.length > 0,
+      ),
     retry: false,
   });
 
@@ -148,6 +168,7 @@ export function WorkflowsPage() {
         enterpriseKey={enterpriseKey}
         enterpriseName={enterprise.enterpriseName}
         stores={stores}
+        grantorNames={grantorNamesQuery.data}
         bundle={bundleQuery.data}
         onUpdateBundle={updateBundle}
       />

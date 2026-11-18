@@ -79,6 +79,7 @@ function renderAuthorization(
       <AuthorizationSection
         view={view}
         type={reportType}
+        grantorNames={new Map([["granting-admin", "授权管理员"]])}
         stores={[
           { name: "门店A", retired: false },
           { name: "门店B", retired: false },
@@ -103,7 +104,8 @@ describe("standing authorization records", () => {
     expect(record.getByText("one@example.com two@example.com")).toBeVisible();
     expect(record.getByText("sender@example.com")).toBeVisible();
     expect(record.getByText("42")).toBeVisible();
-    expect(record.getByText("granting-admin")).toBeVisible();
+    expect(record.getByText("授权管理员")).toBeVisible();
+    expect(record.queryByText("granting-admin")).not.toBeInTheDocument();
     expect(record.getByText("授权时间")).toBeVisible();
     expect(record.getByText("撤销时间")).toBeVisible();
     expect(record.queryByRole("button")).toBeNull();

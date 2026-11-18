@@ -566,6 +566,87 @@ describe("自动任务页", () => {
     });
   });
 
+  it("在授权列表和撤销确认中按账号 ID 显示姓名", async () => {
+    const [dailyGrant, reportGrant] = sampleAuthorizations();
+    const currentGrant = { ...dailyGrant!, grantedBy: "active-grantor" };
+    const missingGrant = {
+      ...currentGrant,
+      authorizationId: "auth-missing",
+      grantedBy: "missing-grantor",
+    };
+    const formerGrant = {
+      ...reportGrant!,
+      grantedBy: "disabled-grantor",
+      revokedAt: null,
+    };
+    const api = createWorkflowApi({
+      views: viewsWithSources().map((view) => ({
+        ...view,
+        authorizations:
+          view.workflowType === "meituan-daily-ingestion"
+            ? [currentGrant, missingGrant]
+            : view.workflowType === "weekly-business-report"
+              ? [formerGrant]
+              : [],
+      })),
+      accounts: [
+        {
+          userAccountId: "active-grantor",
+          displayName: "谢明",
+          disabled: false,
+        },
+        {
+          userAccountId: "disabled-grantor",
+          displayName: "许珊",
+          disabled: true,
+        },
+      ].map((account) => ({
+        ...account,
+        id: account.userAccountId,
+        orgId: "org-1",
+        email: `${account.userAccountId}@example.com`,
+        role: "admin",
+        clearance: 1,
+        mode: "enabled",
+        authorizationVersion: "1",
+        categories: [],
+        grants: [],
+      })),
+    });
+    renderDeepLink(api);
+
+    expect(await screen.findByText("谢明")).toBeInTheDocument();
+    expect(screen.getByText("姓名不可用")).toBeInTheDocument();
+    expect(screen.queryByText("active-grantor")).not.toBeInTheDocument();
+    expect(screen.queryByText("missing-grantor")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "撤销授权 下载经营数据 auth-1" }),
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("谢明")).toBeInTheDocument();
+    expect(dialog.queryByText("active-grantor")).not.toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "取消" }));
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "撤销授权 下载经营数据 auth-missing",
+      }),
+    );
+    const unresolvedDialog = within(screen.getByRole("dialog"));
+    expect(unresolvedDialog.getByText("姓名不可用")).toBeInTheDocument();
+    expect(
+      unresolvedDialog.queryByText("missing-grantor"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(unresolvedDialog.getByRole("button", { name: "取消" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "自然周经营周报" }));
+    expect(screen.getByText("许珊")).toBeInTheDocument();
+    expect(
+      api.calls.filter((call) => call.url.endsWith("/permissions/accounts")),
+    ).toHaveLength(1);
+  });
+
   it("持续授权逐条确认撤销，已撤销授权保持只读", async () => {
     const api = createWorkflowApi({
       views: [dailyView({ authorizations: sampleAuthorizations() })],
