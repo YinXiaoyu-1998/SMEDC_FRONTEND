@@ -95,6 +95,26 @@ export const workflowMessages = {
   reason: ["原因", "Reason"],
   add: ["添加", "Add"],
   remove: ["移除", "Remove"],
+  recordEdit: ["编辑", "Edit"],
+  recordSave: ["保存", "Save"],
+  recordConfirmRemove: ["确认移除", "Confirm removal"],
+  recordRemoveHelp: [
+    "确认后将移除此条记录。",
+    "Confirm to remove this record.",
+  ],
+  recordBackToEdit: ["返回编辑", "Back to editing"],
+  recordMissing: [
+    "此条记录已被移除。请关闭弹窗后查看最新列表。",
+    "This record was removed. Close the dialog to see the latest list.",
+  ],
+  recordDuplicate: [
+    "已有相同的记录，请检查标识。",
+    "A record with this identity already exists.",
+  ],
+  recordImpactReview: [
+    "此变更影响任务执行。请核对影响范围后确认。",
+    "This change affects task execution. Review the impact before confirming.",
+  ],
   saveIntegration: ["保存来源设置", "Save source settings"],
   configuration: ["任务业务设置", "Task settings"],
   stores: ["处理门店", "Stores to process"],
