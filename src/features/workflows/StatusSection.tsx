@@ -28,7 +28,7 @@ export interface StatusSectionProps {
 }
 
 export function StatusSection({ client, view, revision }: StatusSectionProps) {
-  const { w } = useWorkflowText();
+  const { w, locale } = useWorkflowText();
   const workflowId = view?.workflowId;
   const [extraRuns, setExtraRuns] = useState<readonly RunRecord[]>([]);
   const [extraActions, setExtraActions] = useState<readonly PendingAction[]>(
@@ -130,7 +130,7 @@ export function StatusSection({ client, view, revision }: StatusSectionProps) {
 
   if (view === undefined || workflowId === undefined) {
     return (
-      <PageSection title={w("status")} description={w("statusHelp")}>
+      <PageSection title={w("status")}>
         <p className={styles.hint}>{w("statusUnavailable")}</p>
       </PageSection>
     );
@@ -142,6 +142,11 @@ export function StatusSection({ client, view, revision }: StatusSectionProps) {
       installation.installationId === status.assignedInstallationId,
   );
 
+  const latestRun = runs[0];
+  const setupIssues = designated?.readinessChecks?.filter(
+    (check) => check.status !== "ready",
+  );
+
   return (
     <PageSection title={w("status")} description={w("statusHelp")}>
       {statusQuery.isPending ? <p role="status">{w("loading")}</p> : null}
@@ -149,85 +154,115 @@ export function StatusSection({ client, view, revision }: StatusSectionProps) {
 
       {status === undefined ? null : (
         <div className={styles.stack}>
-          <p className={styles.hint}>
-            {w("observedAt")}: {formatDateTime(status.observedAt)}
-          </p>
+          <dl className={styles.summary}>
+            <div className={styles.summaryRow}>
+              <dt>{w("designated")}</dt>
+              <dd>
+                {designated
+                  ? `${designated.deviceAlias} · ${w(designated.state)}`
+                  : w(
+                      status.assignedInstallationId
+                        ? "deviceNameUnavailable"
+                        : "notAssigned",
+                    )}
+              </dd>
+            </div>
+            <div className={styles.summaryRow}>
+              <dt>{w("runs")}</dt>
+              <dd>
+                {latestRun ? <RunSummary run={latestRun} /> : w("runsEmpty")}
+              </dd>
+            </div>
+          </dl>
+
+          {status.assignedInstallationId === null ? (
+            <p className={styles.hint}>
+              {w(
+                status.installations.length === 0
+                  ? "installOnComputer"
+                  : "assignComputer",
+              )}
+            </p>
+          ) : null}
           {status.possibleMissedWindow ? (
             <p className={styles.notice}>{w("possibleMissed")}</p>
           ) : null}
+          {setupIssues?.map((check) => (
+            <p className={styles.notice} key={check.capability}>
+              <strong>
+                {w(check.capability)} · {w(check.status)}
+              </strong>{" "}
+              {check.nextStep}
+            </p>
+          ))}
 
-          <p>
-            <strong>{w("designated")}</strong>:{" "}
-            {designated?.deviceAlias ?? w("notAssigned")}
-          </p>
-
-          {status.installations.length === 0 ? (
-            <div className={styles.stack}>
-              <p className={styles.hint}>{w("not_installed")}</p>
-              <p className={styles.hint}>{w("installHelp")}</p>
-            </div>
-          ) : (
-            status.installations.map((installation) => (
-              <InstallationPanel
-                installation={installation}
-                key={installation.installationId}
-              />
-            ))
-          )}
-
-          <div className={styles.stack}>
-            <h3 className={styles.subheading}>{w("pendingActions")}</h3>
-            <p className={styles.hint}>{w("pendingHelp")}</p>
-            {actions.length === 0 ? (
-              <p className={styles.hint}>{w("pendingEmpty")}</p>
-            ) : (
-              actions.map((action) => (
-                <div className={styles.subpanel} key={action.actionId}>
-                  <p>{w(action.state)}</p>
-                  <small>{formatDateTime(action.updatedAt)}</small>
-                  {identities.data?.get(action.actionId) !== undefined ? (
-                    <Summary value={identities.data.get(action.actionId)} />
-                  ) : identities.isPending ? null : (
-                    <p className={styles.hint}>{w("unavailable")}</p>
+          {actions.length > 0 || actionCursor !== null ? (
+            <div className={styles.notice}>
+              <strong>{w("pendingActions")}</strong>
+              <p>{w("pendingHelp")}</p>
+              <details className={styles.statusDetails}>
+                <summary>{w("actionDetails")}</summary>
+                <div className={styles.stack}>
+                  {actions.map((action) => (
+                    <div className={styles.subpanel} key={action.actionId}>
+                      <p>
+                        {w(action.state)} ·{" "}
+                        {formatDateTime(action.updatedAt, locale)}
+                      </p>
+                      {identities.data?.get(action.actionId) !== undefined ? (
+                        <Summary value={identities.data.get(action.actionId)} />
+                      ) : identities.isPending ? null : (
+                        <p className={styles.hint}>{w("unavailable")}</p>
+                      )}
+                    </div>
+                  ))}
+                  {actionCursor === null ? null : (
+                    <ActionButton
+                      label={w("more")}
+                      variant="secondary"
+                      busy={loadingMore === "actions"}
+                      disabled={loadingMore !== null}
+                      onRun={() => void loadMoreActions()}
+                    />
                   )}
                 </div>
-              ))
-            )}
-            {actionCursor === null ? null : (
-              <ActionButton
-                label={w("more")}
-                variant="secondary"
-                busy={loadingMore === "actions"}
-                disabled={loadingMore !== null}
-                onRun={() => void loadMoreActions()}
-              />
-            )}
-          </div>
+              </details>
+            </div>
+          ) : null}
 
-          <div className={styles.stack}>
-            <h3 className={styles.subheading}>{w("runs")}</h3>
-            {runs.length === 0 ? (
-              <p className={styles.hint}>{w("runsEmpty")}</p>
-            ) : (
-              runs.map((run) => (
+          {runs.length > 1 || runCursor !== null ? (
+            <details className={styles.statusDetails}>
+              <summary>{w("earlierRuns")}</summary>
+              {runs.slice(1).map((run) => (
                 <div className={styles.runRow} key={run.id}>
-                  <span>{w(run.status)}</span>
-                  <span>
-                    {w("window")}: {run.startDate} – {run.endDate}
-                  </span>
+                  <RunSummary run={run} />
                 </div>
-              ))
-            )}
-            {runCursor === null ? null : (
-              <ActionButton
-                label={w("more")}
-                variant="secondary"
-                busy={loadingMore === "runs"}
-                disabled={loadingMore !== null}
-                onRun={() => void loadMoreRuns()}
-              />
-            )}
-          </div>
+              ))}
+              {runCursor === null ? null : (
+                <ActionButton
+                  label={w("more")}
+                  variant="secondary"
+                  busy={loadingMore === "runs"}
+                  disabled={loadingMore !== null}
+                  onRun={() => void loadMoreRuns()}
+                />
+              )}
+            </details>
+          ) : null}
+
+          {status.installations.length > 0 ? (
+            <details className={styles.statusDetails}>
+              <summary>{w("deviceDetails")}</summary>
+              <div className={styles.stack}>
+                {status.installations.map((installation) => (
+                  <InstallationPanel
+                    installation={installation}
+                    key={installation.installationId}
+                  />
+                ))}
+              </div>
+            </details>
+          ) : null}
 
           <ErrorNotice error={moreError} />
         </div>
@@ -236,12 +271,26 @@ export function StatusSection({ client, view, revision }: StatusSectionProps) {
   );
 }
 
+function RunSummary({ run }: { readonly run: RunRecord }) {
+  const { w, locale } = useWorkflowText();
+  const { startDate, endDate } = run.snapshot.window;
+  return (
+    <div>
+      <strong>{w(run.status)}</strong>
+      <p className={styles.hint}>
+        {w("startedAt")} {formatDateTime(run.startedAt, locale)} · {w("window")}{" "}
+        {startDate === endDate ? startDate : `${startDate} – ${endDate}`}
+      </p>
+    </div>
+  );
+}
+
 function InstallationPanel({
   installation,
 }: {
   readonly installation: Installation;
 }) {
-  const { w } = useWorkflowText();
+  const { w, locale } = useWorkflowText();
   const checks = installation.readinessChecks ?? [];
   const host = installation.hostSnapshot;
 
@@ -268,7 +317,7 @@ function InstallationPanel({
               {w("nextStep")}: {check.nextStep}
             </p>
             <small>
-              {w("checkedAt")}: {formatDateTime(check.checkedAt)}
+              {w("checkedAt")}: {formatDateTime(check.checkedAt, locale)}
             </small>
           </div>
         ))
@@ -284,7 +333,7 @@ function InstallationPanel({
               model: host.model,
               reasoningEffort: host.reasoningEffort,
               state: host.state,
-              verifiedAt: host.verifiedAt,
+              verifiedAt: formatDateTime(host.verifiedAt, locale),
             }}
           />
         </div>
@@ -293,7 +342,12 @@ function InstallationPanel({
   );
 }
 
-function formatDateTime(value: string): string {
+function formatDateTime(value: string, locale: "en" | "zh"): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString(locale === "zh" ? "zh-CN" : "en-US", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
 }

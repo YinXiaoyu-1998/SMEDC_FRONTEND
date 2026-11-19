@@ -8,6 +8,10 @@ import type {
 import {
   createWorkflowApi,
   dailyView,
+  dailyConfiguration,
+  integrationRecord,
+  statusPage,
+  TIMESTAMP,
   previewResponse,
   sampleAuthorizations,
   viewsWithSources,
@@ -90,7 +94,7 @@ describe("自动任务页", () => {
       within(sectionByHeading("任务业务设置")).queryByRole("checkbox"),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "指定电脑与最近状态" }),
+      screen.getByRole("heading", { name: "任务运行情况" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "保存任务设置" }),
@@ -104,6 +108,74 @@ describe("自动任务页", () => {
     expect(bodyOf<{ enterpriseKey: string }>(listCall)).toMatchObject({
       enterpriseKey: "enterprise-1",
     });
+  });
+
+  it("摘要显示最近一次运行，历史记录可展开，读取页面的时间不展示", async () => {
+    const run = {
+      id: "run-2",
+      runId: "run-2",
+      orgId: "org-1",
+      workflowId: "wf-daily-1",
+      installationId: "mac-1",
+      userAccountId: "admin",
+      configurationVersion: 2,
+      integrationVersion: 3,
+      controlVersion: 1,
+      assignmentEpoch: 1,
+      workflowPackageVersion: "1.0.0",
+      startDate: TIMESTAMP,
+      endDate: TIMESTAMP,
+      mode: "scheduled",
+      phase: "finished",
+      status: "succeeded" as const,
+      snapshot: {
+        workflowType: "meituan-daily-ingestion" as const,
+        configurationVersion: 2,
+        integrationVersion: 3,
+        workflowPackageVersion: "1.0.0",
+        configuration: dailyConfiguration(),
+        integration: integrationRecord().configuration,
+        window: { startDate: "2026-01-01", endDate: "2026-01-01" },
+      },
+      summary: null,
+      startedAt: TIMESTAMP,
+      renewedAt: TIMESTAMP,
+      finishedAt: TIMESTAMP,
+      retainUntil: TIMESTAMP,
+    };
+    const api = createWorkflowApi({
+      status: statusPage({
+        runs: [
+          run,
+          {
+            ...run,
+            id: "run-1",
+            runId: "run-1",
+            status: "failed",
+            startedAt: "2025-12-31T00:00:00.000Z",
+            startDate: "2025-12-31T00:00:00.000Z",
+            endDate: "2025-12-31T00:00:00.000Z",
+            snapshot: {
+              ...run.snapshot,
+              window: { startDate: "2025-12-31", endDate: "2025-12-31" },
+            },
+          },
+        ],
+        possibleMissedWindow: true,
+      }),
+    });
+    renderDeepLink(api);
+    const panel = within(
+      await screen.findByRole("region", { name: "任务运行情况" }),
+    );
+    expect(await panel.findByText("已确认成功")).toBeVisible();
+    expect(panel.getByText(/开始于.*业务日期 2026-01-01$/)).toBeVisible();
+    expect(panel.getByText(/任务可能漏跑/)).toBeVisible();
+    expect(panel.queryByText(/状态读取时间/)).not.toBeInTheDocument();
+    expect(panel.queryByText("查看待核对事项")).not.toBeInTheDocument();
+    expect(panel.getByText("失败")).not.toBeVisible();
+    fireEvent.click(panel.getByText("更早的运行记录"));
+    expect(panel.getByText("失败")).toBeVisible();
   });
 
   it("没有业务企业时显示创建引导并禁用入口", async () => {
