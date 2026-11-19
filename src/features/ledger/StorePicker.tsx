@@ -85,6 +85,11 @@ export function StorePicker({ stores, selected, onChange }: StorePickerProps) {
           className={styles.storeMenu}
           role="group"
           aria-label={t("ledger.store")}
+          onMouseDown={(event) => {
+            // 先保留焦点，让随后的原生 label 点击完成勾选。
+            if (event.target instanceof HTMLLabelElement)
+              event.preventDefault();
+          }}
         >
           <input
             type="search"
