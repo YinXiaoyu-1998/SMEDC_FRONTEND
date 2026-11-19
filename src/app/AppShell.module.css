@@ -197,7 +197,6 @@
 .consoleBrand {
   display: flex;
   align-items: center;
-  gap: 11px;
   padding: 0 9px;
   margin-bottom: 40px;
   color: var(--color-text);
@@ -207,23 +206,10 @@
   text-decoration: none;
 }
 
-.consoleMark,
 .avatar {
   display: grid;
   place-items: center;
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-}
-
-.consoleMark {
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  box-shadow: 0 3px 8px #5643cb28;
-}
-
-.avatar {
   width: 31px;
   height: 31px;
   border-radius: 50%;

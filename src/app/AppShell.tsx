@@ -13,6 +13,7 @@ import { useLogout } from "@/api/session";
 import { AdminSectionNav } from "@/app/AdminSectionNav";
 import { LanguageSwitch } from "@/app/LanguageSwitch";
 import { appPaths } from "@/app/paths";
+import { Brand } from "@/app/Brand";
 import { useText } from "@/i18n/useText";
 import theme from "@/styles/AdminTheme.module.css";
 import { AdminIcon } from "@/ui/AdminIcon";
@@ -86,10 +87,7 @@ export function AppShell({ session, children }: AppShellProps) {
       {consoleOrg === undefined ? null : (
         <aside className={styles.consoleSidebar}>
           <Link className={styles.consoleBrand} to={appPaths.home}>
-            <span className={styles.consoleMark}>
-              <AdminIcon name="grid" />
-            </span>
-            <span>{t("app.brand")}</span>
+            <Brand />
           </Link>
           <AdminSectionNav orgId={consoleOrg} />
           <div className={styles.consoleOrganization}>
@@ -104,7 +102,7 @@ export function AppShell({ session, children }: AppShellProps) {
       <header className={styles.header}>
         {consoleOrg === undefined ? (
           <Link className={styles.brand} to={appPaths.home}>
-            {t("app.brand")}
+            <Brand />
           </Link>
         ) : (
           <div className={styles.consoleBreadcrumb}>
