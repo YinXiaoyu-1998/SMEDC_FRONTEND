@@ -7,6 +7,7 @@ import { useAuthFeedback } from "@/app/authFeedback";
 import { LanguageSwitch } from "@/app/LanguageSwitch";
 import { LoadingSkeleton } from "@/app/LoadingSkeleton";
 import { appPaths, resolveLoginTarget } from "@/app/paths";
+import { Brand } from "@/app/Brand";
 import { useText } from "@/i18n/useText";
 import { Button } from "@/ui/Button";
 
@@ -91,7 +92,9 @@ export function LoginPage() {
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="login-title">
         <div className={styles.topRow}>
-          <span className={styles.brand}>{t("app.brand")}</span>
+          <span className={styles.brand}>
+            <Brand />
+          </span>
           <LanguageSwitch />
         </div>
 

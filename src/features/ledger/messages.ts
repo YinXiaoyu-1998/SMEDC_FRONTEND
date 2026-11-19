@@ -23,15 +23,13 @@ export const ledgerMessages = {
   "ledger.retry": ["重试", "Try again"],
 
   "ledger.filters.title": ["筛选条件", "Filters"],
-  "ledger.store": ["门店精确名称", "Exact store name"],
-  "ledger.loadedStores": [
-    "已加载门店（非完整门店目录）",
-    "Loaded stores (not a complete directory)",
-  ],
-  "ledger.allStores": [
-    "留空查询所有受权门店；保留名称原有空格。",
-    "Leave empty for all authorized stores. Preserve spaces in the name.",
-  ],
+  "ledger.store": ["门店", "Stores"],
+  "ledger.pickStores": ["请选择门店", "Choose stores"],
+  "ledger.noStores": ["暂无可选门店", "No stores available"],
+  "ledger.picked": ["已选 {count} 家门店", "{count} stores selected"],
+  "ledger.selectAllStores": ["全选门店", "Select all stores"],
+  "ledger.searchStores": ["搜索门店", "Search stores"],
+  "ledger.noMatch": ["没有匹配的门店", "No matching stores"],
   "ledger.startDate": ["进货日期 · 起", "Purchase date · From"],
   "ledger.endDate": ["进货日期 · 止", "Purchase date · To"],
   "ledger.search": ["查询台账", "Find ledgers"],
@@ -46,7 +44,10 @@ export const ledgerMessages = {
     "本次查询无受权进货记录。请调整筛选条件。",
     "No authorized purchase records match this query. Adjust your filters.",
   ],
-  "ledger.initial": ["选择日期后查询台账。", "Choose dates to find ledgers."],
+  "ledger.initial": [
+    "选择门店和日期后查询台账。",
+    "Choose stores and dates to find ledgers.",
+  ],
   "ledger.failed": [
     "本批台账读取失败，请重试。",
     "This batch failed to load. Please try again.",

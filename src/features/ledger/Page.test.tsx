@@ -65,6 +65,7 @@ function ledgerContext(
       displayName: "李四",
       organizationName: "示例企业",
     },
+    storeNames: [" 门店 甲 ", "门店乙", "门店A"],
     csrfToken: "csrf-ledger",
     limits: { ...defaultLimits, ...limits },
   };
@@ -214,6 +215,13 @@ async function waitForPage(searchLabel = "查询台账") {
   await screen.findByRole("button", { name: searchLabel });
 }
 
+function selectAllStores() {
+  const picker = screen.getByRole("button", { name: "门店" });
+  fireEvent.click(picker);
+  fireEvent.click(screen.getByRole("checkbox", { name: "全选门店" }));
+  fireEvent.click(picker);
+}
+
 function clickSearch() {
   fireEvent.click(screen.getByRole("button", { name: "查询台账" }));
 }
@@ -265,7 +273,9 @@ describe("台账下载中心", () => {
     });
     await waitForPage();
 
-    expect(screen.getByText("选择日期后查询台账。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "查询台账" })).toBeDisabled();
+    selectAllStores();
+    expect(screen.getByText("选择门店和日期后查询台账。")).toBeInTheDocument();
     const prepare = screen.getByRole("button", { name: "打包下载 ZIP" });
     expect(prepare).toBeDisabled();
     expect(prepare).toHaveAccessibleDescription("请先选择可下载的台账");
@@ -284,9 +294,38 @@ describe("台账下载中心", () => {
     ).toBeInTheDocument();
     const [coverageCall] = coverageCalls(calls);
     expect(coverageCall?.body).toEqual({
-      scope: { startDate: "2026-10-01", endDate: "2026-10-03" },
+      scope: {
+        storeNames: [" 门店 甲 ", "门店A", "门店乙"],
+        startDate: "2026-10-01",
+        endDate: "2026-10-03",
+      },
     });
     expect(coverageCall?.headers.get("x-csrf-token")).toBe("csrf-ledger");
+  });
+
+  it("首次打开加载可选门店，多选仅在提交后查询，URL 保留精确店名", async () => {
+    const { calls, router } = renderLedger();
+    await waitForPage();
+    expect(
+      calls.some((call) => call.url.searchParams.get("includeStores") === "1"),
+    ).toBe(true);
+    const picker = screen.getByRole("button", { name: "门店" });
+    fireEvent.click(picker);
+    const all = screen.getByRole("checkbox", { name: "全选门店" });
+    expect(all).not.toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "门店 甲" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "门店乙" }));
+    expect(all).toBePartiallyChecked();
+    expect(coverageCalls(calls)).toHaveLength(0);
+    fireEvent.click(picker);
+    clickSearch();
+    await waitFor(() => expect(coverageCalls(calls)).toHaveLength(1));
+    expect(coverageCalls(calls)[0]?.body).toMatchObject({
+      scope: { storeNames: [" 门店 甲 ", "门店乙"] },
+    });
+    expect(
+      new URLSearchParams(router.state.location.search).getAll("store"),
+    ).toEqual([" 门店 甲 ", "门店乙"]);
   });
 
   it("日期必填、区间合法且跨度不超过上限，校验失败不发请求", async () => {
@@ -294,6 +333,7 @@ describe("台账下载中心", () => {
       coverage: () => ({ body: { partitions: [], nextCursor: null } }),
     });
     await waitForPage();
+    selectAllStores();
 
     fireEvent.change(screen.getByLabelText(/进货日期 · 起/), {
       target: { value: "" },
@@ -319,20 +359,6 @@ describe("台账下载中心", () => {
       ),
     ).toBeInTheDocument();
     expect(coverageCalls(calls)).toHaveLength(0);
-
-    fireEvent.change(screen.getByLabelText("门店精确名称"), {
-      target: { value: "   " },
-    });
-    fireEvent.change(screen.getByLabelText(/进货日期 · 止/), {
-      target: { value: "2026-01-01" },
-    });
-    clickSearch();
-    expect(
-      await screen.findByText(
-        "请核对门店原名及有效日期，起始日期不能晚于结束日期。",
-      ),
-    ).toBeInTheDocument();
-    expect(coverageCalls(calls)).toHaveLength(0);
   });
 
   it("深链进入时按 URL 还原筛选条件、自动查询并填充已加载门店", async () => {
@@ -345,8 +371,12 @@ describe("台账下载中心", () => {
     ]);
     await waitForPage();
 
-    expect(await screen.findByText("门店 甲")).toBeInTheDocument();
-    expect(screen.getByLabelText("门店精确名称")).toHaveValue(" 门店 甲 ");
+    expect(
+      await screen.findByRole("cell", { name: "门店 甲" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "门店" })).toHaveTextContent(
+      "门店 甲",
+    );
     expect(screen.getByLabelText(/进货日期 · 起/)).toHaveValue("2026-10-01");
     expect(screen.getByLabelText(/进货日期 · 止/)).toHaveValue("2026-10-03");
 
@@ -359,10 +389,9 @@ describe("台账下载中心", () => {
       },
     });
 
-    const options = [
-      ...document.querySelectorAll<HTMLOptionElement>("#ledger-stores option"),
-    ].map((option) => option.value);
-    expect(options).toEqual([" 门店 甲 ", "门店乙"]);
+    fireEvent.click(screen.getByRole("button", { name: "门店" }));
+    expect(screen.getByRole("checkbox", { name: "门店 甲" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "门店乙" })).not.toBeChecked();
   });
 
   it("请求失败展示稳定错误文案，重试后恢复列表", async () => {
@@ -381,6 +410,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
 
     expect(
@@ -403,6 +433,7 @@ describe("台账下载中心", () => {
       }),
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
 
     expect(
@@ -436,6 +467,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
     selectRow("门店A", "2026-10-01");
@@ -497,6 +529,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店B");
 
@@ -525,6 +558,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
     selectRow("门店A", "2026-10-01");
@@ -558,6 +592,7 @@ describe("台账下载中心", () => {
       coverage: selectionCoverage(rows),
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
 
@@ -607,6 +642,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
     selectRow("门店A", "2026-10-01");
@@ -662,6 +698,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
     selectRow("门店A", "2026-10-01");
@@ -712,6 +749,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     fireEvent.change(screen.getByLabelText(/进货日期 · 起/), {
       target: { value: "2026-10-01" },
     });
@@ -757,6 +795,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
     expect(screen.getByText("第 1 批")).toBeInTheDocument();
@@ -772,6 +811,7 @@ describe("台账下载中心", () => {
     );
     expect(sent?.body).toEqual({
       scope: {
+        storeNames: [" 门店 甲 ", "门店A", "门店乙"],
         startDate: expect.any(String),
         endDate: expect.any(String),
       },
@@ -787,6 +827,7 @@ describe("台账下载中心", () => {
     const rows = [partition("门店A", "2026-10-01")];
     const { calls } = renderLedger({ coverage: selectionCoverage(rows) });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
 
@@ -826,6 +867,7 @@ describe("台账下载中心", () => {
       },
     });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
     selectRow("门店A", "2026-10-01");
@@ -852,6 +894,7 @@ describe("台账下载中心", () => {
     const rows = [partition("门店A", "2026-10-01")];
     renderLedger({ coverage: selectionCoverage(rows) });
     await waitForPage();
+    selectAllStores();
     clickSearch();
     await screen.findByText("门店A");
 
@@ -881,7 +924,7 @@ describe("台账下载中心", () => {
       screen.getByRole("button", { name: "Prepare ZIP" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Choose dates to find ledgers."),
+      screen.getByText("Choose stores and dates to find ledgers."),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "中文" }));

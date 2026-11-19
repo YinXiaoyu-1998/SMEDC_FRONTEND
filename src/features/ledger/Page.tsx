@@ -29,6 +29,7 @@ import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { Field } from "@/ui/Field";
 import { PageSection } from "@/ui/PageSection";
 
+import { StorePicker } from "./StorePicker";
 import styles from "./Page.module.css";
 
 const TASK_STATUS_KEYS: ReadonlySet<string> = new Set([
@@ -156,26 +157,11 @@ function LedgerWorkspaceView({
           description={t("ledger.access")}
         >
           <form className={styles.filters} onSubmit={handleSearch} noValidate>
-            <Field
-              label={t("ledger.store")}
-              hint={t("ledger.loadedStores")}
-              id="ledger-store"
-            >
-              <input
-                id="ledger-store"
-                type="text"
-                list="ledger-stores"
-                maxLength={512}
-                autoComplete="off"
-                value={workspace.draft.storeName}
-                onChange={(event) => workspace.setStoreName(event.target.value)}
-              />
-            </Field>
-            <datalist id="ledger-stores">
-              {workspace.stores.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
+            <StorePicker
+              stores={context.storeNames ?? []}
+              selected={workspace.draft.storeNames}
+              onChange={workspace.setStoreNames}
+            />
             <Field label={t("ledger.startDate")} required id="ledger-start">
               <input
                 id="ledger-start"
@@ -199,12 +185,15 @@ function LedgerWorkspaceView({
               />
             </Field>
             <div className={styles.filterActions}>
-              <Button type="submit" busy={workspace.coverageLoading}>
+              <Button
+                type="submit"
+                busy={workspace.coverageLoading}
+                disabled={!workspace.draft.storeNames.length}
+              >
                 {t("ledger.search")}
               </Button>
             </div>
           </form>
-          <p className={styles.muted}>{t("ledger.allStores")}</p>
           {workspace.filterIssueKey === null ? null : (
             <p className={styles.error} role="alert">
               {t(ledgerErrorKey(workspace.filterIssueKey))}
