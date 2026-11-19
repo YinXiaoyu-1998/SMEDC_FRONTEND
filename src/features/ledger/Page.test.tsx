@@ -328,6 +328,23 @@ describe("台账下载中心", () => {
     ).toEqual([" 门店 甲 ", "门店乙"]);
   });
 
+  it("点击门店文字或全选行会勾选且保持菜单打开", async () => {
+    renderLedger();
+    await waitForPage();
+    const picker = screen.getByRole("button", { name: "门店" });
+    fireEvent.click(picker);
+    const menu = within(screen.getByRole("group", { name: "门店" }));
+
+    for (const name of ["门店乙", "全选门店"]) {
+      const row = menu.getByText(name, { exact: true });
+      // 浏览器会在 label 的 mousedown 默认行为中移走焦点，早于 click。
+      expect(fireEvent.mouseDown(row)).toBe(false);
+      fireEvent.click(row);
+      expect(menu.getByRole("checkbox", { name })).toBeChecked();
+      expect(picker).toHaveAttribute("aria-expanded", "true");
+    }
+  });
+
   it("日期必填、区间合法且跨度不超过上限，校验失败不发请求", async () => {
     const { calls } = renderLedger({
       coverage: () => ({ body: { partitions: [], nextCursor: null } }),
