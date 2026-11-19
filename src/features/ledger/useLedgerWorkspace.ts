@@ -104,13 +104,12 @@ export interface UseLedgerWorkspaceOptions {
 
 export interface LedgerWorkspace {
   readonly draft: LedgerFilterDraft;
-  readonly setStoreName: (value: string) => void;
+  readonly setStoreNames: (value: readonly string[]) => void;
   readonly setStartDate: (value: string) => void;
   readonly setEndDate: (value: string) => void;
   readonly search: () => void;
   readonly filterIssueKey: string | null;
   readonly appliedScope: LedgerScope | null;
-  readonly stores: readonly string[];
   readonly rows: readonly LedgerPartition[];
   readonly coverageLoading: boolean;
   readonly coverageErrorKey: string | null;
@@ -183,30 +182,38 @@ export function useLedgerWorkspace({
       ),
     [searchText, limits],
   );
+  const catalog = context.storeNames;
+  const appliedDraft = useMemo(
+    () =>
+      parsed.scope && !parsed.scope.storeNames.length
+        ? { ...parsed.draft, storeNames: catalog ?? [] }
+        : parsed.draft,
+    [parsed, catalog],
+  );
   const appliedSignature = useMemo(
-    () => JSON.stringify(parsed.draft),
-    [parsed],
+    () => JSON.stringify(appliedDraft),
+    [appliedDraft],
   );
   const [draftState, setDraftState] = useState<{
     readonly signature: string;
     readonly draft: LedgerFilterDraft;
-  }>(() => ({ signature: appliedSignature, draft: parsed.draft }));
+  }>(() => ({ signature: appliedSignature, draft: appliedDraft }));
   const draft =
-    draftState.signature === appliedSignature ? draftState.draft : parsed.draft;
+    draftState.signature === appliedSignature ? draftState.draft : appliedDraft;
   const updateDraft = useCallback(
     (patch: Partial<LedgerFilterDraft>) => {
       setDraftState((previous) => {
         const current =
           previous.signature === appliedSignature
             ? previous.draft
-            : parsed.draft;
+            : appliedDraft;
         return { signature: appliedSignature, draft: { ...current, ...patch } };
       });
     },
-    [appliedSignature, parsed.draft],
+    [appliedSignature, appliedDraft],
   );
-  const setStoreName = useCallback(
-    (value: string) => updateDraft({ storeName: value }),
+  const setStoreNames = useCallback(
+    (value: readonly string[]) => updateDraft({ storeNames: value }),
     [updateDraft],
   );
   const setStartDate = useCallback(
@@ -236,7 +243,13 @@ export function useLedgerWorkspace({
   const cursor = effectivePage.cursors[effectivePage.batch] ?? null;
 
   const coverageQuery = useQuery({
-    queryKey: [...COVERAGE_QUERY_KEY, coverageKeyBase, cursor],
+    queryKey: [
+      ...COVERAGE_QUERY_KEY,
+      context.identity.orgId,
+      context.identity.userAccountId,
+      coverageKeyBase,
+      cursor,
+    ],
     enabled: scope !== null,
     retry: false,
     staleTime: 30_000,
@@ -256,42 +269,34 @@ export function useLedgerWorkspace({
       ? null
       : ledgerErrorKey(coverageQuery.error);
 
-  const [storeHistory, setStoreHistory] = useState<readonly string[]>([]);
-  const rememberStores = useCallback(() => {
-    setStoreHistory((previous) => {
-      const names = new Set(previous);
-      let changed = false;
-      for (const row of rows) {
-        if (!names.has(row.storeName)) {
-          names.add(row.storeName);
-          changed = true;
-        }
-      }
-      return changed ? [...names].sort() : previous;
-    });
-  }, [rows]);
-
   const search = useCallback(() => {
-    const validation = validateFilter(draft, limits);
+    if (!draft.storeNames.length) return;
+    const selected = new Set(draft.storeNames);
+    const allSelected =
+      catalog &&
+      catalog.length > 0 &&
+      catalog.every((name) => selected.has(name)) &&
+      selected.size === catalog.length;
+    const validation = validateFilter(
+      allSelected && selected.size > limits.stores
+        ? { ...draft, storeNames: [] }
+        : draft,
+      limits,
+    );
     if (!validation.ok) {
       setFilterIssueKey(validation.code);
       return;
     }
     setFilterIssueKey(null);
-    rememberStores();
-    const entries = scopeToSearchParams(validation.scope);
-    const params = new URLSearchParams({ from: entries.from, to: entries.to });
-    if (entries.store !== undefined) params.set("store", entries.store);
-    setSearchParams(params, { replace: true });
+    setSearchParams(scopeToSearchParams(validation.scope), { replace: true });
     setSearchNonce((value) => value + 1);
-  }, [draft, limits, rememberStores, setSearchParams]);
+  }, [draft, limits, catalog, setSearchParams]);
 
   const refetchCoverage = useCallback(() => {
     void coverageQuery.refetch();
   }, [coverageQuery]);
 
   const goPrevious = useCallback(() => {
-    rememberStores();
     setPageState((previous) => {
       const base =
         previous.key === coverageKeyBase
@@ -300,11 +305,10 @@ export function useLedgerWorkspace({
       if (base.batch === 0) return base;
       return { ...base, batch: base.batch - 1 };
     });
-  }, [coverageKeyBase, rememberStores]);
+  }, [coverageKeyBase]);
 
   const goNext = useCallback(() => {
     if (nextCursor === null) return;
-    rememberStores();
     setPageState((previous) => {
       const base =
         previous.key === coverageKeyBase
@@ -314,13 +318,7 @@ export function useLedgerWorkspace({
       cursors[base.batch + 1] = nextCursor;
       return { key: coverageKeyBase, batch: base.batch + 1, cursors };
     });
-  }, [coverageKeyBase, nextCursor, rememberStores]);
-
-  const stores = useMemo(() => {
-    const names = new Set(storeHistory);
-    for (const row of rows) names.add(row.storeName);
-    return [...names].sort();
-  }, [rows, storeHistory]);
+  }, [coverageKeyBase, nextCursor]);
 
   // 已选清单是草稿：服务端新返回的状态与大小只用于展示，提交前会整单复核
   const [selectionBase, setSelectionBase] = useState<LedgerSelection>(
@@ -673,13 +671,12 @@ export function useLedgerWorkspace({
 
   return {
     draft,
-    setStoreName,
+    setStoreNames,
     setStartDate,
     setEndDate,
     search,
     filterIssueKey,
     appliedScope: scope,
-    stores,
     rows,
     coverageLoading: scope !== null && coverageQuery.isPending,
     coverageErrorKey,

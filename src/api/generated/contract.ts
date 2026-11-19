@@ -5089,7 +5089,9 @@ export const ledgerContextParamsSchema = z.strictObject({});
 
 export type LedgerContextParams = z.infer<typeof ledgerContextParamsSchema>;
 
-export const ledgerContextQuerySchema = z.strictObject({});
+export const ledgerContextQuerySchema = z.strictObject({
+  includeStores: z.literal("1").optional(),
+});
 
 export type LedgerContextQuery = z.infer<typeof ledgerContextQuerySchema>;
 
@@ -5100,6 +5102,7 @@ export const ledgerContextResponseSchema = z.strictObject({
     displayName: z.string().min(1),
     organizationName: z.string().min(1),
   }),
+  storeNames: z.array(z.string()).optional(),
   csrfToken: z.string().min(1),
   limits: z.strictObject({
     files: z.number().int().min(0).max(9007199254740991),
@@ -8217,8 +8220,14 @@ export const webApiRoutes = {
     method: "GET",
     path: "/api/web/v1/ledger/context",
     auth: "session",
-    errors: ["BROWSER_SIGN_IN_REQUIRED", "INTERNAL_ERROR"],
-    summary: "读取台账下载中心所需的本人身份、CSRF 令牌与静态限额",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "LEDGER_PDF_UNAVAILABLE",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary:
+      "读取台账下载中心所需的本人身份、CSRF 令牌、静态限额及按需加载的可选门店",
   },
   "ledger.coverage": {
     method: "POST",

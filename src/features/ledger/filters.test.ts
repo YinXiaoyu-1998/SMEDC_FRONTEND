@@ -20,7 +20,7 @@ const limits: LedgerLimits = {
 };
 
 const draft = (patch: Partial<LedgerFilterDraft> = {}): LedgerFilterDraft => ({
-  storeName: "",
+  storeNames: [],
   startDate: "2026-10-01",
   endDate: "2026-10-07",
   ...patch,
@@ -47,20 +47,22 @@ describe("台账筛选校验", () => {
   });
 
   it("门店名保留原有空格，但全空格视为无效", () => {
-    expect(validateFilter(draft({ storeName: " 门店 甲 " }), limits)).toEqual({
+    expect(
+      validateFilter(draft({ storeNames: [" 门店 甲 "] }), limits),
+    ).toEqual({
       ok: true,
       scope: {
-        storeName: " 门店 甲 ",
+        storeNames: [" 门店 甲 "],
         startDate: "2026-10-01",
         endDate: "2026-10-07",
       },
     });
-    expect(validateFilter(draft({ storeName: "   " }), limits)).toEqual({
+    expect(validateFilter(draft({ storeNames: ["   "] }), limits)).toEqual({
       ok: false,
       code: "LEDGER_SCOPE_INVALID",
     });
     expect(
-      validateFilter(draft({ storeName: "x".repeat(513) }), limits),
+      validateFilter(draft({ storeNames: ["x".repeat(513)] }), limits),
     ).toEqual({
       ok: false,
       code: "LEDGER_SCOPE_INVALID",
@@ -86,7 +88,7 @@ describe("台账筛选校验", () => {
 
   it("深链参数可用时还原筛选，参数无效时退回默认且不查询", () => {
     const fallback: LedgerFilterDraft = {
-      storeName: "",
+      storeNames: [],
       startDate: "2026-10-01",
       endDate: "2026-10-07",
     };
@@ -100,12 +102,12 @@ describe("台账筛选校验", () => {
       fallback,
     );
     expect(parsed.scope).toEqual({
-      storeName: " 店 ",
+      storeNames: [" 店 "],
       startDate: "2026-01-01",
       endDate: "2026-01-02",
     });
     expect(parsed.draft).toEqual({
-      storeName: " 店 ",
+      storeNames: [" 店 "],
       startDate: "2026-01-01",
       endDate: "2026-01-02",
     });

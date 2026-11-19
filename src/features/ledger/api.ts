@@ -31,6 +31,7 @@ export function readLedgerContext(
     {
       method: contextRoute.method,
       path: contextRoute.path,
+      query: { includeStores: "1" },
       ...(signal === undefined ? {} : { signal }),
     },
     ledgerContextResponseSchema,

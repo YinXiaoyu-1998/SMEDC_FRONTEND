@@ -258,3 +258,58 @@
     grid-template-columns: 1fr;
   }
 }
+
+.picker {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+.picker > label {
+  font-weight: 600;
+}
+.picker > button {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 2.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.storeMenu {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  width: 100%;
+  margin-top: 4px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 18px #18264520;
+}
+.storeMenu > input {
+  width: 100%;
+  padding: var(--space-2);
+}
+.storeMenu label {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.storeMenu > label {
+  border-bottom: 1px solid var(--color-border);
+}
+.storeList {
+  max-height: 15rem;
+  overflow: auto;
+}

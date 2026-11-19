@@ -3,16 +3,12 @@ import type { LedgerCoverageBody } from "@/api/generated/contract";
 import type { LedgerLimits } from "@/features/ledger/model";
 
 export interface LedgerFilterDraft {
-  readonly storeName: string;
+  readonly storeNames: readonly string[];
   readonly startDate: string;
   readonly endDate: string;
 }
 
-export interface LedgerScope {
-  readonly storeName: string;
-  readonly startDate: string;
-  readonly endDate: string;
-}
+export type LedgerScope = LedgerFilterDraft;
 
 export type LedgerScopeIssueCode =
   "LEDGER_SCOPE_INVALID" | "LEDGER_SCOPE_LIMIT_EXCEEDED";
@@ -53,7 +49,7 @@ export function defaultFilter(now: Date = new Date()): LedgerFilterDraft {
   const start = new Date(Date.parse(`${today}T00:00:00Z`) - 6 * DAY_MS)
     .toISOString()
     .slice(0, 10);
-  return { storeName: "", startDate: start, endDate: today };
+  return { storeNames: [], startDate: start, endDate: today };
 }
 
 export type ScopeValidation =
@@ -64,31 +60,34 @@ export function validateFilter(
   draft: LedgerFilterDraft,
   limits: LedgerLimits,
 ): ScopeValidation {
-  const storeName = draft.storeName;
+  const storeNames = [...new Set(draft.storeNames)].sort();
   if (!isValidDateText(draft.startDate) || !isValidDateText(draft.endDate)) {
     return { ok: false, code: "LEDGER_SCOPE_INVALID" };
   }
   if (draft.startDate > draft.endDate) {
     return { ok: false, code: "LEDGER_SCOPE_INVALID" };
   }
-  // 保留门店名称里的空格，但全是空格等于没有填写有效名称
-  if (storeName !== "" && storeName.trim() === "") {
+  if (
+    storeNames.some(
+      (name) => !name.trim() || name.length > STORE_NAME_MAX_LENGTH,
+    )
+  ) {
     return { ok: false, code: "LEDGER_SCOPE_INVALID" };
   }
-  if (storeName.length > STORE_NAME_MAX_LENGTH) {
-    return { ok: false, code: "LEDGER_SCOPE_INVALID" };
-  }
-  if (daySpan(draft.startDate, draft.endDate) > limits.dates) {
+  if (
+    storeNames.length > limits.stores ||
+    daySpan(draft.startDate, draft.endDate) > limits.dates
+  ) {
     return { ok: false, code: "LEDGER_SCOPE_LIMIT_EXCEEDED" };
   }
   return {
     ok: true,
-    scope: { storeName, startDate: draft.startDate, endDate: draft.endDate },
+    scope: { storeNames, startDate: draft.startDate, endDate: draft.endDate },
   };
 }
 
 export function scopeKey(scope: LedgerScope): string {
-  return JSON.stringify([scope.storeName, scope.startDate, scope.endDate]);
+  return JSON.stringify([scope.storeNames, scope.startDate, scope.endDate]);
 }
 
 export function scopeToBody(
@@ -97,20 +96,17 @@ export function scopeToBody(
   return {
     startDate: scope.startDate,
     endDate: scope.endDate,
-    ...(scope.storeName === "" ? {} : { storeNames: [scope.storeName] }),
+    ...(scope.storeNames.length ? { storeNames: [...scope.storeNames] } : {}),
   };
 }
 
-export function scopeToSearchParams(scope: LedgerScope): {
-  readonly from: string;
-  readonly to: string;
-  readonly store?: string;
-} {
-  return {
+export function scopeToSearchParams(scope: LedgerScope): URLSearchParams {
+  const params = new URLSearchParams({
     from: scope.startDate,
     to: scope.endDate,
-    ...(scope.storeName === "" ? {} : { store: scope.storeName }),
-  };
+  });
+  for (const name of scope.storeNames) params.append("store", name);
+  return params;
 }
 
 export interface ParsedScopeFilter {
@@ -129,12 +125,13 @@ export function parseScopeFilter(
 ): ParsedScopeFilter {
   const from = params.get("from");
   const to = params.get("to");
-  const store = params.get("store");
+  const storeNames = params.getAll("store");
   if (from === null || to === null) {
     return { draft: fallback, scope: null };
   }
   const candidate: LedgerFilterDraft = {
-    storeName: store ?? "",
+    storeNames:
+      storeNames.length === 1 && storeNames[0] === "" ? [] : storeNames,
     startDate: from,
     endDate: to,
   };
@@ -142,5 +139,5 @@ export function parseScopeFilter(
   if (!validation.ok) {
     return { draft: fallback, scope: null };
   }
-  return { draft: candidate, scope: validation.scope };
+  return { draft: validation.scope, scope: validation.scope };
 }
