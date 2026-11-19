@@ -1,6 +1,6 @@
-# SMEDC 前端
+# 企业智脑前端
 
-SMEDC 的网页前端：一个独立构建、独立部署的静态 React 应用。
+企业智脑的网页前端：一个独立构建、独立部署的静态 React 应用。
 它只通过 `/api/web/v1` 的 JSON 契约访问后端，不消费任何后端渲染的 HTML。
 
 - 迁移背景与权威规格：SME_DATA_CENTER Issue #319
@@ -15,7 +15,7 @@ SMEDC 的网页前端：一个独立构建、独立部署的静态 React 应用�
 | `src/app/`      | 路由、布局、导航、角色跳转、错误页                         |
 | `src/i18n/`     | `{zh, en}` 文案字典与 `useText()`                          |
 | `src/ui/`       | 可复用的交互内核：按钮状态机、对话框、表格、字段、冲突对比 |
-| `src/features/` | 权限设置、自动任务、台账下载中心                           |
+| `src/features/` | 员工档案与部门、权限设置、自动任务、台账下载中心           |
 | `src/styles/`   | 设计令牌与 CSS Modules                                     |
 
 ## 技术栈
@@ -36,8 +36,8 @@ SMEDC 的网页前端：一个独立构建、独立部署的静态 React 应用�
 本仓把契约快照与生成物一起提交，保证没有网络时也能构建、测试与校验。
 
 ```bash
-# 按指定 commit 拉取并重新生成（只接受 commit SHA，分支名/tag 会移动，不能用于复现）
-npm run contract:sync -- --ref 59e0b43b1e6f57a9951fae950c6d15973641950e
+# 升级时，将 backend_commit 设为已选定的后端完整提交 SHA
+npm run contract:sync -- --ref "${backend_commit:?请先设置后端提交 SHA}"
 
 # 按 contract/ref.json 里 pin 住的 commit 重新拉取
 npm run contract:sync
@@ -72,9 +72,9 @@ npm run contract:sync -- --check
 
 ### CI 中的契约检查
 
-`.github/workflows/quality.yml` 只运行 `npm run contract:sync -- --check`，**不联网**：
+质量门禁中的契约检查使用 `npm run contract:sync -- --check`，只读取本地文件：
 它校验 `contract.json` 的 hash 与 `ref.json` 一致、`contract.json` 是 sync 的规范化格式、
-`src/api/generated/contract.ts` 与 `contract.json` 逐字一致。因此 PR 不需要访问 GitHub；
+`src/api/generated/contract.ts` 与 `contract.json` 逐字一致。因此契约校验无需从 GitHub 获取快照；
 升级契约是显式的 `--ref` 操作，必须在同一提交里更新上述三个文件。
 
 ## 本地开发

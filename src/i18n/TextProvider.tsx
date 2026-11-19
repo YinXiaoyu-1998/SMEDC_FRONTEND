@@ -37,7 +37,8 @@ export function TextProvider({
   useEffect(() => {
     storeLocale(locale);
     document.documentElement.lang = toHtmlLang(locale);
-  }, [locale]);
+    document.title = resolveText(messages, locale, "app.brand");
+  }, [locale, messages]);
 
   const value = useMemo<TextContextValue>(
     () => ({

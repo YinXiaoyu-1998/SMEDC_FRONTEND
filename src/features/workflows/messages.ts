@@ -16,7 +16,7 @@ export const workflowMessages = {
   ],
   title: ["自动任务", "Automatic tasks"],
   intro: [
-    "业务配置由 SMEDC 保存，实际定时任务由您电脑上的 Codex 执行。",
+    "业务配置由企业智脑保存，实际定时任务由您电脑上的 Codex 执行。",
     "SMEDC saves business settings; Codex on your computer schedules and runs tasks.",
   ],
   enterprise: ["业务企业", "Business enterprise"],
@@ -486,7 +486,7 @@ export const workflowMessages = {
   authorizationRevoked: ["已撤销", "Revoked"],
   scopeKind: ["授权动作", "Action"],
   workflowSectionIntro: [
-    "业务配置由 SMEDC 保存，实际定时任务由 Codex 在你的电脑上执行。",
+    "业务配置由企业智脑保存，实际定时任务由 Codex 在你的电脑上执行。",
     "SMEDC saves business settings; Codex on your computer runs the tasks.",
   ],
 } as const satisfies TextDictionary;
