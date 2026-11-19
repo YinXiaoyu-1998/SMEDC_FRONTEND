@@ -74,7 +74,9 @@ export function StorePicker({ stores, selected, onChange }: StorePickerProps) {
           setOpen(!open);
         }}
       >
-        {summary}
+        <span className={styles.storeSummary} title={summary}>
+          {summary}
+        </span>
         <span aria-hidden="true">▾</span>
       </button>
       {open && (
