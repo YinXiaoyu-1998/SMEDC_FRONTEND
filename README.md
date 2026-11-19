@@ -1,6 +1,6 @@
-# SMEDC 前端
+# 企业智脑前端
 
-SMEDC 的网页前端：一个独立构建、独立部署的静态 React 应用。
+企业智脑的网页前端：一个独立构建、独立部署的静态 React 应用。
 它只通过 `/api/web/v1` 的 JSON 契约访问后端，不消费任何后端渲染的 HTML。
 
 - 迁移背景与权威规格：SME_DATA_CENTER Issue #319

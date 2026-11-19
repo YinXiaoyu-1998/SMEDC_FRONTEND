@@ -432,7 +432,7 @@ it("asks before marking an employee departed and does not submit when cancelled"
   });
   fireEvent.click(within(form).getByRole("button", { name: "保存" }));
   expect(window.confirm).toHaveBeenCalledWith(
-    "标记离职后，员工档案会保留，并从默认在职名单移除。SMEDC 登录账号和访问权限不会因此改变。",
+    "标记离职后，员工档案会保留，并从默认在职名单移除。企业智脑登录账号和访问权限不会因此改变。",
   );
   expect(calls.some((url) => url.includes("/update_employee"))).toBe(false);
 });

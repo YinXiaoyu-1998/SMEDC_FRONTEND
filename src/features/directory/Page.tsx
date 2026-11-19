@@ -341,7 +341,7 @@ export function DirectoryPage() {
       draft.status === "departed" &&
       !window.confirm(
         L([
-          "标记离职后，员工档案会保留，并从默认在职名单移除。SMEDC 登录账号和访问权限不会因此改变。",
+          "标记离职后，员工档案会保留，并从默认在职名单移除。企业智脑登录账号和访问权限不会因此改变。",
           "The record remains and leaves the active list. SMEDC account access is unchanged.",
         ]),
       )

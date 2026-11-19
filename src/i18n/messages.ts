@@ -4,7 +4,7 @@ import type { TextDictionary } from "@/i18n/text";
 
 // 这里只放跨业务复用的通用 UI 文案；业务文案由各 feature 通过 mergeText 合并进字典
 export const baseMessages = {
-  "app.brand": ["SMEDC", "SMEDC"],
+  "app.brand": ["企业智脑", "SMEDC"],
   "app.skipToContent": ["跳到主要内容", "Skip to main content"],
   "app.loading": ["正在加载", "Loading"],
   "nav.primary": ["主导航", "Main navigation"],
@@ -24,7 +24,7 @@ export const baseMessages = {
   "language.zh": ["中文", "中文"],
   "language.en": ["English", "English"],
   "session.identity": ["当前身份", "Signed in as"],
-  "login.title": ["登录 SMEDC", "Sign in to SMEDC"],
+  "login.title": ["登录企业智脑", "Sign in to SMEDC"],
   "login.email": ["邮箱", "Email"],
   "login.password": ["密码", "Password"],
   "login.submit": ["登录", "Sign in"],

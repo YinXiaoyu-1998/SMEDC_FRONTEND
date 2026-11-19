@@ -37,7 +37,7 @@ describe("会话守卫", () => {
     const next = new URLSearchParams(router.state.location.search).get("next");
     expect(next).toBe("/admin/org-9/workflows");
     expect(
-      screen.getByRole("heading", { name: "登录 SMEDC" }),
+      screen.getByRole("heading", { name: "登录企业智脑" }),
     ).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe("会话守卫", () => {
 
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "登录 SMEDC" }),
+      screen.queryByRole("heading", { name: "登录企业智脑" }),
     ).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/ledger");
   });

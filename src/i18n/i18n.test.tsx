@@ -19,9 +19,11 @@ describe("界面语言", () => {
     renderApp({ session: null, initialEntries: ["/login"] });
 
     expect(
-      screen.getByRole("heading", { name: "登录 SMEDC" }),
+      screen.getByRole("heading", { name: "登录企业智脑" }),
     ).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("zh-CN");
+    expect(document.title).toBe("企业智脑");
+    expect(screen.getByText("企业智脑", { exact: true })).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "English" }));
 
@@ -30,14 +32,18 @@ describe("界面语言", () => {
     ).toBeInTheDocument();
     expect(localStorage.getItem("smedc-locale")).toBe("en");
     expect(document.documentElement.lang).toBe("en");
+    expect(document.title).toBe("SMEDC");
+    expect(screen.getByText("SMEDC", { exact: true })).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "中文" }));
 
     expect(
-      screen.getByRole("heading", { name: "登录 SMEDC" }),
+      screen.getByRole("heading", { name: "登录企业智脑" }),
     ).toBeInTheDocument();
     expect(localStorage.getItem("smedc-locale")).toBe("zh");
     expect(document.documentElement.lang).toBe("zh-CN");
+    expect(document.title).toBe("企业智脑");
+    expect(screen.getByText("企业智脑", { exact: true })).toBeVisible();
   });
 
   it("读取已存储的语言偏好", () => {
@@ -49,6 +55,8 @@ describe("界面语言", () => {
       screen.getByRole("heading", { name: "Sign in to SMEDC" }),
     ).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("en");
+    expect(document.title).toBe("SMEDC");
+    expect(screen.getByText("SMEDC", { exact: true })).toBeVisible();
   });
 
   it("mergeText 允许业务字典补充与覆盖文案", () => {
