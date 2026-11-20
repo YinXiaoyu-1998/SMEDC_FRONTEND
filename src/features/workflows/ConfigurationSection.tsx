@@ -41,6 +41,7 @@ const DATASETS = [
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ] as const;
 const CHANNELS = ["meituan", "dianping"] as const;

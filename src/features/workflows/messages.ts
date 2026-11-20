@@ -189,6 +189,7 @@ export const workflowMessages = {
   dishes: ["菜品销售", "Dish sales"],
   in_store_orders: ["店内订单明细", "In-store order details"],
   takeaway_orders: ["平台外卖订单明细", "Takeaway order details"],
+  combo_sales: ["套餐销售统计", "Combo item sales"],
   delivery_ledger: ["配送收货单", "Delivery receipts"],
   orderScope: [
     "店内订单口径：已结账完整营业日。不得标记为全状态订单。",

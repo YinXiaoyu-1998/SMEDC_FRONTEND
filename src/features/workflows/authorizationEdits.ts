@@ -29,6 +29,7 @@ const uploadDatasets: readonly Dataset[] = [
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ];
 export const reviewChannels: readonly ReviewChannel[] = ["meituan", "dianping"];
