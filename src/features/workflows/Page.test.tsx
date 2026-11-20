@@ -265,6 +265,29 @@ describe("自动任务页", () => {
     ]);
   });
 
+  it("套餐销售统计可独立勾选并保存到每日采集范围", async () => {
+    const api = createWorkflowApi();
+    renderDeepLink(api);
+    const editor = await openIngestionScope();
+    const combo = editor.getByRole("checkbox", { name: "套餐销售统计" });
+    expect(combo).not.toBeChecked();
+    fireEvent.click(combo);
+    fireEvent.click(editor.getByRole("button", { name: "保存" }));
+    await screen.findByText(savedNotice);
+    expect(prepareCalls(api)).toMatchObject([
+      {
+        change: {
+          kind: "configuration",
+          configuration: {
+            datasets: ["business", "combo_sales"],
+            storeNames: ["门店A"],
+          },
+        },
+      },
+    ]);
+    expect(saveCalls(api)).toHaveLength(1);
+  });
+
   it("准备期间防止重复提交，保存失败时保留表单填写值", async () => {
     let release: (() => void) | undefined;
     const api = createWorkflowApi({

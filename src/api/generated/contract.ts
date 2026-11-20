@@ -303,6 +303,7 @@ export const rWorkflowsGetEnterpriseWorkflowSchema7Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -311,7 +312,7 @@ export const rWorkflowsGetEnterpriseWorkflowSchema2Schema = z.strictObject({
   storeNames: rWorkflowsGetEnterpriseWorkflowSchema4Schema,
   notificationPolicy: rWorkflowsGetEnterpriseWorkflowSchema6Schema,
   type: z.literal("meituan-daily-ingestion"),
-  datasets: z.array(rWorkflowsGetEnterpriseWorkflowSchema7Schema).min(1).max(5),
+  datasets: z.array(rWorkflowsGetEnterpriseWorkflowSchema7Schema).min(1).max(6),
   orderScope: z.literal("settled_only"),
   cleanupPolicy: z.literal("confirmed_files_only"),
 });
@@ -461,6 +462,7 @@ export const rWorkflowsGetEnterpriseWorkflowSchema30Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -533,6 +535,7 @@ export const rWorkflowsGetWorkflowStatusSchema10Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -541,7 +544,7 @@ export const rWorkflowsGetWorkflowStatusSchema5Schema = z.strictObject({
   storeNames: rWorkflowsGetWorkflowStatusSchema7Schema,
   notificationPolicy: rWorkflowsGetWorkflowStatusSchema9Schema,
   type: z.literal("meituan-daily-ingestion"),
-  datasets: z.array(rWorkflowsGetWorkflowStatusSchema10Schema).min(1).max(5),
+  datasets: z.array(rWorkflowsGetWorkflowStatusSchema10Schema).min(1).max(6),
   orderScope: z.literal("settled_only"),
   cleanupPolicy: z.literal("confirmed_files_only"),
 });
@@ -702,6 +705,7 @@ export const rWorkflowsGetWorkflowStatusSchema34Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -775,6 +779,7 @@ export const rWorkflowsGetWorkflowStatusSchema47Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -885,6 +890,7 @@ export const rWorkflowsListEnterpriseWorkflowsSchema8Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -896,7 +902,7 @@ export const rWorkflowsListEnterpriseWorkflowsSchema3Schema = z.strictObject({
   datasets: z
     .array(rWorkflowsListEnterpriseWorkflowsSchema8Schema)
     .min(1)
-    .max(5),
+    .max(6),
   orderScope: z.literal("settled_only"),
   cleanupPolicy: z.literal("confirmed_files_only"),
 });
@@ -1048,6 +1054,7 @@ export const rWorkflowsListEnterpriseWorkflowsSchema31Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -1116,6 +1123,7 @@ export const bWorkflowsManageWorkflowInstallationSchema13Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -1449,6 +1457,7 @@ export const bWorkflowsManageWorkflowInstallationSchema52Schema = z.union([
       "dishes",
       "in_store_orders",
       "takeaway_orders",
+      "combo_sales",
       "delivery_ledger",
     ]),
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
@@ -1637,6 +1646,7 @@ export const bWorkflowsManageWorkflowInstallationSchema72Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -1649,7 +1659,7 @@ export const bWorkflowsManageWorkflowInstallationSchema69Schema =
     datasets: z
       .array(bWorkflowsManageWorkflowInstallationSchema72Schema)
       .min(1)
-      .max(5),
+      .max(6),
     orderScope: z.literal("settled_only"),
     cleanupPolicy: z.literal("confirmed_files_only"),
   });
@@ -1739,6 +1749,7 @@ export const bWorkflowsManageWorkflowInstallationSchema82Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -1765,7 +1776,7 @@ export const bWorkflowsManageWorkflowInstallationSchema81Schema = z.union([
     datasets: z
       .array(bWorkflowsManageWorkflowInstallationSchema82Schema)
       .min(1)
-      .max(5),
+      .max(6),
     storeNames: bWorkflowsManageWorkflowInstallationSchema8Schema,
   }),
   z.strictObject({
@@ -1968,6 +1979,7 @@ export const rWorkflowsManageWorkflowInstallationSchema31Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -1980,7 +1992,7 @@ export const rWorkflowsManageWorkflowInstallationSchema27Schema =
     datasets: z
       .array(rWorkflowsManageWorkflowInstallationSchema31Schema)
       .min(1)
-      .max(5),
+      .max(6),
     orderScope: z.literal("settled_only"),
     cleanupPolicy: z.literal("confirmed_files_only"),
   });
@@ -2086,6 +2098,7 @@ export const rWorkflowsManageWorkflowInstallationSchema44Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -2112,7 +2125,7 @@ export const rWorkflowsManageWorkflowInstallationSchema43Schema = z.union([
     datasets: z
       .array(rWorkflowsManageWorkflowInstallationSchema44Schema)
       .min(1)
-      .max(5),
+      .max(6),
     storeNames: rWorkflowsManageWorkflowInstallationSchema29Schema,
   }),
   z.strictObject({
@@ -2206,6 +2219,7 @@ export const rWorkflowsManageWorkflowInstallationSchema56Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -2468,6 +2482,7 @@ export const rWorkflowsManageWorkflowInstallationSchema82Schema = z.union([
       "dishes",
       "in_store_orders",
       "takeaway_orders",
+      "combo_sales",
       "delivery_ledger",
     ]),
     storeNames: rWorkflowsManageWorkflowInstallationSchema29Schema,
@@ -2714,6 +2729,7 @@ export const bWorkflowsManageWorkflowRunSchema14Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -2875,6 +2891,7 @@ export const bWorkflowsManageWorkflowRunSchema34Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3129,6 +3146,7 @@ export const rWorkflowsManageWorkflowRunSchema41Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3137,7 +3155,7 @@ export const rWorkflowsManageWorkflowRunSchema37Schema = z.strictObject({
   storeNames: rWorkflowsManageWorkflowRunSchema39Schema,
   notificationPolicy: rWorkflowsManageWorkflowRunSchema40Schema,
   type: z.literal("meituan-daily-ingestion"),
-  datasets: z.array(rWorkflowsManageWorkflowRunSchema41Schema).min(1).max(5),
+  datasets: z.array(rWorkflowsManageWorkflowRunSchema41Schema).min(1).max(6),
   orderScope: z.literal("settled_only"),
   cleanupPolicy: z.literal("confirmed_files_only"),
 });
@@ -3263,6 +3281,7 @@ export const rWorkflowsManageWorkflowRunSchema57Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3438,6 +3457,7 @@ export const bWorkflowsPrepareEnterpriseWorkflowChangeSchema18Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3450,7 +3470,7 @@ export const bWorkflowsPrepareEnterpriseWorkflowChangeSchema14Schema =
     datasets: z
       .array(bWorkflowsPrepareEnterpriseWorkflowChangeSchema18Schema)
       .min(1)
-      .max(5),
+      .max(6),
     orderScope: z.literal("settled_only"),
     cleanupPolicy: z.literal("confirmed_files_only"),
   });
@@ -3554,6 +3574,7 @@ export const bWorkflowsPrepareEnterpriseWorkflowChangeSchema30Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3580,7 +3601,7 @@ export const bWorkflowsPrepareEnterpriseWorkflowChangeSchema29Schema = z.union([
     datasets: z
       .array(bWorkflowsPrepareEnterpriseWorkflowChangeSchema30Schema)
       .min(1)
-      .max(5),
+      .max(6),
     storeNames: bWorkflowsPrepareEnterpriseWorkflowChangeSchema16Schema,
   }),
   z.strictObject({
@@ -3722,6 +3743,7 @@ export const rWorkflowsPrepareEnterpriseWorkflowChangeSchema18Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3734,7 +3756,7 @@ export const rWorkflowsPrepareEnterpriseWorkflowChangeSchema14Schema =
     datasets: z
       .array(rWorkflowsPrepareEnterpriseWorkflowChangeSchema18Schema)
       .min(1)
-      .max(5),
+      .max(6),
     orderScope: z.literal("settled_only"),
     cleanupPolicy: z.literal("confirmed_files_only"),
   });
@@ -3838,6 +3860,7 @@ export const rWorkflowsPrepareEnterpriseWorkflowChangeSchema30Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -3864,7 +3887,7 @@ export const rWorkflowsPrepareEnterpriseWorkflowChangeSchema29Schema = z.union([
     datasets: z
       .array(rWorkflowsPrepareEnterpriseWorkflowChangeSchema30Schema)
       .min(1)
-      .max(5),
+      .max(6),
     storeNames: rWorkflowsPrepareEnterpriseWorkflowChangeSchema16Schema,
   }),
   z.strictObject({
@@ -3956,6 +3979,7 @@ export const bWorkflowsRecordWorkflowActionSchema9Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -4231,6 +4255,7 @@ export const rWorkflowsRecordWorkflowActionSchema5Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -4467,6 +4492,7 @@ export const rWorkflowsSaveEnterpriseWorkflowSchema7Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -4478,7 +4504,7 @@ export const rWorkflowsSaveEnterpriseWorkflowSchema2Schema = z.strictObject({
   datasets: z
     .array(rWorkflowsSaveEnterpriseWorkflowSchema7Schema)
     .min(1)
-    .max(5),
+    .max(6),
   orderScope: z.literal("settled_only"),
   cleanupPolicy: z.literal("confirmed_files_only"),
 });
@@ -4630,6 +4656,7 @@ export const rWorkflowsSaveEnterpriseWorkflowSchema30Schema = z.enum([
   "dishes",
   "in_store_orders",
   "takeaway_orders",
+  "combo_sales",
   "delivery_ledger",
 ]);
 
@@ -6562,7 +6589,7 @@ export const workflowsGetEnterpriseWorkflowResponseSchema = z.strictObject({
           datasets: z
             .array(rWorkflowsGetEnterpriseWorkflowSchema30Schema)
             .min(1)
-            .max(5),
+            .max(6),
           storeNames: rWorkflowsGetEnterpriseWorkflowSchema4Schema,
         }),
         z.strictObject({
@@ -6696,7 +6723,7 @@ export const workflowsGetWorkflowStatusResponseSchema = z.strictObject({
           datasets: z
             .array(rWorkflowsGetWorkflowStatusSchema34Schema)
             .min(1)
-            .max(5),
+            .max(6),
           storeNames: rWorkflowsGetWorkflowStatusSchema7Schema,
         }),
         z.strictObject({
@@ -7065,7 +7092,7 @@ export const workflowsListEnterpriseWorkflowsResponseSchema = z.strictObject({
               datasets: z
                 .array(rWorkflowsListEnterpriseWorkflowsSchema31Schema)
                 .min(1)
-                .max(5),
+                .max(6),
               storeNames: rWorkflowsListEnterpriseWorkflowsSchema5Schema,
             }),
             z.strictObject({
@@ -8017,7 +8044,7 @@ export const workflowsSaveEnterpriseWorkflowResponseSchema = z.strictObject({
           datasets: z
             .array(rWorkflowsSaveEnterpriseWorkflowSchema30Schema)
             .min(1)
-            .max(5),
+            .max(6),
           storeNames: rWorkflowsSaveEnterpriseWorkflowSchema4Schema,
         }),
         z.strictObject({
