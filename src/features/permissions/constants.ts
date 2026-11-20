@@ -3,6 +3,7 @@
 export const FIXED_BUSINESS_CATEGORY_KEYS = [
   "business",
   "dishes",
+  "combo_sales",
   "in_store_orders",
   "takeaway_orders",
   "vip",

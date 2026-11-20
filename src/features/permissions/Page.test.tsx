@@ -14,6 +14,8 @@ import { adminSession } from "@/test/fixtures";
 import { jsonResponse } from "@/test/http";
 import { renderApp } from "@/test/renderApp";
 
+import { FIXED_BUSINESS_CATEGORY_KEYS } from "./constants";
+
 interface MockState {
   version: string;
   mode: "legacy" | "preparing" | "enabled" | "suspended";
@@ -891,6 +893,43 @@ describe("权限设置页", () => {
     ]) {
       expect(paths.some((path) => path.endsWith(suffix))).toBe(true);
     }
+  });
+
+  it("仅缺套餐子菜销售类别时，补齐摘要显示该类别的名称", async () => {
+    const state = createState();
+    state.categories = FIXED_BUSINESS_CATEGORY_KEYS.filter(
+      (key) => key !== "combo_sales",
+    ).map((key) => ({
+      ...state.categories[0]!,
+      id: key,
+      key,
+      name: key,
+    }));
+    renderPermissions({ state });
+    fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "补齐固定类别" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("套餐子菜销售明细")).toBeInTheDocument();
+  });
+
+  it("已登记的套餐子菜销售在英文固定类别列表中按门店范围展示", async () => {
+    const state = createState();
+    state.categories.push({
+      ...state.categories[1]!,
+      id: "combo",
+      key: "combo_sales",
+      name: "套餐子菜销售明细",
+    });
+    renderPermissions({ state });
+    await screen.findByRole("heading", { name: "文档类别" });
+    fireEvent.click(screen.getByRole("button", { name: "English" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Fixed categories" }),
+    );
+    const cell = await screen.findByText("Combo item sales");
+    expect(within(cell.closest("tr")!).getByText(/store/i)).toBeInTheDocument();
   });
 
   it("编辑固定类别密级时确认摘要只有密级一项，并按冻结版本提交", async () => {
