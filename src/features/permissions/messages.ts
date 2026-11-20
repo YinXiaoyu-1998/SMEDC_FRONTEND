@@ -110,7 +110,6 @@ export const permissionsMessages = {
   ],
   "permissions.category.business": ["营业数据", "Business data"],
   "permissions.category.dishes": ["菜品销售", "Dish sales"],
-  "permissions.category.combo_sales": ["套餐子菜销售明细", "Combo item sales"],
   "permissions.category.delivery_ledger": [
     "原始配送台账（内部）",
     "Raw delivery ledger (internal)",
