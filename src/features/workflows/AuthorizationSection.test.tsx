@@ -78,7 +78,7 @@ function renderAuthorization(
     <TextProvider>
       <AuthorizationSection
         view={view}
-        type={reportType}
+        type={view.workflowType}
         grantorNames={new Map([["granting-admin", "授权管理员"]])}
         stores={[
           { name: "门店A", retired: false },
@@ -95,6 +95,33 @@ function renderAuthorization(
 beforeEach(() => localStorage.clear());
 
 describe("standing authorization records", () => {
+  it("offers only dish sales in daily upload authorization and folds redundant saved scope", () => {
+    const current = dailyView({
+      authorizations: [
+        {
+          ...metadata,
+          authorizationId: "daily-upload",
+          revokedAt: null,
+          scope: {
+            kind: "upload",
+            datasets: ["dishes", "combo_sales"],
+            storeNames: ["门店A"],
+          },
+        },
+      ],
+    });
+    renderAuthorization(current, vi.fn());
+    const record = within(screen.getByRole("listitem"));
+    expect(record.getByText("菜品销售")).toBeVisible();
+    expect(record.queryByText("套餐销售统计")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /编辑.*daily-upload/ }));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByRole("checkbox", { name: "菜品销售" })).toBeChecked();
+    expect(
+      dialog.queryByRole("checkbox", { name: /套餐销售/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows historical email scopes in full without exposing edit or revoke buttons", () => {
     renderAuthorization(reportView([revokedEmail]), vi.fn());
     const record = within(screen.getByRole("listitem"));

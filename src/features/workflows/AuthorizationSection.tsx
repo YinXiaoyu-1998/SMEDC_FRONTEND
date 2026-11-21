@@ -8,6 +8,7 @@ import {
 import {
   allowedAuthorizationStores,
   authorizationDatasets,
+  authorizationDisplayScope,
   authorizationRecord,
   authorizationRecordEdit,
   authorizationScopeAllowed,
@@ -145,7 +146,11 @@ export function AuthorizationSection({
             ? w("authorizationNeedsConfiguration")
             : undefined
         }
-        canEdit={isActive}
+        canEdit={(record) =>
+          isActive(record) &&
+          (record.draft.kind !== "upload" ||
+            !record.draft.datasets.includes("combo_sales"))
+        }
         canRemove={isActive}
         removeLabel={text("revoke")}
         removeConfirmLabel={text("confirmRevoke")}
@@ -166,7 +171,8 @@ function AuthorizationDetails({
   const { locale, w } = useWorkflowText();
   const text = (key: keyof typeof messages) =>
     resolveText(messages, locale, key);
-  const { scope, revokedAt } = authorization;
+  const { revokedAt } = authorization;
+  const scope = authorizationDisplayScope(authorization.scope);
   const formatDate = (value: string) => {
     const date = new Date(value);
     return Number.isNaN(date.getTime())

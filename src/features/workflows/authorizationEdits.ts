@@ -29,7 +29,6 @@ const uploadDatasets: readonly Dataset[] = [
   "dishes",
   "in_store_orders",
   "takeaway_orders",
-  "combo_sales",
   "delivery_ledger",
 ];
 export const reviewChannels: readonly ReviewChannel[] = ["meituan", "dianping"];
@@ -38,6 +37,18 @@ export interface AuthorizationRecord {
   readonly saved: WorkflowAuthorization | null;
   readonly draft: AuthorizationDraft;
   readonly purpose: EmailPurpose | null;
+}
+
+export function authorizationDisplayScope(
+  scope: AuthorizationScope,
+): AuthorizationScope {
+  if (scope.kind === "upload" && scope.datasets.includes("dishes")) {
+    return {
+      ...scope,
+      datasets: scope.datasets.filter((dataset) => dataset !== "combo_sales"),
+    };
+  }
+  return scope;
 }
 
 export function authorizationRecord(
@@ -49,7 +60,7 @@ export function authorizationRecord(
     return { saved, draft: defaults, purpose: workflowEmailPurpose(type) };
   }
 
-  const { scope } = saved;
+  const scope = authorizationDisplayScope(saved.scope);
   const draft = { ...defaults, kind: scope.kind, storeNames: scope.storeNames };
   if (scope.kind === "email") {
     return {
@@ -151,7 +162,7 @@ export function authorizationRecordEdit(
           saved === null
             ? null
             : {
-                scope: scopeForReview(saved.scope),
+                scope: scopeForReview(authorizationDisplayScope(saved.scope)),
                 ...(saved.revokedAt === null
                   ? {}
                   : { revokedAt: saved.revokedAt }),
