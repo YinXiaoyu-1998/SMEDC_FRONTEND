@@ -101,6 +101,864 @@ export const bDirectoryUpdateEmployeeSchema0Schema = z
     ),
   );
 
+export const qInspectionsContextSchema0Schema = z.string().min(1).max(4096);
+
+export const qInspectionsContextSchema1Schema = z.number().int().min(1).max(50);
+
+export const qInspectionsContextSchema2Schema = z.string().min(1).max(128);
+
+export const qInspectionsContextSchema3Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const qInspectionsContextSchema4Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+    ),
+  );
+
+export const rInspectionsContextSchema1Schema = z.string().min(1).max(128);
+
+export const rInspectionsContextSchema2Schema = z.string().min(1).max(255);
+
+export const rInspectionsContextSchema3Schema = z.boolean();
+
+export const rInspectionsContextSchema4Schema = z.boolean();
+
+export const rInspectionsContextSchema5Schema = z.boolean();
+
+export const rInspectionsContextSchema6Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsContextSchema0Schema = z.union([
+  z.strictObject({
+    kind: z.literal("enterprise"),
+    enterpriseKey: rInspectionsContextSchema1Schema,
+    enterpriseName: rInspectionsContextSchema2Schema,
+    canReadInspections: rInspectionsContextSchema3Schema,
+    canFillInspections: rInspectionsContextSchema4Schema,
+    canManageInspectionTemplates: rInspectionsContextSchema5Schema,
+  }),
+  z.strictObject({
+    kind: z.literal("store"),
+    enterpriseKey: rInspectionsContextSchema1Schema,
+    enterpriseName: rInspectionsContextSchema2Schema,
+    canReadInspections: rInspectionsContextSchema3Schema,
+    canFillInspections: rInspectionsContextSchema4Schema,
+    canManageInspectionTemplates: rInspectionsContextSchema5Schema,
+    storeId: rInspectionsContextSchema6Schema,
+    officialName: z.string().min(1).max(255),
+    retired: z.boolean(),
+  }),
+]);
+
+export const rInspectionsDaySchema1Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsDaySchema2Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsDaySchema3Schema = z.string().max(120);
+
+export const rInspectionsDaySchema0Schema = z.union([
+  z.strictObject({
+    kind: z.literal("template"),
+    templateId: rInspectionsDaySchema1Schema,
+    templateVersionId: rInspectionsDaySchema1Schema,
+    activeRevision: rInspectionsDaySchema2Schema,
+    title: rInspectionsDaySchema3Schema,
+    copyMode: z.enum(["single", "multiple"]),
+  }),
+  z.strictObject({
+    sheetId: rInspectionsDaySchema1Schema,
+    templateVersionId: rInspectionsDaySchema1Schema,
+    sheetRevision: rInspectionsDaySchema2Schema,
+    templateId: rInspectionsDaySchema1Schema,
+    templateTitle: rInspectionsDaySchema3Schema,
+    name: z.union([rInspectionsDaySchema3Schema, z.null()]),
+    progress: z.enum(["unfilled", "incomplete", "complete"]),
+    scoreSummary: z
+      .strictObject({
+        earnedTenths: z.number().int().min(0).max(2400000000),
+        maxTenths: z.number().int().min(0).max(2400000000),
+        scoredCount: z.number().int().min(0).max(2400),
+        scoreCount: z.number().int().min(1).max(2400),
+        rate: z.union([z.number().min(0).max(1), z.null()]),
+      })
+      .optional(),
+    kind: z.literal("sheet"),
+  }),
+]);
+
+export const bInspectionsPatchesSchema2Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsPatchesSchema4Schema = z.union([
+  z.number().int().min(0).max(1000000),
+  z.string().min(1).max(4000),
+]);
+
+export const bInspectionsPatchesSchema5Schema = z
+  .number()
+  .int()
+  .min(0)
+  .max(9007199254740991);
+
+export const bInspectionsPatchesSchema6Schema = z
+  .array(bInspectionsPatchesSchema2Schema)
+  .max(20);
+
+export const bInspectionsPatchesSchema3Schema = z.union([
+  z.strictObject({
+    componentId: bInspectionsPatchesSchema2Schema,
+    op: z.literal("fill"),
+    value: bInspectionsPatchesSchema4Schema,
+  }),
+  z.strictObject({
+    componentId: bInspectionsPatchesSchema2Schema,
+    expectedComponentRevision: bInspectionsPatchesSchema5Schema,
+    op: z.literal("set"),
+    value: bInspectionsPatchesSchema4Schema,
+  }),
+  z.strictObject({
+    componentId: bInspectionsPatchesSchema2Schema,
+    expectedComponentRevision: bInspectionsPatchesSchema5Schema,
+    op: z.literal("clear"),
+  }),
+  z.strictObject({
+    componentId: bInspectionsPatchesSchema2Schema,
+    op: z.literal("appendPhotos"),
+    photoIds: bInspectionsPatchesSchema6Schema,
+  }),
+  z.strictObject({
+    componentId: bInspectionsPatchesSchema2Schema,
+    expectedComponentRevision: bInspectionsPatchesSchema5Schema,
+    op: z.literal("removePhotos"),
+    photoIds: bInspectionsPatchesSchema6Schema,
+  }),
+]);
+
+export const bInspectionsPatchesSchema1Schema = z.strictObject({
+  sheetId: bInspectionsPatchesSchema2Schema,
+  templateVersionId: bInspectionsPatchesSchema2Schema,
+  requestId: z.string().min(1).max(255),
+  changes: z.array(bInspectionsPatchesSchema3Schema).min(1).max(50),
+});
+
+export const bInspectionsPatchesSchema0Schema = z
+  .array(bInspectionsPatchesSchema1Schema)
+  .min(1)
+  .max(10);
+
+export const rInspectionsPatchesSchema1Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsPatchesSchema2Schema = z.strictObject({
+  questionId: rInspectionsPatchesSchema1Schema,
+  componentId: rInspectionsPatchesSchema1Schema,
+});
+
+export const rInspectionsPatchesSchema3Schema = z.string().min(1).max(500);
+
+export const rInspectionsPatchesSchema0Schema = z.union([
+  z.strictObject({
+    sheetId: rInspectionsPatchesSchema1Schema,
+    templateVersionId: rInspectionsPatchesSchema1Schema,
+    sheetRevision: z.number().int().min(1).max(9007199254740991),
+    progress: z.enum(["unfilled", "incomplete", "complete"]),
+    scoreSummary: z
+      .strictObject({
+        earnedTenths: z.number().int().min(0).max(2400000000),
+        maxTenths: z.number().int().min(0).max(2400000000),
+        scoredCount: z.number().int().min(0).max(2400),
+        scoreCount: z.number().int().min(1).max(2400),
+        rate: z.union([z.number().min(0).max(1), z.null()]),
+      })
+      .optional(),
+    missingRequiredCount: z.number().int().min(0).max(2400),
+    missingRequired: z.array(rInspectionsPatchesSchema2Schema).max(20),
+    status: z.literal("applied"),
+  }),
+  z.strictObject({
+    sheetId: rInspectionsPatchesSchema1Schema,
+    status: z.literal("conflict"),
+    error: z.union([
+      z.strictObject({
+        message: rInspectionsPatchesSchema3Schema,
+        code: z.literal("INSPECTION_CONFLICT"),
+        details: z.strictObject({
+          reason: z.enum([
+            "nonempty",
+            "revision",
+            "version",
+            "ambiguous",
+            "stale_cursor",
+          ]),
+        }),
+      }),
+      z.strictObject({
+        message: rInspectionsPatchesSchema3Schema,
+        code: z.literal("INSPECTION_IDEMPOTENCY_CONFLICT"),
+      }),
+    ]),
+  }),
+  z.strictObject({
+    sheetId: rInspectionsPatchesSchema1Schema,
+    status: z.literal("failed"),
+    error: z.union([
+      z.strictObject({
+        message: rInspectionsPatchesSchema3Schema,
+        code: z.enum(["INSPECTION_NOT_FOUND", "INSPECTION_FORBIDDEN"]),
+      }),
+      z.strictObject({
+        message: rInspectionsPatchesSchema3Schema,
+        code: z.literal("INSPECTION_INVALID"),
+        details: z
+          .strictObject({
+            field: z
+              .string()
+              .min(1)
+              .max(255)
+              .regex(new RegExp("^[A-Za-z0-9_.[\\]-]+$")),
+          })
+          .optional(),
+      }),
+      z.strictObject({
+        message: rInspectionsPatchesSchema3Schema,
+        code: z.enum([
+          "INSPECTION_LIMIT_EXCEEDED",
+          "INSPECTION_MEDIA_UNSUPPORTED",
+          "INTERNAL_ERROR",
+        ]),
+      }),
+    ]),
+  }),
+]);
+
+export const rInspectionsPhotosUploadSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsSheetsCreateSchema0Schema = z.string().min(1).max(128);
+
+export const bInspectionsSheetsCreateSchema1Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsSheetsCreateSchema2Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+    ),
+  );
+
+export const bInspectionsSheetsCreateSchema3Schema = z.string().min(1).max(255);
+
+export const bInspectionsSheetsCreateSchema4Schema = z.string().max(120);
+
+export const rInspectionsSheetsCreateSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsSheetsReadSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsSheetsReadSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsSheetsReadSchema2Schema = z.string().max(120);
+
+export const rInspectionsSheetsReadSchema5Schema = z.string().max(120);
+
+export const rInspectionsSheetsReadSchema6Schema = z.boolean();
+
+export const rInspectionsSheetsReadSchema7Schema = z.literal("score");
+
+export const rInspectionsSheetsReadSchema8Schema = z
+  .number()
+  .int()
+  .min(0)
+  .max(1000000);
+
+export const rInspectionsSheetsReadSchema9Schema = z.strictObject({
+  id: z.string().min(1).max(64),
+  label: rInspectionsSheetsReadSchema5Schema,
+});
+
+export const rInspectionsSheetsReadSchema4Schema = z.union([
+  z.strictObject({
+    componentId: rInspectionsSheetsReadSchema0Schema,
+    label: rInspectionsSheetsReadSchema5Schema,
+    kind: z.literal("sop"),
+    text: z.string().max(4000),
+  }),
+  z.strictObject({
+    componentId: rInspectionsSheetsReadSchema0Schema,
+    label: rInspectionsSheetsReadSchema5Schema,
+    required: rInspectionsSheetsReadSchema6Schema,
+    kind: rInspectionsSheetsReadSchema7Schema,
+    minTenths: rInspectionsSheetsReadSchema8Schema,
+    maxTenths: rInspectionsSheetsReadSchema8Schema,
+  }),
+  z.strictObject({
+    componentId: rInspectionsSheetsReadSchema0Schema,
+    label: rInspectionsSheetsReadSchema5Schema,
+    required: rInspectionsSheetsReadSchema6Schema,
+    kind: z.literal("comment"),
+  }),
+  z.strictObject({
+    componentId: rInspectionsSheetsReadSchema0Schema,
+    label: rInspectionsSheetsReadSchema5Schema,
+    required: rInspectionsSheetsReadSchema6Schema,
+    kind: z.literal("photo"),
+  }),
+  z.strictObject({
+    componentId: rInspectionsSheetsReadSchema0Schema,
+    label: rInspectionsSheetsReadSchema5Schema,
+    required: rInspectionsSheetsReadSchema6Schema,
+    kind: z.literal("status"),
+    options: z.array(rInspectionsSheetsReadSchema9Schema).max(32),
+  }),
+]);
+
+export const rInspectionsSheetsReadSchema10Schema = z.strictObject({
+  componentId: rInspectionsSheetsReadSchema0Schema,
+  componentRevision: z.number().int().min(0).max(9007199254740991),
+  value: z.union([
+    z.number().int().min(0).max(1000000),
+    z.string().min(1).max(4000),
+    z.array(rInspectionsSheetsReadSchema0Schema).max(20),
+    z.null(),
+  ]),
+});
+
+export const rInspectionsSheetsReadSchema3Schema = z.strictObject({
+  questionId: rInspectionsSheetsReadSchema0Schema,
+  title: z.string().max(120),
+  category: z.string().max(120),
+  questionRevision: rInspectionsSheetsReadSchema1Schema,
+  components: z.array(rInspectionsSheetsReadSchema4Schema).max(12),
+  answers: z.array(rInspectionsSheetsReadSchema10Schema).max(12),
+});
+
+export const rInspectionsSheetsReadSchema11Schema = z.strictObject({
+  questionId: rInspectionsSheetsReadSchema0Schema,
+  componentId: rInspectionsSheetsReadSchema0Schema,
+});
+
+export const bInspectionsSheetsReplaceSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsSheetsReplaceSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const bInspectionsSheetsReplaceSchema2Schema = z
+  .string()
+  .min(1)
+  .max(255);
+
+export const rInspectionsSheetsReplaceSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsSheetsReplaceSchema1Schema = z.strictObject({
+  questionId: rInspectionsSheetsReplaceSchema0Schema,
+  componentId: rInspectionsSheetsReplaceSchema0Schema,
+});
+
+export const rInspectionsSheetsReplacementSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsSheetsReplacementSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsSheetsReplacementSchema2Schema = z
+  .array(rInspectionsSheetsReplacementSchema0Schema)
+  .max(200);
+
+export const bInspectionsSheetsVoidSchema0Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const bInspectionsSheetsVoidSchema1Schema = z.string().min(1).max(255);
+
+export const rInspectionsSheetsVoidSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsTemplatesActivateSchema0Schema = z
+  .string()
+  .min(1)
+  .max(128);
+
+export const bInspectionsTemplatesActivateSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsTemplatesActivateSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsTemplatesActivateSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const bInspectionsTemplatesCreateSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsTemplatesCreateSchema1Schema = z
+  .string()
+  .min(1)
+  .max(128);
+
+export const bInspectionsTemplatesCreateSchema3Schema = z.string().max(120);
+
+export const bInspectionsTemplatesCreateSchema4Schema = z.union([
+  z.enum(["single", "multiple"]),
+  z.null(),
+]);
+
+export const bInspectionsTemplatesCreateSchema5Schema = z
+  .array(bInspectionsTemplatesCreateSchema0Schema)
+  .max(200);
+
+export const bInspectionsTemplatesCreateSchema9Schema = z.string().max(120);
+
+export const bInspectionsTemplatesCreateSchema10Schema = z.boolean();
+
+export const bInspectionsTemplatesCreateSchema11Schema = z.literal("score");
+
+export const bInspectionsTemplatesCreateSchema13Schema = z
+  .number()
+  .int()
+  .min(0)
+  .max(1000000);
+
+export const bInspectionsTemplatesCreateSchema12Schema = z.union([
+  bInspectionsTemplatesCreateSchema13Schema,
+  z.null(),
+]);
+
+export const bInspectionsTemplatesCreateSchema14Schema = z.union([
+  bInspectionsTemplatesCreateSchema13Schema,
+  z.null(),
+]);
+
+export const bInspectionsTemplatesCreateSchema15Schema = z.strictObject({
+  id: z.string().min(1).max(64),
+  label: bInspectionsTemplatesCreateSchema9Schema,
+});
+
+export const bInspectionsTemplatesCreateSchema8Schema = z.union([
+  z.strictObject({
+    componentId: bInspectionsTemplatesCreateSchema0Schema,
+    label: bInspectionsTemplatesCreateSchema9Schema,
+    kind: z.literal("sop"),
+    text: z.string().max(4000),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesCreateSchema0Schema,
+    label: bInspectionsTemplatesCreateSchema9Schema,
+    required: bInspectionsTemplatesCreateSchema10Schema,
+    kind: bInspectionsTemplatesCreateSchema11Schema,
+    minTenths: bInspectionsTemplatesCreateSchema12Schema.optional(),
+    maxTenths: bInspectionsTemplatesCreateSchema14Schema.optional(),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesCreateSchema0Schema,
+    label: bInspectionsTemplatesCreateSchema9Schema,
+    required: bInspectionsTemplatesCreateSchema10Schema,
+    kind: z.literal("comment"),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesCreateSchema0Schema,
+    label: bInspectionsTemplatesCreateSchema9Schema,
+    required: bInspectionsTemplatesCreateSchema10Schema,
+    kind: z.literal("photo"),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesCreateSchema0Schema,
+    label: bInspectionsTemplatesCreateSchema9Schema,
+    required: bInspectionsTemplatesCreateSchema10Schema,
+    kind: z.literal("status"),
+    options: z
+      .array(bInspectionsTemplatesCreateSchema15Schema)
+      .max(32)
+      .optional(),
+  }),
+]);
+
+export const bInspectionsTemplatesCreateSchema7Schema = z.strictObject({
+  questionId: bInspectionsTemplatesCreateSchema0Schema,
+  title: bInspectionsTemplatesCreateSchema3Schema,
+  category: z.string().max(120),
+  components: z.array(bInspectionsTemplatesCreateSchema8Schema).max(12),
+});
+
+export const bInspectionsTemplatesCreateSchema6Schema = z
+  .array(bInspectionsTemplatesCreateSchema7Schema)
+  .max(200);
+
+export const bInspectionsTemplatesCreateSchema2Schema = z.strictObject({
+  title: bInspectionsTemplatesCreateSchema3Schema,
+  copyMode: bInspectionsTemplatesCreateSchema4Schema.optional(),
+  storeIds: bInspectionsTemplatesCreateSchema5Schema,
+  questions: bInspectionsTemplatesCreateSchema6Schema,
+});
+
+export const rInspectionsTemplatesCreateSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsTemplatesCreateSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const bInspectionsTemplatesDeactivateSchema0Schema = z
+  .string()
+  .min(1)
+  .max(128);
+
+export const bInspectionsTemplatesDeactivateSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsTemplatesDeactivateSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsTemplatesDeactivateSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsTemplatesListSchema1Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsTemplatesListSchema2Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsTemplatesListSchema0Schema = z.strictObject({
+  templateId: rInspectionsTemplatesListSchema1Schema,
+  draftRevision: rInspectionsTemplatesListSchema2Schema,
+  activeTemplateVersionId: z.union([
+    rInspectionsTemplatesListSchema1Schema,
+    z.null(),
+  ]),
+  activeRevision: z.union([rInspectionsTemplatesListSchema2Schema, z.null()]),
+  title: z.string().max(120),
+});
+
+export const rInspectionsTemplatesPreviewSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsTemplatesPreviewSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
+export const rInspectionsTemplatesPreviewSchema2Schema = z.string().max(120);
+
+export const rInspectionsTemplatesPreviewSchema5Schema = z.string().max(120);
+
+export const rInspectionsTemplatesPreviewSchema6Schema = z.boolean();
+
+export const rInspectionsTemplatesPreviewSchema7Schema = z.literal("score");
+
+export const rInspectionsTemplatesPreviewSchema9Schema = z
+  .number()
+  .int()
+  .min(0)
+  .max(1000000);
+
+export const rInspectionsTemplatesPreviewSchema8Schema = z.union([
+  rInspectionsTemplatesPreviewSchema9Schema,
+  z.null(),
+]);
+
+export const rInspectionsTemplatesPreviewSchema10Schema = z.union([
+  rInspectionsTemplatesPreviewSchema9Schema,
+  z.null(),
+]);
+
+export const rInspectionsTemplatesPreviewSchema11Schema = z.strictObject({
+  id: z.string().min(1).max(64),
+  label: rInspectionsTemplatesPreviewSchema5Schema,
+});
+
+export const rInspectionsTemplatesPreviewSchema4Schema = z.union([
+  z.strictObject({
+    componentId: rInspectionsTemplatesPreviewSchema0Schema,
+    label: rInspectionsTemplatesPreviewSchema5Schema,
+    kind: z.literal("sop"),
+    text: z.string().max(4000),
+  }),
+  z.strictObject({
+    componentId: rInspectionsTemplatesPreviewSchema0Schema,
+    label: rInspectionsTemplatesPreviewSchema5Schema,
+    required: rInspectionsTemplatesPreviewSchema6Schema,
+    kind: rInspectionsTemplatesPreviewSchema7Schema,
+    minTenths: rInspectionsTemplatesPreviewSchema8Schema.optional(),
+    maxTenths: rInspectionsTemplatesPreviewSchema10Schema.optional(),
+  }),
+  z.strictObject({
+    componentId: rInspectionsTemplatesPreviewSchema0Schema,
+    label: rInspectionsTemplatesPreviewSchema5Schema,
+    required: rInspectionsTemplatesPreviewSchema6Schema,
+    kind: z.literal("comment"),
+  }),
+  z.strictObject({
+    componentId: rInspectionsTemplatesPreviewSchema0Schema,
+    label: rInspectionsTemplatesPreviewSchema5Schema,
+    required: rInspectionsTemplatesPreviewSchema6Schema,
+    kind: z.literal("photo"),
+  }),
+  z.strictObject({
+    componentId: rInspectionsTemplatesPreviewSchema0Schema,
+    label: rInspectionsTemplatesPreviewSchema5Schema,
+    required: rInspectionsTemplatesPreviewSchema6Schema,
+    kind: z.literal("status"),
+    options: z
+      .array(rInspectionsTemplatesPreviewSchema11Schema)
+      .max(32)
+      .optional(),
+  }),
+]);
+
+export const rInspectionsTemplatesPreviewSchema3Schema = z.strictObject({
+  questionId: rInspectionsTemplatesPreviewSchema0Schema,
+  title: rInspectionsTemplatesPreviewSchema2Schema,
+  category: z.string().max(120),
+  components: z.array(rInspectionsTemplatesPreviewSchema4Schema).max(12),
+  questionRevision: rInspectionsTemplatesPreviewSchema1Schema,
+});
+
+export const bInspectionsTemplatesSaveSchema0Schema = z.string().max(120);
+
+export const bInspectionsTemplatesSaveSchema1Schema = z.union([
+  z.enum(["single", "multiple"]),
+  z.null(),
+]);
+
+export const bInspectionsTemplatesSaveSchema3Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bInspectionsTemplatesSaveSchema2Schema = z
+  .array(bInspectionsTemplatesSaveSchema3Schema)
+  .max(200);
+
+export const bInspectionsTemplatesSaveSchema7Schema = z.string().max(120);
+
+export const bInspectionsTemplatesSaveSchema8Schema = z.boolean();
+
+export const bInspectionsTemplatesSaveSchema9Schema = z.literal("score");
+
+export const bInspectionsTemplatesSaveSchema11Schema = z
+  .number()
+  .int()
+  .min(0)
+  .max(1000000);
+
+export const bInspectionsTemplatesSaveSchema10Schema = z.union([
+  bInspectionsTemplatesSaveSchema11Schema,
+  z.null(),
+]);
+
+export const bInspectionsTemplatesSaveSchema12Schema = z.union([
+  bInspectionsTemplatesSaveSchema11Schema,
+  z.null(),
+]);
+
+export const bInspectionsTemplatesSaveSchema13Schema = z.strictObject({
+  id: z.string().min(1).max(64),
+  label: bInspectionsTemplatesSaveSchema7Schema,
+});
+
+export const bInspectionsTemplatesSaveSchema6Schema = z.union([
+  z.strictObject({
+    componentId: bInspectionsTemplatesSaveSchema3Schema,
+    label: bInspectionsTemplatesSaveSchema7Schema,
+    kind: z.literal("sop"),
+    text: z.string().max(4000),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesSaveSchema3Schema,
+    label: bInspectionsTemplatesSaveSchema7Schema,
+    required: bInspectionsTemplatesSaveSchema8Schema,
+    kind: bInspectionsTemplatesSaveSchema9Schema,
+    minTenths: bInspectionsTemplatesSaveSchema10Schema.optional(),
+    maxTenths: bInspectionsTemplatesSaveSchema12Schema.optional(),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesSaveSchema3Schema,
+    label: bInspectionsTemplatesSaveSchema7Schema,
+    required: bInspectionsTemplatesSaveSchema8Schema,
+    kind: z.literal("comment"),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesSaveSchema3Schema,
+    label: bInspectionsTemplatesSaveSchema7Schema,
+    required: bInspectionsTemplatesSaveSchema8Schema,
+    kind: z.literal("photo"),
+  }),
+  z.strictObject({
+    componentId: bInspectionsTemplatesSaveSchema3Schema,
+    label: bInspectionsTemplatesSaveSchema7Schema,
+    required: bInspectionsTemplatesSaveSchema8Schema,
+    kind: z.literal("status"),
+    options: z
+      .array(bInspectionsTemplatesSaveSchema13Schema)
+      .max(32)
+      .optional(),
+  }),
+]);
+
+export const bInspectionsTemplatesSaveSchema5Schema = z.strictObject({
+  questionId: bInspectionsTemplatesSaveSchema3Schema,
+  title: bInspectionsTemplatesSaveSchema0Schema,
+  category: z.string().max(120),
+  components: z.array(bInspectionsTemplatesSaveSchema6Schema).max(12),
+});
+
+export const bInspectionsTemplatesSaveSchema4Schema = z
+  .array(bInspectionsTemplatesSaveSchema5Schema)
+  .max(200);
+
+export const rInspectionsTemplatesSaveSchema0Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rInspectionsTemplatesSaveSchema1Schema = z
+  .number()
+  .int()
+  .min(1)
+  .max(9007199254740991);
+
 export const bLedgerCoverageSchema0Schema = z.string().min(1).max(512);
 
 export const bLedgerCoverageSchema1Schema = z
@@ -125,6 +983,18 @@ export const rPermissionsAccountsListSchema1Schema = z.union([
   }),
 ]);
 
+export const rPermissionsAccountsListSchema4Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rPermissionsAccountsListSchema3Schema = z
+  .array(rPermissionsAccountsListSchema4Schema)
+  .max(1000);
+
 export const rPermissionsAccountsReadSchema0Schema = z.enum(["group", "store"]);
 
 export const rPermissionsAccountsReadSchema2Schema = z.string().min(1);
@@ -139,10 +1009,21 @@ export const rPermissionsAccountsReadSchema1Schema = z.union([
   }),
 ]);
 
-export const bPermissionsAccountsUpdateSchema1Schema = z
+export const rPermissionsAccountsReadSchema4Schema = z
   .string()
-  .min(1)
-  .max(64);
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rPermissionsAccountsReadSchema3Schema = z
+  .array(rPermissionsAccountsReadSchema4Schema)
+  .max(1000);
+
+export const bPermissionsAccountsUpdateSchema0Schema = z
+  .string()
+  .regex(new RegExp("^(0|[1-9]\\d*)$"));
 
 export const bPermissionsAccountsUpdateSchema2Schema = z
   .string()
@@ -152,52 +1033,89 @@ export const bPermissionsAccountsUpdateSchema2Schema = z
 export const bPermissionsAccountsUpdateSchema3Schema = z
   .string()
   .min(1)
+  .max(64);
+
+export const bPermissionsAccountsUpdateSchema4Schema = z
+  .string()
+  .min(1)
   .max(128);
 
-export const bPermissionsAccountsUpdateSchema5Schema = z
+export const bPermissionsAccountsUpdateSchema6Schema = z
   .string()
   .min(1)
   .max(64);
 
-export const bPermissionsAccountsUpdateSchema4Schema = z
-  .array(bPermissionsAccountsUpdateSchema5Schema)
+export const bPermissionsAccountsUpdateSchema5Schema = z
+  .array(bPermissionsAccountsUpdateSchema6Schema)
   .min(1);
 
-export const bPermissionsAccountsUpdateSchema8Schema = z.string().min(1);
+export const bPermissionsAccountsUpdateSchema9Schema = z.string().min(1);
 
-export const bPermissionsAccountsUpdateSchema7Schema = z.union([
+export const bPermissionsAccountsUpdateSchema8Schema = z.union([
   z.strictObject({
     kind: z.literal("all"),
   }),
   z.strictObject({
     kind: z.literal("fixed"),
-    values: z.array(bPermissionsAccountsUpdateSchema8Schema).min(1),
+    values: z.array(bPermissionsAccountsUpdateSchema9Schema).min(1),
   }),
 ]);
 
-export const bPermissionsAccountsUpdateSchema6Schema = z
+export const bPermissionsAccountsUpdateSchema7Schema = z
   .object({})
-  .catchall(bPermissionsAccountsUpdateSchema7Schema);
+  .catchall(bPermissionsAccountsUpdateSchema8Schema);
 
-export const bPermissionsAccountsUpdateSchema0Schema = z.union([
+export const bPermissionsAccountsUpdateSchema1Schema = z.union([
   z.strictObject({
-    id: bPermissionsAccountsUpdateSchema1Schema,
-    orgId: bPermissionsAccountsUpdateSchema2Schema,
-    enterpriseKey: bPermissionsAccountsUpdateSchema3Schema,
-    categoryIds: bPermissionsAccountsUpdateSchema4Schema,
-    dimensions: bPermissionsAccountsUpdateSchema6Schema,
+    id: bPermissionsAccountsUpdateSchema2Schema,
+    orgId: bPermissionsAccountsUpdateSchema3Schema,
+    enterpriseKey: bPermissionsAccountsUpdateSchema4Schema,
+    categoryIds: bPermissionsAccountsUpdateSchema5Schema,
+    dimensions: bPermissionsAccountsUpdateSchema7Schema,
     ownership: z.literal("group"),
   }),
   z.strictObject({
-    id: bPermissionsAccountsUpdateSchema1Schema,
-    orgId: bPermissionsAccountsUpdateSchema2Schema,
-    enterpriseKey: bPermissionsAccountsUpdateSchema3Schema,
-    categoryIds: bPermissionsAccountsUpdateSchema4Schema,
-    dimensions: bPermissionsAccountsUpdateSchema6Schema,
+    id: bPermissionsAccountsUpdateSchema2Schema,
+    orgId: bPermissionsAccountsUpdateSchema3Schema,
+    enterpriseKey: bPermissionsAccountsUpdateSchema4Schema,
+    categoryIds: bPermissionsAccountsUpdateSchema5Schema,
+    dimensions: bPermissionsAccountsUpdateSchema7Schema,
     ownership: z.literal("store"),
-    stores: bPermissionsAccountsUpdateSchema7Schema,
+    stores: bPermissionsAccountsUpdateSchema8Schema,
   }),
 ]);
+
+export const bPermissionsAccountsUpdateSchema13Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const bPermissionsAccountsUpdateSchema12Schema = z
+  .array(bPermissionsAccountsUpdateSchema13Schema)
+  .max(1000);
+
+export const bPermissionsAccountsUpdateSchema11Schema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  readStores: z.union([
+    z.strictObject({
+      kind: z.literal("all"),
+    }),
+    z.strictObject({
+      kind: z.literal("fixed"),
+      storeIds: bPermissionsAccountsUpdateSchema12Schema,
+    }),
+  ]),
+  writeStoreIds: bPermissionsAccountsUpdateSchema12Schema,
+  manageTemplates: z.boolean(),
+  confirmLoseFutureStores: z.literal(true).optional(),
+});
+
+export const bPermissionsAccountsUpdateSchema10Schema = z
+  .array(bPermissionsAccountsUpdateSchema11Schema)
+  .max(200);
 
 export const rPermissionsAccountsUpdateSchema1Schema = z.string().min(1);
 
@@ -210,6 +1128,18 @@ export const rPermissionsAccountsUpdateSchema0Schema = z.union([
     values: z.array(rPermissionsAccountsUpdateSchema1Schema).min(1),
   }),
 ]);
+
+export const rPermissionsAccountsUpdateSchema3Schema = z
+  .string()
+  .regex(
+    new RegExp(
+      "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+    ),
+  );
+
+export const rPermissionsAccountsUpdateSchema2Schema = z
+  .array(rPermissionsAccountsUpdateSchema3Schema)
+  .max(1000);
 
 export const bPermissionsCategoriesCreateSchema0Schema = z.enum([
   "group",
@@ -5108,6 +6038,725 @@ export type DirectoryUpdateEmployeeResponse = z.infer<
   typeof directoryUpdateEmployeeResponseSchema
 >;
 
+export const inspectionsContextBodySchema = z.strictObject({});
+
+export type InspectionsContextBody = z.infer<
+  typeof inspectionsContextBodySchema
+>;
+
+export const inspectionsContextParamsSchema = z.strictObject({});
+
+export type InspectionsContextParams = z.infer<
+  typeof inspectionsContextParamsSchema
+>;
+
+export const inspectionsContextQuerySchema = z.strictObject({
+  cursor: qInspectionsContextSchema0Schema.optional(),
+  limit: qInspectionsContextSchema1Schema.optional(),
+  enterpriseKey: qInspectionsContextSchema2Schema.optional(),
+  storeId: qInspectionsContextSchema3Schema.optional(),
+  inspectionDate: qInspectionsContextSchema4Schema.optional(),
+});
+
+export type InspectionsContextQuery = z.infer<
+  typeof inspectionsContextQuerySchema
+>;
+
+export const inspectionsContextResponseSchema = z.strictObject({
+  items: z.array(rInspectionsContextSchema0Schema).max(50),
+  nextCursor: z.union([z.string().min(1).max(4096), z.null()]),
+  preflight: z
+    .strictObject({
+      enterpriseKey: rInspectionsContextSchema1Schema,
+      storeId: rInspectionsContextSchema6Schema,
+      inspectionDate: z
+        .string()
+        .regex(
+          new RegExp(
+            "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+          ),
+        ),
+      canReadInspections: rInspectionsContextSchema3Schema,
+      canFillInspections: rInspectionsContextSchema4Schema,
+      canManageInspectionTemplates: rInspectionsContextSchema5Schema,
+    })
+    .optional(),
+});
+
+export type InspectionsContextResponse = z.infer<
+  typeof inspectionsContextResponseSchema
+>;
+
+export const inspectionsDayBodySchema = z.strictObject({});
+
+export type InspectionsDayBody = z.infer<typeof inspectionsDayBodySchema>;
+
+export const inspectionsDayParamsSchema = z.strictObject({});
+
+export type InspectionsDayParams = z.infer<typeof inspectionsDayParamsSchema>;
+
+export const inspectionsDayQuerySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  storeId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+  inspectionDate: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+      ),
+    ),
+  cursor: z.string().min(1).max(4096).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+});
+
+export type InspectionsDayQuery = z.infer<typeof inspectionsDayQuerySchema>;
+
+export const inspectionsDayResponseSchema = z.strictObject({
+  items: z.array(rInspectionsDaySchema0Schema).max(50),
+  nextCursor: z.union([z.string().min(1).max(4096), z.null()]),
+});
+
+export type InspectionsDayResponse = z.infer<
+  typeof inspectionsDayResponseSchema
+>;
+
+export const inspectionsPatchesBodySchema = z.strictObject({
+  patches: bInspectionsPatchesSchema0Schema,
+});
+
+export type InspectionsPatchesBody = z.infer<
+  typeof inspectionsPatchesBodySchema
+>;
+
+export const inspectionsPatchesParamsSchema = z.strictObject({});
+
+export type InspectionsPatchesParams = z.infer<
+  typeof inspectionsPatchesParamsSchema
+>;
+
+export const inspectionsPatchesQuerySchema = z.strictObject({});
+
+export type InspectionsPatchesQuery = z.infer<
+  typeof inspectionsPatchesQuerySchema
+>;
+
+export const inspectionsPatchesResponseSchema = z.strictObject({
+  results: z.array(rInspectionsPatchesSchema0Schema).min(1).max(10),
+});
+
+export type InspectionsPatchesResponse = z.infer<
+  typeof inspectionsPatchesResponseSchema
+>;
+
+export const inspectionsPhotosReadBodySchema = z.strictObject({});
+
+export type InspectionsPhotosReadBody = z.infer<
+  typeof inspectionsPhotosReadBodySchema
+>;
+
+export const inspectionsPhotosReadParamsSchema = z.strictObject({
+  photoId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsPhotosReadParams = z.infer<
+  typeof inspectionsPhotosReadParamsSchema
+>;
+
+export const inspectionsPhotosReadQuerySchema = z.strictObject({});
+
+export type InspectionsPhotosReadQuery = z.infer<
+  typeof inspectionsPhotosReadQuerySchema
+>;
+
+export const inspectionsPhotosReadResponseSchema = z.unknown();
+
+export type InspectionsPhotosReadResponse = z.infer<
+  typeof inspectionsPhotosReadResponseSchema
+>;
+
+export const inspectionsPhotosUploadBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  storeId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+  inspectionDate: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+      ),
+    ),
+  requestId: z.string().min(1).max(255),
+});
+
+export type InspectionsPhotosUploadBody = z.infer<
+  typeof inspectionsPhotosUploadBodySchema
+>;
+
+export const inspectionsPhotosUploadParamsSchema = z.strictObject({});
+
+export type InspectionsPhotosUploadParams = z.infer<
+  typeof inspectionsPhotosUploadParamsSchema
+>;
+
+export const inspectionsPhotosUploadQuerySchema = z.strictObject({});
+
+export type InspectionsPhotosUploadQuery = z.infer<
+  typeof inspectionsPhotosUploadQuerySchema
+>;
+
+export const inspectionsPhotosUploadResponseSchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  storeId: rInspectionsPhotosUploadSchema0Schema,
+  inspectionDate: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+      ),
+    ),
+  photoId: rInspectionsPhotosUploadSchema0Schema,
+  expiresAt: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+      ),
+    ),
+});
+
+export type InspectionsPhotosUploadResponse = z.infer<
+  typeof inspectionsPhotosUploadResponseSchema
+>;
+
+export const inspectionsSheetsCreateBodySchema = z.strictObject({
+  enterpriseKey: bInspectionsSheetsCreateSchema0Schema,
+  storeId: bInspectionsSheetsCreateSchema1Schema,
+  inspectionDate: bInspectionsSheetsCreateSchema2Schema,
+  templateId: bInspectionsSheetsCreateSchema1Schema,
+  requestId: bInspectionsSheetsCreateSchema3Schema,
+  name: bInspectionsSheetsCreateSchema4Schema.optional(),
+});
+
+export type InspectionsSheetsCreateBody = z.infer<
+  typeof inspectionsSheetsCreateBodySchema
+>;
+
+export const inspectionsSheetsCreateParamsSchema = z.strictObject({});
+
+export type InspectionsSheetsCreateParams = z.infer<
+  typeof inspectionsSheetsCreateParamsSchema
+>;
+
+export const inspectionsSheetsCreateQuerySchema = z.strictObject({});
+
+export type InspectionsSheetsCreateQuery = z.infer<
+  typeof inspectionsSheetsCreateQuerySchema
+>;
+
+export const inspectionsSheetsCreateResponseSchema = z.strictObject({
+  sheetId: rInspectionsSheetsCreateSchema0Schema,
+  templateVersionId: rInspectionsSheetsCreateSchema0Schema,
+  sheetRevision: z.number().int().min(1).max(9007199254740991),
+  status: z.enum(["active", "voided"]),
+});
+
+export type InspectionsSheetsCreateResponse = z.infer<
+  typeof inspectionsSheetsCreateResponseSchema
+>;
+
+export const inspectionsSheetsReadBodySchema = z.strictObject({});
+
+export type InspectionsSheetsReadBody = z.infer<
+  typeof inspectionsSheetsReadBodySchema
+>;
+
+export const inspectionsSheetsReadParamsSchema = z.strictObject({
+  sheetId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsSheetsReadParams = z.infer<
+  typeof inspectionsSheetsReadParamsSchema
+>;
+
+export const inspectionsSheetsReadQuerySchema = z.strictObject({
+  cursor: z.string().min(1).max(4096).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+});
+
+export type InspectionsSheetsReadQuery = z.infer<
+  typeof inspectionsSheetsReadQuerySchema
+>;
+
+export const inspectionsSheetsReadResponseSchema = z.strictObject({
+  sheetId: rInspectionsSheetsReadSchema0Schema,
+  templateVersionId: rInspectionsSheetsReadSchema0Schema,
+  sheetRevision: rInspectionsSheetsReadSchema1Schema,
+  templateId: rInspectionsSheetsReadSchema0Schema,
+  templateTitle: rInspectionsSheetsReadSchema2Schema,
+  name: z.union([rInspectionsSheetsReadSchema2Schema, z.null()]),
+  progress: z.enum(["unfilled", "incomplete", "complete"]),
+  scoreSummary: z
+    .strictObject({
+      earnedTenths: z.number().int().min(0).max(2400000000),
+      maxTenths: z.number().int().min(0).max(2400000000),
+      scoredCount: z.number().int().min(0).max(2400),
+      scoreCount: z.number().int().min(1).max(2400),
+      rate: z.union([z.number().min(0).max(1), z.null()]),
+    })
+    .optional(),
+  enterpriseKey: z.string().min(1).max(128),
+  storeId: rInspectionsSheetsReadSchema0Schema,
+  inspectionDate: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+      ),
+    ),
+  questions: z.array(rInspectionsSheetsReadSchema3Schema).max(50),
+  missingRequired: z.array(rInspectionsSheetsReadSchema11Schema).max(600),
+  missingRequiredCount: z.number().int().min(0).max(2400),
+  nextCursor: z.union([z.string().min(1).max(4096), z.null()]),
+});
+
+export type InspectionsSheetsReadResponse = z.infer<
+  typeof inspectionsSheetsReadResponseSchema
+>;
+
+export const inspectionsSheetsReplaceBodySchema = z.strictObject({
+  sourceTemplateVersionId: bInspectionsSheetsReplaceSchema0Schema,
+  targetTemplateVersionId: bInspectionsSheetsReplaceSchema0Schema,
+  expectedActiveRevision: bInspectionsSheetsReplaceSchema1Schema,
+  expectedSheetRevision: bInspectionsSheetsReplaceSchema1Schema,
+  requestId: bInspectionsSheetsReplaceSchema2Schema,
+});
+
+export type InspectionsSheetsReplaceBody = z.infer<
+  typeof inspectionsSheetsReplaceBodySchema
+>;
+
+export const inspectionsSheetsReplaceParamsSchema = z.strictObject({
+  sheetId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsSheetsReplaceParams = z.infer<
+  typeof inspectionsSheetsReplaceParamsSchema
+>;
+
+export const inspectionsSheetsReplaceQuerySchema = z.strictObject({});
+
+export type InspectionsSheetsReplaceQuery = z.infer<
+  typeof inspectionsSheetsReplaceQuerySchema
+>;
+
+export const inspectionsSheetsReplaceResponseSchema = z.strictObject({
+  sheetId: rInspectionsSheetsReplaceSchema0Schema,
+  templateVersionId: rInspectionsSheetsReplaceSchema0Schema,
+  sheetRevision: z.number().int().min(1).max(9007199254740991),
+  progress: z.enum(["unfilled", "incomplete", "complete"]),
+  scoreSummary: z
+    .strictObject({
+      earnedTenths: z.number().int().min(0).max(2400000000),
+      maxTenths: z.number().int().min(0).max(2400000000),
+      scoredCount: z.number().int().min(0).max(2400),
+      scoreCount: z.number().int().min(1).max(2400),
+      rate: z.union([z.number().min(0).max(1), z.null()]),
+    })
+    .optional(),
+  missingRequiredCount: z.number().int().min(0).max(2400),
+  missingRequired: z.array(rInspectionsSheetsReplaceSchema1Schema).max(20),
+});
+
+export type InspectionsSheetsReplaceResponse = z.infer<
+  typeof inspectionsSheetsReplaceResponseSchema
+>;
+
+export const inspectionsSheetsReplacementBodySchema = z.strictObject({});
+
+export type InspectionsSheetsReplacementBody = z.infer<
+  typeof inspectionsSheetsReplacementBodySchema
+>;
+
+export const inspectionsSheetsReplacementParamsSchema = z.strictObject({
+  sheetId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsSheetsReplacementParams = z.infer<
+  typeof inspectionsSheetsReplacementParamsSchema
+>;
+
+export const inspectionsSheetsReplacementQuerySchema = z.strictObject({});
+
+export type InspectionsSheetsReplacementQuery = z.infer<
+  typeof inspectionsSheetsReplacementQuerySchema
+>;
+
+export const inspectionsSheetsReplacementResponseSchema = z.strictObject({
+  sheetId: rInspectionsSheetsReplacementSchema0Schema,
+  sourceTemplateVersionId: rInspectionsSheetsReplacementSchema0Schema,
+  targetTemplateVersionId: rInspectionsSheetsReplacementSchema0Schema,
+  expectedActiveRevision: rInspectionsSheetsReplacementSchema1Schema,
+  expectedSheetRevision: rInspectionsSheetsReplacementSchema1Schema,
+  retainedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
+  clearedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
+  addedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
+  removedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
+});
+
+export type InspectionsSheetsReplacementResponse = z.infer<
+  typeof inspectionsSheetsReplacementResponseSchema
+>;
+
+export const inspectionsSheetsVoidBodySchema = z.strictObject({
+  expectedSheetRevision: bInspectionsSheetsVoidSchema0Schema,
+  requestId: bInspectionsSheetsVoidSchema1Schema,
+});
+
+export type InspectionsSheetsVoidBody = z.infer<
+  typeof inspectionsSheetsVoidBodySchema
+>;
+
+export const inspectionsSheetsVoidParamsSchema = z.strictObject({
+  sheetId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsSheetsVoidParams = z.infer<
+  typeof inspectionsSheetsVoidParamsSchema
+>;
+
+export const inspectionsSheetsVoidQuerySchema = z.strictObject({});
+
+export type InspectionsSheetsVoidQuery = z.infer<
+  typeof inspectionsSheetsVoidQuerySchema
+>;
+
+export const inspectionsSheetsVoidResponseSchema = z.strictObject({
+  sheetId: rInspectionsSheetsVoidSchema0Schema,
+  templateVersionId: rInspectionsSheetsVoidSchema0Schema,
+  sheetRevision: z.number().int().min(1).max(9007199254740991),
+  status: z.enum(["active", "voided"]),
+});
+
+export type InspectionsSheetsVoidResponse = z.infer<
+  typeof inspectionsSheetsVoidResponseSchema
+>;
+
+export const inspectionsTemplatesActivateBodySchema = z.strictObject({
+  enterpriseKey: bInspectionsTemplatesActivateSchema0Schema,
+  expectedDraftRevision: bInspectionsTemplatesActivateSchema1Schema,
+});
+
+export type InspectionsTemplatesActivateBody = z.infer<
+  typeof inspectionsTemplatesActivateBodySchema
+>;
+
+export const inspectionsTemplatesActivateParamsSchema = z.strictObject({
+  templateId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsTemplatesActivateParams = z.infer<
+  typeof inspectionsTemplatesActivateParamsSchema
+>;
+
+export const inspectionsTemplatesActivateQuerySchema = z.strictObject({});
+
+export type InspectionsTemplatesActivateQuery = z.infer<
+  typeof inspectionsTemplatesActivateQuerySchema
+>;
+
+export const inspectionsTemplatesActivateResponseSchema = z.strictObject({
+  templateId: rInspectionsTemplatesActivateSchema0Schema,
+  draftRevision: rInspectionsTemplatesActivateSchema1Schema,
+  activeTemplateVersionId: z.union([
+    rInspectionsTemplatesActivateSchema0Schema,
+    z.null(),
+  ]),
+  activeRevision: z.union([
+    rInspectionsTemplatesActivateSchema1Schema,
+    z.null(),
+  ]),
+});
+
+export type InspectionsTemplatesActivateResponse = z.infer<
+  typeof inspectionsTemplatesActivateResponseSchema
+>;
+
+export const inspectionsTemplatesCreateBodySchema = z.strictObject({
+  templateId: bInspectionsTemplatesCreateSchema0Schema,
+  enterpriseKey: bInspectionsTemplatesCreateSchema1Schema,
+  definition: bInspectionsTemplatesCreateSchema2Schema,
+});
+
+export type InspectionsTemplatesCreateBody = z.infer<
+  typeof inspectionsTemplatesCreateBodySchema
+>;
+
+export const inspectionsTemplatesCreateParamsSchema = z.strictObject({});
+
+export type InspectionsTemplatesCreateParams = z.infer<
+  typeof inspectionsTemplatesCreateParamsSchema
+>;
+
+export const inspectionsTemplatesCreateQuerySchema = z.strictObject({});
+
+export type InspectionsTemplatesCreateQuery = z.infer<
+  typeof inspectionsTemplatesCreateQuerySchema
+>;
+
+export const inspectionsTemplatesCreateResponseSchema = z.strictObject({
+  templateId: rInspectionsTemplatesCreateSchema0Schema,
+  draftRevision: rInspectionsTemplatesCreateSchema1Schema,
+  activeTemplateVersionId: z.union([
+    rInspectionsTemplatesCreateSchema0Schema,
+    z.null(),
+  ]),
+  activeRevision: z.union([rInspectionsTemplatesCreateSchema1Schema, z.null()]),
+});
+
+export type InspectionsTemplatesCreateResponse = z.infer<
+  typeof inspectionsTemplatesCreateResponseSchema
+>;
+
+export const inspectionsTemplatesDeactivateBodySchema = z.strictObject({
+  enterpriseKey: bInspectionsTemplatesDeactivateSchema0Schema,
+  expectedDraftRevision: bInspectionsTemplatesDeactivateSchema1Schema,
+});
+
+export type InspectionsTemplatesDeactivateBody = z.infer<
+  typeof inspectionsTemplatesDeactivateBodySchema
+>;
+
+export const inspectionsTemplatesDeactivateParamsSchema = z.strictObject({
+  templateId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsTemplatesDeactivateParams = z.infer<
+  typeof inspectionsTemplatesDeactivateParamsSchema
+>;
+
+export const inspectionsTemplatesDeactivateQuerySchema = z.strictObject({});
+
+export type InspectionsTemplatesDeactivateQuery = z.infer<
+  typeof inspectionsTemplatesDeactivateQuerySchema
+>;
+
+export const inspectionsTemplatesDeactivateResponseSchema = z.strictObject({
+  templateId: rInspectionsTemplatesDeactivateSchema0Schema,
+  draftRevision: rInspectionsTemplatesDeactivateSchema1Schema,
+  activeTemplateVersionId: z.union([
+    rInspectionsTemplatesDeactivateSchema0Schema,
+    z.null(),
+  ]),
+  activeRevision: z.union([
+    rInspectionsTemplatesDeactivateSchema1Schema,
+    z.null(),
+  ]),
+});
+
+export type InspectionsTemplatesDeactivateResponse = z.infer<
+  typeof inspectionsTemplatesDeactivateResponseSchema
+>;
+
+export const inspectionsTemplatesListBodySchema = z.strictObject({});
+
+export type InspectionsTemplatesListBody = z.infer<
+  typeof inspectionsTemplatesListBodySchema
+>;
+
+export const inspectionsTemplatesListParamsSchema = z.strictObject({});
+
+export type InspectionsTemplatesListParams = z.infer<
+  typeof inspectionsTemplatesListParamsSchema
+>;
+
+export const inspectionsTemplatesListQuerySchema = z.strictObject({
+  cursor: z.string().min(1).max(4096).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+  enterpriseKey: z.string().min(1).max(128),
+});
+
+export type InspectionsTemplatesListQuery = z.infer<
+  typeof inspectionsTemplatesListQuerySchema
+>;
+
+export const inspectionsTemplatesListResponseSchema = z.strictObject({
+  items: z.array(rInspectionsTemplatesListSchema0Schema).max(50),
+  nextCursor: z.union([z.string().min(1).max(4096), z.null()]),
+});
+
+export type InspectionsTemplatesListResponse = z.infer<
+  typeof inspectionsTemplatesListResponseSchema
+>;
+
+export const inspectionsTemplatesPreviewBodySchema = z.strictObject({});
+
+export type InspectionsTemplatesPreviewBody = z.infer<
+  typeof inspectionsTemplatesPreviewBodySchema
+>;
+
+export const inspectionsTemplatesPreviewParamsSchema = z.strictObject({
+  templateId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsTemplatesPreviewParams = z.infer<
+  typeof inspectionsTemplatesPreviewParamsSchema
+>;
+
+export const inspectionsTemplatesPreviewQuerySchema = z.strictObject({
+  cursor: z.string().min(1).max(4096).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+  enterpriseKey: z.string().min(1).max(128),
+});
+
+export type InspectionsTemplatesPreviewQuery = z.infer<
+  typeof inspectionsTemplatesPreviewQuerySchema
+>;
+
+export const inspectionsTemplatesPreviewResponseSchema = z.strictObject({
+  templateId: rInspectionsTemplatesPreviewSchema0Schema,
+  draftRevision: rInspectionsTemplatesPreviewSchema1Schema,
+  activeTemplateVersionId: z.union([
+    rInspectionsTemplatesPreviewSchema0Schema,
+    z.null(),
+  ]),
+  activeRevision: z.union([
+    rInspectionsTemplatesPreviewSchema1Schema,
+    z.null(),
+  ]),
+  draft: z.strictObject({
+    templateId: rInspectionsTemplatesPreviewSchema0Schema,
+    draftRevision: rInspectionsTemplatesPreviewSchema1Schema,
+    title: rInspectionsTemplatesPreviewSchema2Schema,
+    copyMode: z.union([z.enum(["single", "multiple"]), z.null()]).optional(),
+    storeIds: z.array(rInspectionsTemplatesPreviewSchema0Schema).max(200),
+    questions: z.array(rInspectionsTemplatesPreviewSchema3Schema).max(50),
+  }),
+  issues: z.array(
+    z.strictObject({
+      field: z
+        .string()
+        .min(1)
+        .max(255)
+        .regex(new RegExp("^[A-Za-z0-9_.[\\]-]+$")),
+      message: z.string().min(1).max(500),
+    }),
+  ),
+  staticMaxTenths: z.union([z.number().int().min(0).max(2400000000), z.null()]),
+  nextCursor: z.union([z.string().min(1).max(4096), z.null()]),
+});
+
+export type InspectionsTemplatesPreviewResponse = z.infer<
+  typeof inspectionsTemplatesPreviewResponseSchema
+>;
+
+export const inspectionsTemplatesSaveBodySchema = z.strictObject({
+  enterpriseKey: z.string().min(1).max(128),
+  expectedDraftRevision: z.number().int().min(1).max(9007199254740991),
+  definition: z.strictObject({
+    title: bInspectionsTemplatesSaveSchema0Schema,
+    copyMode: bInspectionsTemplatesSaveSchema1Schema.optional(),
+    storeIds: bInspectionsTemplatesSaveSchema2Schema,
+    questions: bInspectionsTemplatesSaveSchema4Schema,
+  }),
+});
+
+export type InspectionsTemplatesSaveBody = z.infer<
+  typeof inspectionsTemplatesSaveBodySchema
+>;
+
+export const inspectionsTemplatesSaveParamsSchema = z.strictObject({
+  templateId: z
+    .string()
+    .regex(
+      new RegExp(
+        "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+      ),
+    ),
+});
+
+export type InspectionsTemplatesSaveParams = z.infer<
+  typeof inspectionsTemplatesSaveParamsSchema
+>;
+
+export const inspectionsTemplatesSaveQuerySchema = z.strictObject({});
+
+export type InspectionsTemplatesSaveQuery = z.infer<
+  typeof inspectionsTemplatesSaveQuerySchema
+>;
+
+export const inspectionsTemplatesSaveResponseSchema = z.strictObject({
+  templateId: rInspectionsTemplatesSaveSchema0Schema,
+  draftRevision: rInspectionsTemplatesSaveSchema1Schema,
+  activeTemplateVersionId: z.union([
+    rInspectionsTemplatesSaveSchema0Schema,
+    z.null(),
+  ]),
+  activeRevision: z.union([rInspectionsTemplatesSaveSchema1Schema, z.null()]),
+});
+
+export type InspectionsTemplatesSaveResponse = z.infer<
+  typeof inspectionsTemplatesSaveResponseSchema
+>;
+
 export const ledgerContextBodySchema = z.strictObject({});
 
 export type LedgerContextBody = z.infer<typeof ledgerContextBodySchema>;
@@ -5338,7 +6987,9 @@ export type PermissionsAccountsListParams = z.infer<
   typeof permissionsAccountsListParamsSchema
 >;
 
-export const permissionsAccountsListQuerySchema = z.strictObject({});
+export const permissionsAccountsListQuerySchema = z.strictObject({
+  includeInspection: z.enum(["true", "false"]).optional(),
+});
 
 export type PermissionsAccountsListQuery = z.infer<
   typeof permissionsAccountsListQuerySchema
@@ -5380,6 +7031,24 @@ export const permissionsAccountsListResponseSchema = z.strictObject({
             .catchall(rPermissionsAccountsListSchema1Schema),
         }),
       ),
+      inspectionPermissions: z
+        .array(
+          z.strictObject({
+            enterpriseKey: z.string().min(1).max(128),
+            readStores: z.union([
+              z.strictObject({
+                kind: z.literal("all"),
+              }),
+              z.strictObject({
+                kind: z.literal("fixed"),
+                storeIds: rPermissionsAccountsListSchema3Schema,
+              }),
+            ]),
+            writeStoreIds: rPermissionsAccountsListSchema3Schema,
+            manageTemplates: z.boolean(),
+          }),
+        )
+        .optional(),
       displayName: z.string(),
       email: z.string(),
       id: z.string(),
@@ -5406,7 +7075,9 @@ export type PermissionsAccountsReadParams = z.infer<
   typeof permissionsAccountsReadParamsSchema
 >;
 
-export const permissionsAccountsReadQuerySchema = z.strictObject({});
+export const permissionsAccountsReadQuerySchema = z.strictObject({
+  includeInspection: z.enum(["true", "false"]).optional(),
+});
 
 export type PermissionsAccountsReadQuery = z.infer<
   typeof permissionsAccountsReadQuerySchema
@@ -5444,17 +7115,42 @@ export const permissionsAccountsReadResponseSchema = z.strictObject({
       dimensions: z.object({}).catchall(rPermissionsAccountsReadSchema1Schema),
     }),
   ),
+  inspectionPermissions: z
+    .array(
+      z.strictObject({
+        enterpriseKey: z.string().min(1).max(128),
+        readStores: z.union([
+          z.strictObject({
+            kind: z.literal("all"),
+          }),
+          z.strictObject({
+            kind: z.literal("fixed"),
+            storeIds: rPermissionsAccountsReadSchema3Schema,
+          }),
+        ]),
+        writeStoreIds: rPermissionsAccountsReadSchema3Schema,
+        manageTemplates: z.boolean(),
+      }),
+    )
+    .optional(),
 });
 
 export type PermissionsAccountsReadResponse = z.infer<
   typeof permissionsAccountsReadResponseSchema
 >;
 
-export const permissionsAccountsUpdateBodySchema = z.strictObject({
-  expectedVersion: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
-  clearance: z.number().int().min(0).max(3),
-  grants: z.array(bPermissionsAccountsUpdateSchema0Schema).max(100),
-});
+export const permissionsAccountsUpdateBodySchema = z.union([
+  z.strictObject({
+    expectedVersion: bPermissionsAccountsUpdateSchema0Schema,
+    clearance: z.number().int().min(0).max(3),
+    grants: z.array(bPermissionsAccountsUpdateSchema1Schema).max(100),
+    inspectionPermissions: bPermissionsAccountsUpdateSchema10Schema.optional(),
+  }),
+  z.strictObject({
+    expectedVersion: bPermissionsAccountsUpdateSchema0Schema,
+    inspectionPermissions: bPermissionsAccountsUpdateSchema10Schema,
+  }),
+]);
 
 export type PermissionsAccountsUpdateBody = z.infer<
   typeof permissionsAccountsUpdateBodySchema
@@ -5492,6 +7188,24 @@ export const permissionsAccountsUpdateResponseSchema = z.strictObject({
           .catchall(rPermissionsAccountsUpdateSchema0Schema),
       }),
     ),
+    inspectionPermissions: z
+      .array(
+        z.strictObject({
+          enterpriseKey: z.string().min(1).max(128),
+          readStores: z.union([
+            z.strictObject({
+              kind: z.literal("all"),
+            }),
+            z.strictObject({
+              kind: z.literal("fixed"),
+              storeIds: rPermissionsAccountsUpdateSchema2Schema,
+            }),
+          ]),
+          writeStoreIds: rPermissionsAccountsUpdateSchema2Schema,
+          manageTemplates: z.boolean(),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -6444,6 +8158,9 @@ export const sessionLoginResponseSchema = z.strictObject({
   }),
   csrfToken: z.string().min(1),
   canManageSettings: z.boolean(),
+  canReadInspections: z.boolean().optional(),
+  canFillInspections: z.boolean().optional(),
+  canManageInspectionTemplates: z.boolean().optional(),
 });
 
 export type SessionLoginResponse = z.infer<typeof sessionLoginResponseSchema>;
@@ -6490,6 +8207,9 @@ export const sessionReadResponseSchema = z.strictObject({
   }),
   csrfToken: z.string().min(1),
   canManageSettings: z.boolean(),
+  canReadInspections: z.boolean().optional(),
+  canFillInspections: z.boolean().optional(),
+  canManageInspectionTemplates: z.boolean().optional(),
 });
 
 export type SessionReadResponse = z.infer<typeof sessionReadResponseSchema>;
@@ -8243,6 +9963,251 @@ export const webApiRoutes = {
     ],
     summary: "维护员工档案与归属",
   },
+  "inspections.context": {
+    method: "GET",
+    path: "/api/web/v1/inspections/context",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_INVALID",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "分页寻找本人的巡检企业和门店，也可检查确切范围的填写资格",
+  },
+  "inspections.day": {
+    method: "GET",
+    path: "/api/web/v1/inspections/day",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_INVALID",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "分页读取指定门店日期的巡检模板入口与有效卷",
+  },
+  "inspections.patches": {
+    method: "POST",
+    path: "/api/web/v1/inspections/patches",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "提交最多十份巡检卷的组件变更并按提交顺序返回逐卷回执",
+  },
+  "inspections.photos.read": {
+    method: "GET",
+    path: "/api/web/v1/inspections/photos/:photoId",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "实时鉴权后用同源二进制流返回巡检原图",
+  },
+  "inspections.photos.upload": {
+    method: "POST",
+    path: "/api/web/v1/inspections/photos",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_IDEMPOTENCY_CONFLICT",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_MEDIA_UNSUPPORTED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "向指定企业、门店与巡检日暂存一份原始 JPEG 或 PNG 照片",
+  },
+  "inspections.sheets.create": {
+    method: "POST",
+    path: "/api/web/v1/inspections/sheets",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_IDEMPOTENCY_CONFLICT",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "用当前启用的模板和指定范围幂等建立巡检卷",
+  },
+  "inspections.sheets.read": {
+    method: "GET",
+    path: "/api/web/v1/inspections/sheets/:sheetId",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_INVALID",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "按题分页读取巡检卷的固定版本、组件答案及必填缺项",
+  },
+  "inspections.sheets.replace": {
+    method: "POST",
+    path: "/api/web/v1/inspections/sheets/:sheetId/replace",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_IDEMPOTENCY_CONFLICT",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "确认比较结果后为该卷换版，并返回填写回执",
+  },
+  "inspections.sheets.replacement": {
+    method: "GET",
+    path: "/api/web/v1/inspections/sheets/:sheetId/replacement",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "比较当前卷与启用版本，并返回用来确认换版的修订",
+  },
+  "inspections.sheets.void": {
+    method: "POST",
+    path: "/api/web/v1/inspections/sheets/:sheetId/void",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_IDEMPOTENCY_CONFLICT",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "用预期修订作废巡检卷并保留审计",
+  },
+  "inspections.templates.activate": {
+    method: "POST",
+    path: "/api/web/v1/inspections/templates/:templateId/activate",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "启用经过预览且通过校验的巡检模板草稿修订",
+  },
+  "inspections.templates.create": {
+    method: "POST",
+    path: "/api/web/v1/inspections/templates",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "用调用方新生成的模板标识创建巡检模板草稿",
+  },
+  "inspections.templates.deactivate": {
+    method: "POST",
+    path: "/api/web/v1/inspections/templates/:templateId/deactivate",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "按预期草稿修订停用巡检模板的新建入口",
+  },
+  "inspections.templates.list": {
+    method: "GET",
+    path: "/api/web/v1/inspections/templates",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_INVALID",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "分页列出有维护权限的企业巡检模板",
+  },
+  "inspections.templates.preview": {
+    method: "GET",
+    path: "/api/web/v1/inspections/templates/:templateId",
+    auth: "session",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_INVALID",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "按题分页预览模板草稿、启用情况、校验问题及静态满分",
+  },
+  "inspections.templates.save": {
+    method: "PATCH",
+    path: "/api/web/v1/inspections/templates/:templateId",
+    auth: "session-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INSPECTION_CONFLICT",
+      "INSPECTION_FORBIDDEN",
+      "INSPECTION_INVALID",
+      "INSPECTION_LIMIT_EXCEEDED",
+      "INSPECTION_NOT_FOUND",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "按预期草稿修订完整替换巡检模板定义",
+  },
   "ledger.context": {
     method: "GET",
     path: "/api/web/v1/ledger/context",
@@ -8381,6 +10346,7 @@ export const webApiRoutes = {
       "BROWSER_SECURITY_CHECK_FAILED",
       "BROWSER_SIGN_IN_REQUIRED",
       "ENTERPRISE_NAME_REQUIRED",
+      "INSPECTION_FUTURE_STORES_CONFIRMATION_REQUIRED",
       "INTERNAL_ERROR",
       "INVALID_PERMISSION_CONFIGURATION",
       "WEB_API_INVALID_REQUEST",

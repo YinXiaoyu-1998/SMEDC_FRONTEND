@@ -1062,6 +1062,3533 @@
       ]
     },
     {
+      "id": "inspections.context",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/context",
+      "auth": "session",
+      "summary": "分页寻找本人的巡检企业和门店，也可检查确切范围的填写资格",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "$ref": "#/$defs/q_inspections_context___schema0"
+            },
+            "limit": {
+              "$ref": "#/$defs/q_inspections_context___schema1"
+            },
+            "enterpriseKey": {
+              "$ref": "#/$defs/q_inspections_context___schema2"
+            },
+            "storeId": {
+              "$ref": "#/$defs/q_inspections_context___schema3"
+            },
+            "inspectionDate": {
+              "$ref": "#/$defs/q_inspections_context___schema4"
+            }
+          },
+          "additionalProperties": false,
+          "$defs": {
+            "q_inspections_context___schema0": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "q_inspections_context___schema1": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "q_inspections_context___schema2": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "q_inspections_context___schema3": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "q_inspections_context___schema4": {
+              "type": "string",
+              "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "format": "date"
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_context___schema0"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preflight": {
+            "type": "object",
+            "properties": {
+              "enterpriseKey": {
+                "$ref": "#/$defs/r_inspections_context___schema1"
+              },
+              "storeId": {
+                "$ref": "#/$defs/r_inspections_context___schema6"
+              },
+              "inspectionDate": {
+                "type": "string",
+                "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                "format": "date"
+              },
+              "canReadInspections": {
+                "$ref": "#/$defs/r_inspections_context___schema3"
+              },
+              "canFillInspections": {
+                "$ref": "#/$defs/r_inspections_context___schema4"
+              },
+              "canManageInspectionTemplates": {
+                "$ref": "#/$defs/r_inspections_context___schema5"
+              }
+            },
+            "required": [
+              "enterpriseKey",
+              "storeId",
+              "inspectionDate",
+              "canReadInspections",
+              "canFillInspections",
+              "canManageInspectionTemplates"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["items", "nextCursor"],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_context___schema0": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "enterprise"
+                  },
+                  "enterpriseKey": {
+                    "$ref": "#/$defs/r_inspections_context___schema1"
+                  },
+                  "enterpriseName": {
+                    "$ref": "#/$defs/r_inspections_context___schema2"
+                  },
+                  "canReadInspections": {
+                    "$ref": "#/$defs/r_inspections_context___schema3"
+                  },
+                  "canFillInspections": {
+                    "$ref": "#/$defs/r_inspections_context___schema4"
+                  },
+                  "canManageInspectionTemplates": {
+                    "$ref": "#/$defs/r_inspections_context___schema5"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "enterpriseKey",
+                  "enterpriseName",
+                  "canReadInspections",
+                  "canFillInspections",
+                  "canManageInspectionTemplates"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "store"
+                  },
+                  "enterpriseKey": {
+                    "$ref": "#/$defs/r_inspections_context___schema1"
+                  },
+                  "enterpriseName": {
+                    "$ref": "#/$defs/r_inspections_context___schema2"
+                  },
+                  "canReadInspections": {
+                    "$ref": "#/$defs/r_inspections_context___schema3"
+                  },
+                  "canFillInspections": {
+                    "$ref": "#/$defs/r_inspections_context___schema4"
+                  },
+                  "canManageInspectionTemplates": {
+                    "$ref": "#/$defs/r_inspections_context___schema5"
+                  },
+                  "storeId": {
+                    "$ref": "#/$defs/r_inspections_context___schema6"
+                  },
+                  "officialName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "retired": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "enterpriseKey",
+                  "enterpriseName",
+                  "canReadInspections",
+                  "canFillInspections",
+                  "canManageInspectionTemplates",
+                  "storeId",
+                  "officialName",
+                  "retired"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "r_inspections_context___schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "r_inspections_context___schema2": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "r_inspections_context___schema3": {
+            "type": "boolean"
+          },
+          "r_inspections_context___schema4": {
+            "type": "boolean"
+          },
+          "r_inspections_context___schema5": {
+            "type": "boolean"
+          },
+          "r_inspections_context___schema6": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_INVALID",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "inspections.day",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/day",
+      "auth": "session",
+      "summary": "分页读取指定门店日期的巡检模板入口与有效卷",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {
+            "enterpriseKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "storeId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "inspectionDate": {
+              "type": "string",
+              "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "format": "date"
+            },
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "required": ["enterpriseKey", "storeId", "inspectionDate"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_day___schema0"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["items", "nextCursor"],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_day___schema0": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "template"
+                  },
+                  "templateId": {
+                    "$ref": "#/$defs/r_inspections_day___schema1"
+                  },
+                  "templateVersionId": {
+                    "$ref": "#/$defs/r_inspections_day___schema1"
+                  },
+                  "activeRevision": {
+                    "$ref": "#/$defs/r_inspections_day___schema2"
+                  },
+                  "title": {
+                    "$ref": "#/$defs/r_inspections_day___schema3"
+                  },
+                  "copyMode": {
+                    "type": "string",
+                    "enum": ["single", "multiple"]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "templateId",
+                  "templateVersionId",
+                  "activeRevision",
+                  "title",
+                  "copyMode"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sheetId": {
+                    "$ref": "#/$defs/r_inspections_day___schema1"
+                  },
+                  "templateVersionId": {
+                    "$ref": "#/$defs/r_inspections_day___schema1"
+                  },
+                  "sheetRevision": {
+                    "$ref": "#/$defs/r_inspections_day___schema2"
+                  },
+                  "templateId": {
+                    "$ref": "#/$defs/r_inspections_day___schema1"
+                  },
+                  "templateTitle": {
+                    "$ref": "#/$defs/r_inspections_day___schema3"
+                  },
+                  "name": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/r_inspections_day___schema3"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "progress": {
+                    "type": "string",
+                    "enum": ["unfilled", "incomplete", "complete"]
+                  },
+                  "scoreSummary": {
+                    "type": "object",
+                    "properties": {
+                      "earnedTenths": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2400000000
+                      },
+                      "maxTenths": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2400000000
+                      },
+                      "scoredCount": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2400
+                      },
+                      "scoreCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2400
+                      },
+                      "rate": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "earnedTenths",
+                      "maxTenths",
+                      "scoredCount",
+                      "scoreCount",
+                      "rate"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "sheet"
+                  }
+                },
+                "required": [
+                  "sheetId",
+                  "templateVersionId",
+                  "sheetRevision",
+                  "templateId",
+                  "templateTitle",
+                  "name",
+                  "progress",
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "r_inspections_day___schema1": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_day___schema2": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "r_inspections_day___schema3": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_INVALID",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "inspections.patches",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/patches",
+      "auth": "session-write",
+      "summary": "提交最多十份巡检卷的组件变更并按提交顺序返回逐卷回执",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "patches": {
+              "$ref": "#/$defs/b_inspections_patches___schema0"
+            }
+          },
+          "required": ["patches"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_patches___schema0": {
+              "minItems": 1,
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_patches___schema1"
+              }
+            },
+            "b_inspections_patches___schema1": {
+              "type": "object",
+              "properties": {
+                "sheetId": {
+                  "$ref": "#/$defs/b_inspections_patches___schema2"
+                },
+                "templateVersionId": {
+                  "$ref": "#/$defs/b_inspections_patches___schema2"
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "changes": {
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/b_inspections_patches___schema3"
+                  }
+                }
+              },
+              "required": [
+                "sheetId",
+                "templateVersionId",
+                "requestId",
+                "changes"
+              ],
+              "additionalProperties": false
+            },
+            "b_inspections_patches___schema2": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "b_inspections_patches___schema3": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_patches___schema2"
+                    },
+                    "op": {
+                      "type": "string",
+                      "const": "fill"
+                    },
+                    "value": {
+                      "$ref": "#/$defs/b_inspections_patches___schema4"
+                    }
+                  },
+                  "required": ["componentId", "op", "value"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_patches___schema2"
+                    },
+                    "expectedComponentRevision": {
+                      "$ref": "#/$defs/b_inspections_patches___schema5"
+                    },
+                    "op": {
+                      "type": "string",
+                      "const": "set"
+                    },
+                    "value": {
+                      "$ref": "#/$defs/b_inspections_patches___schema4"
+                    }
+                  },
+                  "required": [
+                    "componentId",
+                    "expectedComponentRevision",
+                    "op",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_patches___schema2"
+                    },
+                    "expectedComponentRevision": {
+                      "$ref": "#/$defs/b_inspections_patches___schema5"
+                    },
+                    "op": {
+                      "type": "string",
+                      "const": "clear"
+                    }
+                  },
+                  "required": [
+                    "componentId",
+                    "expectedComponentRevision",
+                    "op"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_patches___schema2"
+                    },
+                    "op": {
+                      "type": "string",
+                      "const": "appendPhotos"
+                    },
+                    "photoIds": {
+                      "minItems": 1,
+                      "$ref": "#/$defs/b_inspections_patches___schema6"
+                    }
+                  },
+                  "required": ["componentId", "op", "photoIds"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_patches___schema2"
+                    },
+                    "expectedComponentRevision": {
+                      "$ref": "#/$defs/b_inspections_patches___schema5"
+                    },
+                    "op": {
+                      "type": "string",
+                      "const": "removePhotos"
+                    },
+                    "photoIds": {
+                      "minItems": 1,
+                      "$ref": "#/$defs/b_inspections_patches___schema6"
+                    }
+                  },
+                  "required": [
+                    "componentId",
+                    "expectedComponentRevision",
+                    "op",
+                    "photoIds"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "b_inspections_patches___schema4": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                }
+              ]
+            },
+            "b_inspections_patches___schema5": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "b_inspections_patches___schema6": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_patches___schema2"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "minItems": 1,
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_patches___schema0"
+            }
+          }
+        },
+        "required": ["results"],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_patches___schema0": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "sheetId": {
+                    "$ref": "#/$defs/r_inspections_patches___schema1"
+                  },
+                  "templateVersionId": {
+                    "$ref": "#/$defs/r_inspections_patches___schema1"
+                  },
+                  "sheetRevision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "progress": {
+                    "type": "string",
+                    "enum": ["unfilled", "incomplete", "complete"]
+                  },
+                  "scoreSummary": {
+                    "type": "object",
+                    "properties": {
+                      "earnedTenths": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2400000000
+                      },
+                      "maxTenths": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2400000000
+                      },
+                      "scoredCount": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2400
+                      },
+                      "scoreCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2400
+                      },
+                      "rate": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "earnedTenths",
+                      "maxTenths",
+                      "scoredCount",
+                      "scoreCount",
+                      "rate"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "missingRequiredCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2400
+                  },
+                  "missingRequired": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/r_inspections_patches___schema2"
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "const": "applied"
+                  }
+                },
+                "required": [
+                  "sheetId",
+                  "templateVersionId",
+                  "sheetRevision",
+                  "progress",
+                  "missingRequiredCount",
+                  "missingRequired",
+                  "status"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sheetId": {
+                    "$ref": "#/$defs/r_inspections_patches___schema1"
+                  },
+                  "status": {
+                    "type": "string",
+                    "const": "conflict"
+                  },
+                  "error": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "$ref": "#/$defs/r_inspections_patches___schema3"
+                          },
+                          "code": {
+                            "type": "string",
+                            "const": "INSPECTION_CONFLICT"
+                          },
+                          "details": {
+                            "type": "object",
+                            "properties": {
+                              "reason": {
+                                "type": "string",
+                                "enum": [
+                                  "nonempty",
+                                  "revision",
+                                  "version",
+                                  "ambiguous",
+                                  "stale_cursor"
+                                ]
+                              }
+                            },
+                            "required": ["reason"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["message", "code", "details"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "$ref": "#/$defs/r_inspections_patches___schema3"
+                          },
+                          "code": {
+                            "type": "string",
+                            "const": "INSPECTION_IDEMPOTENCY_CONFLICT"
+                          }
+                        },
+                        "required": ["message", "code"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["sheetId", "status", "error"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sheetId": {
+                    "$ref": "#/$defs/r_inspections_patches___schema1"
+                  },
+                  "status": {
+                    "type": "string",
+                    "const": "failed"
+                  },
+                  "error": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "$ref": "#/$defs/r_inspections_patches___schema3"
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "INSPECTION_NOT_FOUND",
+                              "INSPECTION_FORBIDDEN"
+                            ]
+                          }
+                        },
+                        "required": ["message", "code"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "$ref": "#/$defs/r_inspections_patches___schema3"
+                          },
+                          "code": {
+                            "type": "string",
+                            "const": "INSPECTION_INVALID"
+                          },
+                          "details": {
+                            "type": "object",
+                            "properties": {
+                              "field": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 255,
+                                "pattern": "^[A-Za-z0-9_.[\\]-]+$"
+                              }
+                            },
+                            "required": ["field"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["message", "code"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "message": {
+                            "$ref": "#/$defs/r_inspections_patches___schema3"
+                          },
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "INSPECTION_LIMIT_EXCEEDED",
+                              "INSPECTION_MEDIA_UNSUPPORTED",
+                              "INTERNAL_ERROR"
+                            ]
+                          }
+                        },
+                        "required": ["message", "code"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": ["sheetId", "status", "error"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "r_inspections_patches___schema1": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_patches___schema2": {
+            "type": "object",
+            "properties": {
+              "questionId": {
+                "$ref": "#/$defs/r_inspections_patches___schema1"
+              },
+              "componentId": {
+                "$ref": "#/$defs/r_inspections_patches___schema1"
+              }
+            },
+            "required": ["questionId", "componentId"],
+            "additionalProperties": false
+          },
+          "r_inspections_patches___schema3": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.photos.read",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/photos/:photoId",
+      "auth": "session",
+      "summary": "实时鉴权后用同源二进制流返回巡检原图",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "photoId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["photoId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "response": {},
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "response": {
+          "contentTypes": ["image/jpeg", "image/png"],
+          "cacheControl": "private, no-store"
+        }
+      }
+    },
+    {
+      "id": "inspections.photos.upload",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/photos",
+      "auth": "session-write",
+      "summary": "向指定企业、门店与巡检日暂存一份原始 JPEG 或 PNG 照片",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "enterpriseKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "storeId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "inspectionDate": {
+              "type": "string",
+              "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "format": "date"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          "required": [
+            "enterpriseKey",
+            "storeId",
+            "inspectionDate",
+            "requestId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "enterpriseKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "storeId": {
+            "$ref": "#/$defs/r_inspections_photos_upload___schema0"
+          },
+          "inspectionDate": {
+            "type": "string",
+            "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "format": "date"
+          },
+          "photoId": {
+            "$ref": "#/$defs/r_inspections_photos_upload___schema0"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "enterpriseKey",
+          "storeId",
+          "inspectionDate",
+          "photoId",
+          "expiresAt"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_photos_upload___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_IDEMPOTENCY_CONFLICT",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_MEDIA_UNSUPPORTED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "multipart/form-data",
+          "fileField": "file",
+          "maxFiles": 1,
+          "maxFileBytes": 10485760,
+          "fileContentTypes": ["image/jpeg", "image/png"]
+        }
+      }
+    },
+    {
+      "id": "inspections.sheets.create",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/sheets",
+      "auth": "session-write",
+      "summary": "用当前启用的模板和指定范围幂等建立巡检卷",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "enterpriseKey": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema0"
+            },
+            "storeId": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema1"
+            },
+            "inspectionDate": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema2"
+            },
+            "templateId": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema1"
+            },
+            "requestId": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema3"
+            },
+            "name": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema4"
+            }
+          },
+          "required": [
+            "enterpriseKey",
+            "storeId",
+            "inspectionDate",
+            "templateId",
+            "requestId"
+          ],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_sheets_create___schema0": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "b_inspections_sheets_create___schema1": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "b_inspections_sheets_create___schema2": {
+              "type": "string",
+              "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+              "format": "date"
+            },
+            "b_inspections_sheets_create___schema3": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "b_inspections_sheets_create___schema4": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "sheetId": {
+            "$ref": "#/$defs/r_inspections_sheets_create___schema0"
+          },
+          "templateVersionId": {
+            "$ref": "#/$defs/r_inspections_sheets_create___schema0"
+          },
+          "sheetRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "voided"]
+          }
+        },
+        "required": ["sheetId", "templateVersionId", "sheetRevision", "status"],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_sheets_create___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_IDEMPOTENCY_CONFLICT",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.sheets.read",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/sheets/:sheetId",
+      "auth": "session",
+      "summary": "按题分页读取巡检卷的固定版本、组件答案及必填缺项",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "sheetId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["sheetId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "sheetId": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+          },
+          "templateVersionId": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+          },
+          "sheetRevision": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema1"
+          },
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+          },
+          "templateTitle": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema2"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "progress": {
+            "type": "string",
+            "enum": ["unfilled", "incomplete", "complete"]
+          },
+          "scoreSummary": {
+            "type": "object",
+            "properties": {
+              "earnedTenths": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400000000
+              },
+              "maxTenths": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400000000
+              },
+              "scoredCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400
+              },
+              "scoreCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2400
+              },
+              "rate": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "earnedTenths",
+              "maxTenths",
+              "scoredCount",
+              "scoreCount",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "enterpriseKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "storeId": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+          },
+          "inspectionDate": {
+            "type": "string",
+            "pattern": "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "format": "date"
+          },
+          "questions": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_sheets_read___schema3"
+            }
+          },
+          "missingRequired": {
+            "maxItems": 600,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_sheets_read___schema11"
+            }
+          },
+          "missingRequiredCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2400
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "sheetId",
+          "templateVersionId",
+          "sheetRevision",
+          "templateId",
+          "templateTitle",
+          "name",
+          "progress",
+          "enterpriseKey",
+          "storeId",
+          "inspectionDate",
+          "questions",
+          "missingRequired",
+          "missingRequiredCount",
+          "nextCursor"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_sheets_read___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_sheets_read___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "r_inspections_sheets_read___schema2": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "r_inspections_sheets_read___schema3": {
+            "type": "object",
+            "properties": {
+              "questionId": {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "questionRevision": {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema1"
+              },
+              "components": {
+                "maxItems": 12,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/r_inspections_sheets_read___schema4"
+                }
+              },
+              "answers": {
+                "maxItems": 12,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/r_inspections_sheets_read___schema10"
+                }
+              }
+            },
+            "required": [
+              "questionId",
+              "title",
+              "category",
+              "questionRevision",
+              "components",
+              "answers"
+            ],
+            "additionalProperties": false
+          },
+          "r_inspections_sheets_read___schema4": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "sop"
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": ["componentId", "label", "kind", "text"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                  },
+                  "kind": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema7"
+                  },
+                  "minTenths": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema8"
+                  },
+                  "maxTenths": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema8"
+                  }
+                },
+                "required": [
+                  "componentId",
+                  "label",
+                  "required",
+                  "kind",
+                  "minTenths",
+                  "maxTenths"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "comment"
+                  }
+                },
+                "required": ["componentId", "label", "required", "kind"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "photo"
+                  }
+                },
+                "required": ["componentId", "label", "required", "kind"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "status"
+                  },
+                  "options": {
+                    "maxItems": 32,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/r_inspections_sheets_read___schema9"
+                    }
+                  }
+                },
+                "required": [
+                  "componentId",
+                  "label",
+                  "required",
+                  "kind",
+                  "options"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "r_inspections_sheets_read___schema5": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "r_inspections_sheets_read___schema6": {
+            "type": "boolean"
+          },
+          "r_inspections_sheets_read___schema7": {
+            "type": "string",
+            "const": "score"
+          },
+          "r_inspections_sheets_read___schema8": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "r_inspections_sheets_read___schema9": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "label": {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+              }
+            },
+            "required": ["id", "label"],
+            "additionalProperties": false
+          },
+          "r_inspections_sheets_read___schema10": {
+            "type": "object",
+            "properties": {
+              "componentId": {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+              },
+              "componentRevision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["componentId", "componentRevision", "value"],
+            "additionalProperties": false
+          },
+          "r_inspections_sheets_read___schema11": {
+            "type": "object",
+            "properties": {
+              "questionId": {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+              },
+              "componentId": {
+                "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+              }
+            },
+            "required": ["questionId", "componentId"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_INVALID",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "inspections.sheets.replace",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/sheets/:sheetId/replace",
+      "auth": "session-write",
+      "summary": "确认比较结果后为该卷换版，并返回填写回执",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "sheetId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["sheetId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "sourceTemplateVersionId": {
+              "$ref": "#/$defs/b_inspections_sheets_replace___schema0"
+            },
+            "targetTemplateVersionId": {
+              "$ref": "#/$defs/b_inspections_sheets_replace___schema0"
+            },
+            "expectedActiveRevision": {
+              "$ref": "#/$defs/b_inspections_sheets_replace___schema1"
+            },
+            "expectedSheetRevision": {
+              "$ref": "#/$defs/b_inspections_sheets_replace___schema1"
+            },
+            "requestId": {
+              "$ref": "#/$defs/b_inspections_sheets_replace___schema2"
+            }
+          },
+          "required": [
+            "sourceTemplateVersionId",
+            "targetTemplateVersionId",
+            "expectedActiveRevision",
+            "expectedSheetRevision",
+            "requestId"
+          ],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_sheets_replace___schema0": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "b_inspections_sheets_replace___schema1": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "b_inspections_sheets_replace___schema2": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "sheetId": {
+            "$ref": "#/$defs/r_inspections_sheets_replace___schema0"
+          },
+          "templateVersionId": {
+            "$ref": "#/$defs/r_inspections_sheets_replace___schema0"
+          },
+          "sheetRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "progress": {
+            "type": "string",
+            "enum": ["unfilled", "incomplete", "complete"]
+          },
+          "scoreSummary": {
+            "type": "object",
+            "properties": {
+              "earnedTenths": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400000000
+              },
+              "maxTenths": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400000000
+              },
+              "scoredCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400
+              },
+              "scoreCount": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2400
+              },
+              "rate": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "earnedTenths",
+              "maxTenths",
+              "scoredCount",
+              "scoreCount",
+              "rate"
+            ],
+            "additionalProperties": false
+          },
+          "missingRequiredCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2400
+          },
+          "missingRequired": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_sheets_replace___schema1"
+            }
+          }
+        },
+        "required": [
+          "sheetId",
+          "templateVersionId",
+          "sheetRevision",
+          "progress",
+          "missingRequiredCount",
+          "missingRequired"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_sheets_replace___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_sheets_replace___schema1": {
+            "type": "object",
+            "properties": {
+              "questionId": {
+                "$ref": "#/$defs/r_inspections_sheets_replace___schema0"
+              },
+              "componentId": {
+                "$ref": "#/$defs/r_inspections_sheets_replace___schema0"
+              }
+            },
+            "required": ["questionId", "componentId"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_IDEMPOTENCY_CONFLICT",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.sheets.replacement",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/sheets/:sheetId/replacement",
+      "auth": "session",
+      "summary": "比较当前卷与启用版本，并返回用来确认换版的修订",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "sheetId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["sheetId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "sheetId": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema0"
+          },
+          "sourceTemplateVersionId": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema0"
+          },
+          "targetTemplateVersionId": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema0"
+          },
+          "expectedActiveRevision": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema1"
+          },
+          "expectedSheetRevision": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema1"
+          },
+          "retainedQuestionIds": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema2"
+          },
+          "clearedQuestionIds": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema2"
+          },
+          "addedQuestionIds": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema2"
+          },
+          "removedQuestionIds": {
+            "$ref": "#/$defs/r_inspections_sheets_replacement___schema2"
+          }
+        },
+        "required": [
+          "sheetId",
+          "sourceTemplateVersionId",
+          "targetTemplateVersionId",
+          "expectedActiveRevision",
+          "expectedSheetRevision",
+          "retainedQuestionIds",
+          "clearedQuestionIds",
+          "addedQuestionIds",
+          "removedQuestionIds"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_sheets_replacement___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_sheets_replacement___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "r_inspections_sheets_replacement___schema2": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_sheets_replacement___schema0"
+            }
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "inspections.sheets.void",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/sheets/:sheetId/void",
+      "auth": "session-write",
+      "summary": "用预期修订作废巡检卷并保留审计",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "sheetId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["sheetId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "expectedSheetRevision": {
+              "$ref": "#/$defs/b_inspections_sheets_void___schema0"
+            },
+            "requestId": {
+              "$ref": "#/$defs/b_inspections_sheets_void___schema1"
+            }
+          },
+          "required": ["expectedSheetRevision", "requestId"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_sheets_void___schema0": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "b_inspections_sheets_void___schema1": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "sheetId": {
+            "$ref": "#/$defs/r_inspections_sheets_void___schema0"
+          },
+          "templateVersionId": {
+            "$ref": "#/$defs/r_inspections_sheets_void___schema0"
+          },
+          "sheetRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "voided"]
+          }
+        },
+        "required": ["sheetId", "templateVersionId", "sheetRevision", "status"],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_sheets_void___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_IDEMPOTENCY_CONFLICT",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.templates.activate",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/templates/:templateId/activate",
+      "auth": "session-write",
+      "summary": "启用经过预览且通过校验的巡检模板草稿修订",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["templateId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "enterpriseKey": {
+              "$ref": "#/$defs/b_inspections_templates_activate___schema0"
+            },
+            "expectedDraftRevision": {
+              "$ref": "#/$defs/b_inspections_templates_activate___schema1"
+            }
+          },
+          "required": ["enterpriseKey", "expectedDraftRevision"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_templates_activate___schema0": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "b_inspections_templates_activate___schema1": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_templates_activate___schema0"
+          },
+          "draftRevision": {
+            "$ref": "#/$defs/r_inspections_templates_activate___schema1"
+          },
+          "activeTemplateVersionId": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_activate___schema0"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_activate___schema1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "templateId",
+          "draftRevision",
+          "activeTemplateVersionId",
+          "activeRevision"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_activate___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_activate___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.templates.create",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/templates",
+      "auth": "session-write",
+      "summary": "用调用方新生成的模板标识创建巡检模板草稿",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "$ref": "#/$defs/b_inspections_templates_create___schema0"
+            },
+            "enterpriseKey": {
+              "$ref": "#/$defs/b_inspections_templates_create___schema1"
+            },
+            "definition": {
+              "$ref": "#/$defs/b_inspections_templates_create___schema2"
+            }
+          },
+          "required": ["templateId", "enterpriseKey", "definition"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_templates_create___schema0": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "b_inspections_templates_create___schema1": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "b_inspections_templates_create___schema2": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema3"
+                },
+                "copyMode": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema4"
+                },
+                "storeIds": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema5"
+                },
+                "questions": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema6"
+                }
+              },
+              "required": ["title", "storeIds", "questions"],
+              "additionalProperties": false
+            },
+            "b_inspections_templates_create___schema3": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "b_inspections_templates_create___schema4": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["single", "multiple"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_create___schema5": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_templates_create___schema0"
+              }
+            },
+            "b_inspections_templates_create___schema6": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_templates_create___schema7"
+              }
+            },
+            "b_inspections_templates_create___schema7": {
+              "type": "object",
+              "properties": {
+                "questionId": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema0"
+                },
+                "title": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema3"
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "components": {
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/b_inspections_templates_create___schema8"
+                  }
+                }
+              },
+              "required": ["questionId", "title", "category", "components"],
+              "additionalProperties": false
+            },
+            "b_inspections_templates_create___schema8": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema9"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "sop"
+                    },
+                    "text": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": ["componentId", "label", "kind", "text"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema10"
+                    },
+                    "kind": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema11"
+                    },
+                    "minTenths": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema12"
+                    },
+                    "maxTenths": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema14"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema10"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "comment"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema10"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "photo"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_create___schema10"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "status"
+                    },
+                    "options": {
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/b_inspections_templates_create___schema15"
+                      }
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "b_inspections_templates_create___schema9": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "b_inspections_templates_create___schema10": {
+              "type": "boolean"
+            },
+            "b_inspections_templates_create___schema11": {
+              "type": "string",
+              "const": "score"
+            },
+            "b_inspections_templates_create___schema12": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema13"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_create___schema13": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "b_inspections_templates_create___schema14": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema13"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_create___schema15": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "label": {
+                  "$ref": "#/$defs/b_inspections_templates_create___schema9"
+                }
+              },
+              "required": ["id", "label"],
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_templates_create___schema0"
+          },
+          "draftRevision": {
+            "$ref": "#/$defs/r_inspections_templates_create___schema1"
+          },
+          "activeTemplateVersionId": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_create___schema0"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_create___schema1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "templateId",
+          "draftRevision",
+          "activeTemplateVersionId",
+          "activeRevision"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_create___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_create___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.templates.deactivate",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/templates/:templateId/deactivate",
+      "auth": "session-write",
+      "summary": "按预期草稿修订停用巡检模板的新建入口",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["templateId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "enterpriseKey": {
+              "$ref": "#/$defs/b_inspections_templates_deactivate___schema0"
+            },
+            "expectedDraftRevision": {
+              "$ref": "#/$defs/b_inspections_templates_deactivate___schema1"
+            }
+          },
+          "required": ["enterpriseKey", "expectedDraftRevision"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_templates_deactivate___schema0": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "b_inspections_templates_deactivate___schema1": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_templates_deactivate___schema0"
+          },
+          "draftRevision": {
+            "$ref": "#/$defs/r_inspections_templates_deactivate___schema1"
+          },
+          "activeTemplateVersionId": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_deactivate___schema0"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_deactivate___schema1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "templateId",
+          "draftRevision",
+          "activeTemplateVersionId",
+          "activeRevision"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_deactivate___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_deactivate___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.templates.list",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/templates",
+      "auth": "session",
+      "summary": "分页列出有维护权限的企业巡检模板",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "enterpriseKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": ["enterpriseKey"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_templates_list___schema0"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["items", "nextCursor"],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_list___schema0": {
+            "type": "object",
+            "properties": {
+              "templateId": {
+                "$ref": "#/$defs/r_inspections_templates_list___schema1"
+              },
+              "draftRevision": {
+                "$ref": "#/$defs/r_inspections_templates_list___schema2"
+              },
+              "activeTemplateVersionId": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/r_inspections_templates_list___schema1"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "activeRevision": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/r_inspections_templates_list___schema2"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "templateId",
+              "draftRevision",
+              "activeTemplateVersionId",
+              "activeRevision",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "r_inspections_templates_list___schema1": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_list___schema2": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_INVALID",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "inspections.templates.preview",
+      "method": "GET",
+      "path": "/api/web/v1/inspections/templates/:templateId",
+      "auth": "session",
+      "summary": "按题分页预览模板草稿、启用情况、校验问题及静态满分",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["templateId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "enterpriseKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": ["enterpriseKey"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+          },
+          "draftRevision": {
+            "$ref": "#/$defs/r_inspections_templates_preview___schema1"
+          },
+          "activeTemplateVersionId": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "draft": {
+            "type": "object",
+            "properties": {
+              "templateId": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+              },
+              "draftRevision": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema1"
+              },
+              "title": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema2"
+              },
+              "copyMode": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["single", "multiple"]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "storeIds": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+                }
+              },
+              "questions": {
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/r_inspections_templates_preview___schema3"
+                }
+              }
+            },
+            "required": [
+              "templateId",
+              "draftRevision",
+              "title",
+              "storeIds",
+              "questions"
+            ],
+            "additionalProperties": false
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "pattern": "^[A-Za-z0-9_.[\\]-]+$"
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                }
+              },
+              "required": ["field", "message"],
+              "additionalProperties": false
+            }
+          },
+          "staticMaxTenths": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2400000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "templateId",
+          "draftRevision",
+          "activeTemplateVersionId",
+          "activeRevision",
+          "draft",
+          "issues",
+          "staticMaxTenths",
+          "nextCursor"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_preview___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_preview___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "r_inspections_templates_preview___schema2": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "r_inspections_templates_preview___schema3": {
+            "type": "object",
+            "properties": {
+              "questionId": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+              },
+              "title": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema2"
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "components": {
+                "maxItems": 12,
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/r_inspections_templates_preview___schema4"
+                }
+              },
+              "questionRevision": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema1"
+              }
+            },
+            "required": [
+              "questionId",
+              "title",
+              "category",
+              "components",
+              "questionRevision"
+            ],
+            "additionalProperties": false
+          },
+          "r_inspections_templates_preview___schema4": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema5"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "sop"
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4000
+                  }
+                },
+                "required": ["componentId", "label", "kind", "text"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema6"
+                  },
+                  "kind": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema7"
+                  },
+                  "minTenths": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema8"
+                  },
+                  "maxTenths": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema10"
+                  }
+                },
+                "required": ["componentId", "label", "required", "kind"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema6"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "comment"
+                  }
+                },
+                "required": ["componentId", "label", "required", "kind"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema6"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "photo"
+                  }
+                },
+                "required": ["componentId", "label", "required", "kind"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "componentId": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema0"
+                  },
+                  "label": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema5"
+                  },
+                  "required": {
+                    "$ref": "#/$defs/r_inspections_templates_preview___schema6"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "status"
+                  },
+                  "options": {
+                    "maxItems": 32,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/r_inspections_templates_preview___schema11"
+                    }
+                  }
+                },
+                "required": ["componentId", "label", "required", "kind"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "r_inspections_templates_preview___schema5": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "r_inspections_templates_preview___schema6": {
+            "type": "boolean"
+          },
+          "r_inspections_templates_preview___schema7": {
+            "type": "string",
+            "const": "score"
+          },
+          "r_inspections_templates_preview___schema8": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema9"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "r_inspections_templates_preview___schema9": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "r_inspections_templates_preview___schema10": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema9"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "r_inspections_templates_preview___schema11": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "label": {
+                "$ref": "#/$defs/r_inspections_templates_preview___schema5"
+              }
+            },
+            "required": ["id", "label"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_INVALID",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "inspections.templates.save",
+      "method": "PATCH",
+      "path": "/api/web/v1/inspections/templates/:templateId",
+      "auth": "session-write",
+      "summary": "按预期草稿修订完整替换巡检模板定义",
+      "request": {
+        "params": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": ["templateId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "enterpriseKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "expectedDraftRevision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "definition": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema0"
+                },
+                "copyMode": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema1"
+                },
+                "storeIds": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema2"
+                },
+                "questions": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema4"
+                }
+              },
+              "required": ["title", "storeIds", "questions"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["enterpriseKey", "expectedDraftRevision", "definition"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_templates_save___schema0": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "b_inspections_templates_save___schema1": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["single", "multiple"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_save___schema2": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_templates_save___schema3"
+              }
+            },
+            "b_inspections_templates_save___schema3": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "b_inspections_templates_save___schema4": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_templates_save___schema5"
+              }
+            },
+            "b_inspections_templates_save___schema5": {
+              "type": "object",
+              "properties": {
+                "questionId": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema3"
+                },
+                "title": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema0"
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "components": {
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/b_inspections_templates_save___schema6"
+                  }
+                }
+              },
+              "required": ["questionId", "title", "category", "components"],
+              "additionalProperties": false
+            },
+            "b_inspections_templates_save___schema6": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema7"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "sop"
+                    },
+                    "text": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": ["componentId", "label", "kind", "text"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema7"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema8"
+                    },
+                    "kind": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema9"
+                    },
+                    "minTenths": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema10"
+                    },
+                    "maxTenths": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema12"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema7"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema8"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "comment"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema7"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema8"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "photo"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema3"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema7"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_save___schema8"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "status"
+                    },
+                    "options": {
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/b_inspections_templates_save___schema13"
+                      }
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "b_inspections_templates_save___schema7": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "b_inspections_templates_save___schema8": {
+              "type": "boolean"
+            },
+            "b_inspections_templates_save___schema9": {
+              "type": "string",
+              "const": "score"
+            },
+            "b_inspections_templates_save___schema10": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema11"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_save___schema11": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "b_inspections_templates_save___schema12": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema11"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_save___schema13": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "label": {
+                  "$ref": "#/$defs/b_inspections_templates_save___schema7"
+                }
+              },
+              "required": ["id", "label"],
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_templates_save___schema0"
+          },
+          "draftRevision": {
+            "$ref": "#/$defs/r_inspections_templates_save___schema1"
+          },
+          "activeTemplateVersionId": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_save___schema0"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_save___schema1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "templateId",
+          "draftRevision",
+          "activeTemplateVersionId",
+          "activeRevision"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_save___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_save___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
       "id": "ledger.context",
       "method": "GET",
       "path": "/api/web/v1/ledger/context",
@@ -1584,6 +5111,16 @@
           },
           "required": ["orgId"],
           "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {
+            "includeInspection": {
+              "type": "string",
+              "enum": ["true", "false"]
+            }
+          },
+          "additionalProperties": false
         }
       },
       "response": {
@@ -1716,6 +5253,61 @@
                     "additionalProperties": false
                   }
                 },
+                "inspectionPermissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "enterpriseKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "readStores": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "all"
+                              }
+                            },
+                            "required": ["kind"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "fixed"
+                              },
+                              "storeIds": {
+                                "$ref": "#/$defs/r_permissions_accounts_list___schema3"
+                              }
+                            },
+                            "required": ["kind", "storeIds"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "writeStoreIds": {
+                        "$ref": "#/$defs/r_permissions_accounts_list___schema3"
+                      },
+                      "manageTemplates": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "enterpriseKey",
+                      "readStores",
+                      "writeStoreIds",
+                      "manageTemplates"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
                 "displayName": {
                   "type": "string"
                 },
@@ -1787,6 +5379,18 @@
           "r_permissions_accounts_list___schema2": {
             "type": "string",
             "minLength": 1
+          },
+          "r_permissions_accounts_list___schema3": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_permissions_accounts_list___schema4"
+            }
+          },
+          "r_permissions_accounts_list___schema4": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         }
       },
@@ -1818,6 +5422,16 @@
             }
           },
           "required": ["orgId", "userAccountId"],
+          "additionalProperties": false
+        },
+        "query": {
+          "type": "object",
+          "properties": {
+            "includeInspection": {
+              "type": "string",
+              "enum": ["true", "false"]
+            }
+          },
           "additionalProperties": false
         }
       },
@@ -1945,6 +5559,61 @@
               ],
               "additionalProperties": false
             }
+          },
+          "inspectionPermissions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "enterpriseKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "readStores": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "all"
+                        }
+                      },
+                      "required": ["kind"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "fixed"
+                        },
+                        "storeIds": {
+                          "$ref": "#/$defs/r_permissions_accounts_read___schema3"
+                        }
+                      },
+                      "required": ["kind", "storeIds"],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "writeStoreIds": {
+                  "$ref": "#/$defs/r_permissions_accounts_read___schema3"
+                },
+                "manageTemplates": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "enterpriseKey",
+                "readStores",
+                "writeStoreIds",
+                "manageTemplates"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
@@ -2000,6 +5669,18 @@
           "r_permissions_accounts_read___schema2": {
             "type": "string",
             "minLength": 1
+          },
+          "r_permissions_accounts_read___schema3": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_permissions_accounts_read___schema4"
+            }
+          },
+          "r_permissions_accounts_read___schema4": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         }
       },
@@ -2035,48 +5716,71 @@
           "additionalProperties": false
         },
         "body": {
-          "type": "object",
-          "properties": {
-            "expectedVersion": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "expectedVersion": {
+                  "$ref": "#/$defs/b_permissions_accounts_update___schema0"
+                },
+                "clearance": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 3
+                },
+                "grants": {
+                  "maxItems": 100,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/b_permissions_accounts_update___schema1"
+                  }
+                },
+                "inspectionPermissions": {
+                  "$ref": "#/$defs/b_permissions_accounts_update___schema10"
+                }
+              },
+              "required": ["expectedVersion", "clearance", "grants"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "expectedVersion": {
+                  "$ref": "#/$defs/b_permissions_accounts_update___schema0"
+                },
+                "inspectionPermissions": {
+                  "$ref": "#/$defs/b_permissions_accounts_update___schema10"
+                }
+              },
+              "required": ["expectedVersion", "inspectionPermissions"],
+              "additionalProperties": false
+            }
+          ],
+          "$defs": {
+            "b_permissions_accounts_update___schema0": {
               "type": "string",
               "pattern": "^(0|[1-9]\\d*)$",
               "description": "客户端读到的 authorizationVersion；过期写入整笔回滚。"
             },
-            "clearance": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 3
-            },
-            "grants": {
-              "maxItems": 100,
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/b_permissions_accounts_update___schema0"
-              }
-            }
-          },
-          "required": ["expectedVersion", "clearance", "grants"],
-          "additionalProperties": false,
-          "$defs": {
-            "b_permissions_accounts_update___schema0": {
+            "b_permissions_accounts_update___schema1": {
               "oneOf": [
                 {
                   "type": "object",
                   "properties": {
                     "id": {
-                      "$ref": "#/$defs/b_permissions_accounts_update___schema1"
-                    },
-                    "orgId": {
                       "$ref": "#/$defs/b_permissions_accounts_update___schema2"
                     },
-                    "enterpriseKey": {
+                    "orgId": {
                       "$ref": "#/$defs/b_permissions_accounts_update___schema3"
                     },
-                    "categoryIds": {
+                    "enterpriseKey": {
                       "$ref": "#/$defs/b_permissions_accounts_update___schema4"
                     },
+                    "categoryIds": {
+                      "$ref": "#/$defs/b_permissions_accounts_update___schema5"
+                    },
                     "dimensions": {
-                      "$ref": "#/$defs/b_permissions_accounts_update___schema6"
+                      "$ref": "#/$defs/b_permissions_accounts_update___schema7"
                     },
                     "ownership": {
                       "type": "string",
@@ -2097,26 +5801,26 @@
                   "type": "object",
                   "properties": {
                     "id": {
-                      "$ref": "#/$defs/b_permissions_accounts_update___schema1"
-                    },
-                    "orgId": {
                       "$ref": "#/$defs/b_permissions_accounts_update___schema2"
                     },
-                    "enterpriseKey": {
+                    "orgId": {
                       "$ref": "#/$defs/b_permissions_accounts_update___schema3"
                     },
-                    "categoryIds": {
+                    "enterpriseKey": {
                       "$ref": "#/$defs/b_permissions_accounts_update___schema4"
                     },
+                    "categoryIds": {
+                      "$ref": "#/$defs/b_permissions_accounts_update___schema5"
+                    },
                     "dimensions": {
-                      "$ref": "#/$defs/b_permissions_accounts_update___schema6"
+                      "$ref": "#/$defs/b_permissions_accounts_update___schema7"
                     },
                     "ownership": {
                       "type": "string",
                       "const": "store"
                     },
                     "stores": {
-                      "$ref": "#/$defs/b_permissions_accounts_update___schema7"
+                      "$ref": "#/$defs/b_permissions_accounts_update___schema8"
                     }
                   },
                   "required": [
@@ -2132,11 +5836,6 @@
                 }
               ]
             },
-            "b_permissions_accounts_update___schema1": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 64
-            },
             "b_permissions_accounts_update___schema2": {
               "type": "string",
               "minLength": 1,
@@ -2145,21 +5844,26 @@
             "b_permissions_accounts_update___schema3": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 128
+              "maxLength": 64
             },
             "b_permissions_accounts_update___schema4": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "b_permissions_accounts_update___schema5": {
               "minItems": 1,
               "type": "array",
               "items": {
-                "$ref": "#/$defs/b_permissions_accounts_update___schema5"
+                "$ref": "#/$defs/b_permissions_accounts_update___schema6"
               }
             },
-            "b_permissions_accounts_update___schema5": {
+            "b_permissions_accounts_update___schema6": {
               "type": "string",
               "minLength": 1,
               "maxLength": 64
             },
-            "b_permissions_accounts_update___schema6": {
+            "b_permissions_accounts_update___schema7": {
               "type": "object",
               "propertyNames": {
                 "type": "string",
@@ -2167,10 +5871,10 @@
                 "maxLength": 64
               },
               "additionalProperties": {
-                "$ref": "#/$defs/b_permissions_accounts_update___schema7"
+                "$ref": "#/$defs/b_permissions_accounts_update___schema8"
               }
             },
-            "b_permissions_accounts_update___schema7": {
+            "b_permissions_accounts_update___schema8": {
               "oneOf": [
                 {
                   "type": "object",
@@ -2194,7 +5898,7 @@
                       "minItems": 1,
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/b_permissions_accounts_update___schema8"
+                        "$ref": "#/$defs/b_permissions_accounts_update___schema9"
                       }
                     }
                   },
@@ -2203,9 +5907,84 @@
                 }
               ]
             },
-            "b_permissions_accounts_update___schema8": {
+            "b_permissions_accounts_update___schema9": {
               "type": "string",
               "minLength": 1
+            },
+            "b_permissions_accounts_update___schema10": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_permissions_accounts_update___schema11"
+              }
+            },
+            "b_permissions_accounts_update___schema11": {
+              "type": "object",
+              "properties": {
+                "enterpriseKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "readStores": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "all"
+                        }
+                      },
+                      "required": ["kind"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "fixed"
+                        },
+                        "storeIds": {
+                          "$ref": "#/$defs/b_permissions_accounts_update___schema12"
+                        }
+                      },
+                      "required": ["kind", "storeIds"],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "writeStoreIds": {
+                  "$ref": "#/$defs/b_permissions_accounts_update___schema12"
+                },
+                "manageTemplates": {
+                  "type": "boolean"
+                },
+                "confirmLoseFutureStores": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "enterpriseKey",
+                "readStores",
+                "writeStoreIds",
+                "manageTemplates"
+              ],
+              "additionalProperties": false
+            },
+            "b_permissions_accounts_update___schema12": {
+              "maxItems": 1000,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_permissions_accounts_update___schema13"
+              }
+            },
+            "b_permissions_accounts_update___schema13": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
           }
         }
@@ -2271,6 +6050,61 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "inspectionPermissions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "enterpriseKey": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "readStores": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "all"
+                            }
+                          },
+                          "required": ["kind"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "fixed"
+                            },
+                            "storeIds": {
+                              "$ref": "#/$defs/r_permissions_accounts_update___schema2"
+                            }
+                          },
+                          "required": ["kind", "storeIds"],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "writeStoreIds": {
+                      "$ref": "#/$defs/r_permissions_accounts_update___schema2"
+                    },
+                    "manageTemplates": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "enterpriseKey",
+                    "readStores",
+                    "writeStoreIds",
+                    "manageTemplates"
+                  ],
+                  "additionalProperties": false
+                }
               }
             },
             "required": ["clearance", "grants"],
@@ -2316,6 +6150,18 @@
           "r_permissions_accounts_update___schema1": {
             "type": "string",
             "minLength": 1
+          },
+          "r_permissions_accounts_update___schema2": {
+            "maxItems": 1000,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_permissions_accounts_update___schema3"
+            }
+          },
+          "r_permissions_accounts_update___schema3": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         }
       },
@@ -2327,6 +6173,7 @@
         "BROWSER_SECURITY_CHECK_FAILED",
         "BROWSER_SIGN_IN_REQUIRED",
         "ENTERPRISE_NAME_REQUIRED",
+        "INSPECTION_FUTURE_STORES_CONFIRMATION_REQUIRED",
         "INTERNAL_ERROR",
         "INVALID_PERMISSION_CONFIGURATION",
         "WEB_API_INVALID_REQUEST"
@@ -4698,6 +8545,15 @@
           },
           "canManageSettings": {
             "type": "boolean"
+          },
+          "canReadInspections": {
+            "type": "boolean"
+          },
+          "canFillInspections": {
+            "type": "boolean"
+          },
+          "canManageInspectionTemplates": {
+            "type": "boolean"
           }
         },
         "required": ["identity", "csrfToken", "canManageSettings"],
@@ -4793,6 +8649,15 @@
             "minLength": 1
           },
           "canManageSettings": {
+            "type": "boolean"
+          },
+          "canReadInspections": {
+            "type": "boolean"
+          },
+          "canFillInspections": {
+            "type": "boolean"
+          },
+          "canManageInspectionTemplates": {
             "type": "boolean"
           }
         },
