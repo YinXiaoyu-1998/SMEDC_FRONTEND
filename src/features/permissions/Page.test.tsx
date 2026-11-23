@@ -1700,3 +1700,64 @@ it("confirms the remaining stores before replacing all-store access and sends on
     ),
   );
 });
+
+it("keeps inspection-only and shared inspection grants out of the general editor", async () => {
+  const state = createState();
+  const expectedVersion = state.version;
+  const inspectionId = "cat-inspection";
+  const category: PermissionCategory = {
+    ...state.categories[0]!,
+    id: inspectionId,
+    key: INSPECTION_CATEGORY_KEY,
+    name: "门店巡检问卷",
+  };
+  state.categories.push(category);
+  const account = state.accounts[0]!;
+  const businessGrant = account.grants[0]!;
+  state.accounts[0] = {
+    ...account,
+    grants: [
+      {
+        ...businessGrant,
+        categoryIds: [...businessGrant.categoryIds, inspectionId],
+      },
+      { ...businessGrant, id: "inspection-only", categoryIds: [inspectionId] },
+    ],
+  };
+
+  const { fetchMock } = renderPermissions({ state });
+  await screen.findByRole("heading", { name: "文档类别" });
+  await openTab("账号授权");
+  const row = await screen.findByRole("row", { name: /张三/ });
+  fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+  const panel = await screen.findByRole("dialog", { name: "编辑账号授权" });
+  expect(within(panel).getByRole("button", { name: "巡检权限" })).toBeEnabled();
+  expect(within(panel).getAllByRole("button", { name: "删除" })).toHaveLength(
+    1,
+  );
+  expect(within(panel).queryByText(/门店巡检问卷/)).not.toBeInTheDocument();
+  fireEvent.change(within(panel).getByLabelText("账号密级"), {
+    target: { value: "3" },
+  });
+  fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+  const confirmation = await screen.findByRole("dialog", {
+    name: "确认本次变更",
+  });
+  expect(
+    within(confirmation).queryByText(/门店巡检问卷/),
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    within(confirmation).getByRole("button", { name: "确认变更" }),
+  );
+  await waitFor(() =>
+    expect(
+      bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+    ).toEqual([
+      {
+        expectedVersion,
+        clearance: 3,
+        grants: [businessGrant],
+      },
+    ]),
+  );
+});
