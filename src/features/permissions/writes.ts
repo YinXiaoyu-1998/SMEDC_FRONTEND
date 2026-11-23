@@ -5,6 +5,7 @@ import * as permissionsApi from "@/api/permissions";
 import { documentFromUpdate } from "@/features/permissions/document-draft";
 import type {
   PermissionAccount,
+  PermissionsAccountsReadResponse,
   PermissionDimension,
   PermissionDocument,
   PermissionEnterprise,
@@ -91,6 +92,9 @@ function addDimensionValue(
 
 export interface PermissionsWrites {
   readonly busy: boolean;
+  readonly readInspectionAccount: (
+    userAccountId: string,
+  ) => Promise<PermissionsAccountsReadResponse>;
   readonly readAccount: (userAccountId: string) => Promise<PermissionAccount>;
   readonly previewEnterprise: (
     name: string,
@@ -216,6 +220,12 @@ export function usePermissionsWrites({
       return merged;
     },
     [orgId, queryClient, queryKey],
+  );
+
+  const readInspectionAccount = useCallback(
+    (userAccountId: string) =>
+      permissionsApi.readAccount(orgId, userAccountId, true),
+    [orgId],
   );
 
   const previewEnterprise = useCallback(
@@ -515,6 +525,7 @@ export function usePermissionsWrites({
   return {
     busy: pending > 0,
     readAccount,
+    readInspectionAccount,
     previewEnterprise,
     updateCategory,
     createCategory,

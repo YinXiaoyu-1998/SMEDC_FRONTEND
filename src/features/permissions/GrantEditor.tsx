@@ -7,7 +7,7 @@ import { Field } from "@/ui/Field";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
 import { Checklist } from "./components";
-import { INTERNAL_CATEGORY_KEY } from "./constants";
+import { INSPECTION_CATEGORY_KEY, INTERNAL_CATEGORY_KEY } from "./constants";
 import { createId } from "./ids";
 import { categoryLabel, itemLabel } from "./labels";
 import {
@@ -126,6 +126,7 @@ export function GrantEditor({
     .filter(
       (category) =>
         category.key !== INTERNAL_CATEGORY_KEY &&
+        category.key !== INSPECTION_CATEGORY_KEY &&
         !category.retired &&
         (draft.categoryIds.includes(category.id) ||
           ownershipAllowed(draft, data, category.id)),
