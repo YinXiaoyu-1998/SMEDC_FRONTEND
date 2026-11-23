@@ -150,9 +150,7 @@ export async function requestWebApi<T>(
 
   const headers = new Headers();
   headers.set("accept", "application/json");
-  if (request.body !== undefined) {
-    headers.set("content-type", "application/json");
-  }
+
   if (request.csrfToken !== undefined && request.method !== "GET") {
     headers.set("x-csrf-token", request.csrfToken);
   }
@@ -163,7 +161,12 @@ export async function requestWebApi<T>(
     cache: "no-store",
     headers,
   };
-  if (request.body !== undefined) init.body = JSON.stringify(request.body);
+  if (request.body instanceof FormData) {
+    init.body = request.body;
+  } else if (request.body !== undefined) {
+    headers.set("content-type", "application/json");
+    init.body = JSON.stringify(request.body);
+  }
   if (request.signal !== undefined) init.signal = request.signal;
 
   let response: Response;
