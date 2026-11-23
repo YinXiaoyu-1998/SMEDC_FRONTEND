@@ -8142,7 +8142,9 @@ export const sessionLoginParamsSchema = z.strictObject({});
 
 export type SessionLoginParams = z.infer<typeof sessionLoginParamsSchema>;
 
-export const sessionLoginQuerySchema = z.strictObject({});
+export const sessionLoginQuerySchema = z.strictObject({
+  includeInspection: z.enum(["true", "false"]).optional(),
+});
 
 export type SessionLoginQuery = z.infer<typeof sessionLoginQuerySchema>;
 
@@ -8191,7 +8193,9 @@ export const sessionReadParamsSchema = z.strictObject({});
 
 export type SessionReadParams = z.infer<typeof sessionReadParamsSchema>;
 
-export const sessionReadQuerySchema = z.strictObject({});
+export const sessionReadQuerySchema = z.strictObject({
+  includeInspection: z.enum(["true", "false"]).optional(),
+});
 
 export type SessionReadQuery = z.infer<typeof sessionReadQuerySchema>;
 
@@ -10689,7 +10693,11 @@ export const webApiRoutes = {
     method: "GET",
     path: "/api/web/v1/session",
     auth: "session",
-    errors: ["BROWSER_SIGN_IN_REQUIRED", "INTERNAL_ERROR"],
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
     summary: "读取当前网页会话的身份、CSRF 令牌与管理设置权限",
   },
   "workflows.getEnterpriseWorkflow": {

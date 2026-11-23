@@ -12,7 +12,11 @@ import type { Session } from "@/api/session";
 import { useLogout } from "@/api/session";
 import { AdminSectionNav } from "@/app/AdminSectionNav";
 import { LanguageSwitch } from "@/app/LanguageSwitch";
-import { appPaths } from "@/app/paths";
+import {
+  appPaths,
+  canAccessInspections,
+  canMaintainInspectionTemplates,
+} from "@/app/paths";
 import { Brand } from "@/app/Brand";
 import { useText } from "@/i18n/useText";
 import theme from "@/styles/AdminTheme.module.css";
@@ -59,6 +63,8 @@ export function AppShell({ session, children }: AppShellProps) {
         ? "nav.workflows"
         : "nav.permissions";
   const managementPath = appPaths.permissions(session.identity.orgId);
+  const showInspections = canAccessInspections(session);
+  const showInspectionTemplates = canMaintainInspectionTemplates(session);
 
   const handleLogout = () => {
     setLogoutFailed(false);
@@ -143,6 +149,36 @@ export function AppShell({ session, children }: AppShellProps) {
                 >
                   {t("nav.management")}
                 </Link>
+              </li>
+            ) : null}
+            {showInspections ? (
+              <li>
+                <NavLink
+                  end
+                  to={appPaths.inspections}
+                  className={({ isActive }) =>
+                    isActive
+                      ? `${styles.navLink} ${styles.navLinkActive}`
+                      : styles.navLink
+                  }
+                >
+                  {t("nav.inspections")}
+                </NavLink>
+              </li>
+            ) : null}
+            {showInspectionTemplates ? (
+              <li>
+                <NavLink
+                  end
+                  to={appPaths.inspectionTemplates}
+                  className={({ isActive }) =>
+                    isActive
+                      ? `${styles.navLink} ${styles.navLinkActive}`
+                      : styles.navLink
+                  }
+                >
+                  {t("nav.inspectionTemplates")}
+                </NavLink>
               </li>
             ) : null}
             <li>

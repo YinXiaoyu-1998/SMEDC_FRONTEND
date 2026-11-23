@@ -8475,6 +8475,16 @@
       "auth": "anonymous-write",
       "summary": "用邮箱与密码登录网页，签发会话 Cookie 并返回身份与 CSRF 令牌",
       "request": {
+        "query": {
+          "type": "object",
+          "properties": {
+            "includeInspection": {
+              "type": "string",
+              "enum": ["true", "false"]
+            }
+          },
+          "additionalProperties": false
+        },
         "body": {
           "type": "object",
           "properties": {
@@ -8596,7 +8606,18 @@
       "path": "/api/web/v1/session",
       "auth": "session",
       "summary": "读取当前网页会话的身份、CSRF 令牌与管理设置权限",
-      "request": {},
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {
+            "includeInspection": {
+              "type": "string",
+              "enum": ["true", "false"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
       "response": {
         "type": "object",
         "properties": {
@@ -8664,7 +8685,11 @@
         "required": ["identity", "csrfToken", "canManageSettings"],
         "additionalProperties": false
       },
-      "errors": ["BROWSER_SIGN_IN_REQUIRED", "INTERNAL_ERROR"]
+      "errors": [
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
     },
     {
       "id": "workflows.getEnterpriseWorkflow",

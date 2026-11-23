@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { buildLoginPath, resolveHomePath, sanitizeNextPath } from "@/app/paths";
-import { adminSession, employeeSession } from "@/test/fixtures";
+import {
+  adminSession,
+  employeeSession,
+  inspectionViewerSession,
+  templateMaintainerSession,
+} from "@/test/fixtures";
 
 describe("next 参数校验", () => {
   it("接受已知站内路径", () => {
@@ -17,6 +22,16 @@ describe("next 参数校验", () => {
     );
     expect(sanitizeNextPath("/ledger?page=2")).toBe("/ledger?page=2");
     expect(sanitizeNextPath("/ledger/")).toBe("/ledger");
+    expect(sanitizeNextPath("/inspections")).toBe("/inspections");
+    expect(sanitizeNextPath("/inspections?date=2026-11-23")).toBe(
+      "/inspections?date=2026-11-23",
+    );
+    expect(sanitizeNextPath("/inspections/templates")).toBe(
+      "/inspections/templates",
+    );
+    expect(sanitizeNextPath("/inspections/templates/")).toBe(
+      "/inspections/templates",
+    );
   });
 
   it("拒绝站外与未知路径", () => {
@@ -29,6 +44,7 @@ describe("next 参数校验", () => {
     expect(sanitizeNextPath("/nope")).toBeNull();
     expect(sanitizeNextPath("javascript:alert(1)")).toBeNull();
     expect(sanitizeNextPath("/admin/x/workflows/ent/extra")).toBeNull();
+    expect(sanitizeNextPath("/inspections/unknown")).toBeNull();
   });
 
   it("把当前路径编码进登录地址", () => {
@@ -45,5 +61,15 @@ describe("角色首页", () => {
 
   it("员工进入台账下载中心", () => {
     expect(resolveHomePath(employeeSession)).toBe("/ledger");
+  });
+
+  it("有巡检能力的员工进入巡检", () => {
+    expect(resolveHomePath(inspectionViewerSession)).toBe("/inspections");
+  });
+
+  it("仅模板维护账号进入巡检模板", () => {
+    expect(resolveHomePath(templateMaintainerSession)).toBe(
+      "/inspections/templates",
+    );
   });
 });
