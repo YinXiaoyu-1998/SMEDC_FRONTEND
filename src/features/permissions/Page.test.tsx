@@ -14,7 +14,10 @@ import { adminSession } from "@/test/fixtures";
 import { jsonResponse } from "@/test/http";
 import { renderApp } from "@/test/renderApp";
 
-import { FIXED_BUSINESS_CATEGORY_KEYS } from "./constants";
+import {
+  FIXED_BUSINESS_CATEGORY_KEYS,
+  INSPECTION_CATEGORY_KEY,
+} from "./constants";
 
 interface MockState {
   version: string;
@@ -909,6 +912,23 @@ describe("权限设置页", () => {
     fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
     expect(await screen.findByText("菜品销售")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "补齐固定类别" })).toBeNull();
+  });
+
+  it("offers on-demand initialization to an existing enterprise missing only inspections", async () => {
+    const state = createState();
+    state.categories = FIXED_BUSINESS_CATEGORY_KEYS.filter(
+      (key) => key !== INSPECTION_CATEGORY_KEY,
+    ).map((key) => ({ ...state.categories[0]!, id: key, key, name: key }));
+    const { fetchMock } = renderPermissions({ state });
+    fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
+    fireEvent.click(screen.getByRole("button", { name: "补齐固定类别" }));
+    const confirmation = await screen.findByRole("dialog", {
+      name: "补齐资料类别",
+    });
+    expect(within(confirmation).getByText("门店巡检问卷")).toBeInTheDocument();
+    expect(
+      bodyOf(fetchMock, "POST", /\/permissions\/categories\/initialize$/),
+    ).toHaveLength(0);
   });
 
   it("编辑固定类别密级时确认摘要只有密级一项，并按冻结版本提交", async () => {

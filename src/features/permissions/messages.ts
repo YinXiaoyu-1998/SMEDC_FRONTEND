@@ -114,6 +114,10 @@ export const permissionsMessages = {
     "原始配送台账（内部）",
     "Raw delivery ledger (internal)",
   ],
+  "permissions.category.inspection_questionnaire": [
+    "门店巡检问卷",
+    "Store inspection questionnaires",
+  ],
   "permissions.category.ledger_pdf": ["配送台账 PDF", "Delivery ledger PDF"],
   "permissions.category.quarantine_certificate": [
     "检疫证明",
@@ -773,8 +777,8 @@ export const permissionsMessages = {
     "After switching to selected stores, grant access to newly added stores individually. Review the retained stores below.",
   ],
   "permissions.inspection.unavailable": [
-    "当前企业尚未提供巡检权限配置。",
-    "Inspection permission settings are currently unavailable.",
+    "请确认业务企业，并在类别与密级中补齐门店巡检问卷。",
+    "Confirm the business enterprise and add the store inspection category under Categories and clearance.",
   ],
   "permissions.inspection.noStores": [
     "没有可配置的正式门店。",
