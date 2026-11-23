@@ -1521,3 +1521,162 @@ describe("权限设置页", () => {
     );
   });
 });
+
+it("confirms the remaining stores before replacing all-store access and sends only inspection changes", async () => {
+  const state = createState();
+  const storeA = "7f31ac52-b329-4647-8e7e-c103ac448a03";
+  const storeB = "a7a346a1-262a-4e55-8921-4bdea4713120";
+  state.stores = [
+    {
+      ...state.stores[0]!,
+      storeId: storeA,
+      officialName: "一号店",
+      confirmation: "confirmed",
+    },
+    {
+      ...state.stores[0]!,
+      name: "二号店",
+      storeId: storeB,
+      officialName: "二号店",
+      confirmation: "confirmed",
+    },
+  ];
+  const account = state.accounts[0]!;
+  const existing = [
+    {
+      enterpriseKey: "ent-1",
+      readStores: { kind: "all" },
+      writeStoreIds: [storeA],
+      manageTemplates: true,
+    },
+    {
+      enterpriseKey: "ent-2",
+      readStores: { kind: "fixed", storeIds: [] },
+      writeStoreIds: [],
+      manageTemplates: true,
+    },
+  ];
+  let writes = 0;
+  const { fetchMock } = renderPermissions({
+    state,
+    overrides: {
+      "accounts.read": (_state, request) => {
+        const base = {
+          orgId: ORG,
+          userAccountId: account.id,
+          role: account.role,
+          disabled: false,
+          clearance: account.clearance,
+          mode: state.mode,
+          authorizationVersion: state.version,
+          categories: account.categories,
+          grants: account.grants,
+        };
+        return jsonResponse(
+          request.searchParams.get("includeInspection") === "true"
+            ? { ...base, inspectionPermissions: existing }
+            : base,
+        );
+      },
+      "accounts.update": () => {
+        writes += 1;
+        if (writes === 1) {
+          state.version = "8";
+          existing[0]!.manageTemplates = false;
+          return jsonResponse(
+            {
+              error: {
+                code: "AUTHORIZATION_VERSION_CONFLICT",
+                message: "stale",
+              },
+            },
+            409,
+          );
+        }
+        state.version = "9";
+        return jsonResponse({
+          authorizationVersion: state.version,
+          value: {
+            clearance: account.clearance,
+            grants: account.grants,
+            inspectionPermissions: [
+              {
+                ...existing[0]!,
+                readStores: { kind: "fixed", storeIds: [storeB] },
+                writeStoreIds: [],
+              },
+              existing[1],
+            ],
+          },
+        });
+      },
+    },
+  });
+  await screen.findByRole("heading", { name: "文档类别" });
+  await openTab("账号授权");
+  const row = await screen.findByRole("row", { name: /张三/ });
+  fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+  const editor = await screen.findByRole("dialog", { name: "编辑账号授权" });
+  fireEvent.click(within(editor).getByRole("button", { name: "巡检权限" }));
+  const policy = await screen.findByRole("dialog", { name: "巡检权限" });
+  const store = await within(policy).findByLabelText("一号店 · 巡检权限");
+  expect(store).toHaveValue("write");
+  expect(within(policy).getByLabelText("二号店 · 巡检权限")).toHaveValue(
+    "read",
+  );
+  expect(
+    within(policy).getByRole("checkbox", { name: "可维护模板" }),
+  ).toBeChecked();
+  fireEvent.change(store, { target: { value: "none" } });
+  fireEvent.click(within(policy).getByRole("button", { name: "保存巡检权限" }));
+  let confirm = await screen.findByRole("dialog", { name: "保存巡检权限" });
+  expect(
+    within(confirm).getByText(/以后新增的门店需要单独授权/),
+  ).toBeInTheDocument();
+  expect(within(confirm).getAllByText(/二号店/).length).toBeGreaterThan(0);
+  fireEvent.click(within(confirm).getByRole("button", { name: "取消" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "保存巡检权限" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(
+    bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+  ).toHaveLength(0);
+  fireEvent.click(within(policy).getByRole("button", { name: "保存巡检权限" }));
+  confirm = await screen.findByRole("dialog", { name: "保存巡检权限" });
+  fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+  const reapply = await within(policy).findByRole("button", {
+    name: "以最新配置为基线重新应用我的改动",
+  });
+  expect(within(policy).getByLabelText("一号店 · 巡检权限")).toHaveValue(
+    "none",
+  );
+  fireEvent.click(reapply);
+  confirm = await screen.findByRole("dialog", { name: "保存巡检权限" });
+  expect(
+    within(confirm).getByText(/以后新增的门店需要单独授权/),
+  ).toBeInTheDocument();
+  fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+  await waitFor(() =>
+    expect(
+      bodyOf(fetchMock, "PATCH", /\/permissions\/accounts\/employee-1$/),
+    ).toEqual(
+      [
+        { expectedVersion: "7", manageTemplates: true },
+        { expectedVersion: "8", manageTemplates: false },
+      ].map(({ expectedVersion, manageTemplates }) => ({
+        expectedVersion,
+        inspectionPermissions: [
+          {
+            enterpriseKey: "ent-1",
+            readStores: { kind: "fixed", storeIds: [storeB] },
+            writeStoreIds: [],
+            manageTemplates,
+            confirmLoseFutureStores: true,
+          },
+        ],
+      })),
+    ),
+  );
+});

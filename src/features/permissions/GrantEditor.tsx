@@ -126,6 +126,7 @@ export function GrantEditor({
     .filter(
       (category) =>
         category.key !== INTERNAL_CATEGORY_KEY &&
+        category.key !== "inspection_questionnaire" &&
         !category.retired &&
         (draft.categoryIds.includes(category.id) ||
           ownershipAllowed(draft, data, category.id)),

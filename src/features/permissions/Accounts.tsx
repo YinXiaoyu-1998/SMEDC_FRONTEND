@@ -37,6 +37,7 @@ import {
   grantLocationLabel,
 } from "./labels";
 import { GrantEditor } from "./GrantEditor";
+import { InspectionAccountPanel } from "./InspectionAccountPanel";
 import {
   DraftConflict,
   ListHeader,
@@ -312,6 +313,7 @@ function AccountPanel({
   }, [onDirtyChange, save.conflict, save.isDirty]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [inspectionOpen, setInspectionOpen] = useState(false);
   const pendingRemoval = useRef<string | null>(null);
 
   const removeFlow = useConfirmFlow<{ confirmation: Confirmation }, void>({
@@ -390,6 +392,21 @@ function AccountPanel({
       ? null
       : (save.draft.grants.find((grant) => grant.id === editingId) ?? null);
 
+  if (inspectionOpen) {
+    return (
+      <InspectionAccountPanel
+        account={account}
+        onClose={() => setInspectionOpen(false)}
+        onSaved={() => {
+          scope.setNotice("permissions.saved");
+          onClose();
+        }}
+        onDirtyChange={onDirtyChange}
+        returnFocusRef={returnFocusRef}
+      />
+    );
+  }
+
   return (
     <>
       <Panel
@@ -438,6 +455,16 @@ function AccountPanel({
           />
         </Field>
 
+        <div className={styles.actions}>
+          <ActionButton
+            label={t("permissions.inspection.open")}
+            variant="secondary"
+            disabled={
+              save.isDirty || save.conflict || scope.busy || account.disabled
+            }
+            onRun={() => setInspectionOpen(true)}
+          />
+        </div>
         <ObjectListHead
           title={t("permissions.grants")}
           action={

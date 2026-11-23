@@ -107,6 +107,13 @@ export type PermissionDimension =
   PermissionsDimensionsListResponse["dimensions"][number];
 export type PermissionDimensionValue = PermissionDimension["values"][number];
 export type PermissionStore = PermissionsStoresListResponse["stores"][number];
+export type InspectionAccountPolicy = NonNullable<
+  PermissionsAccountsReadResponse["inspectionPermissions"]
+>[number];
+export type InspectionAccountChange = NonNullable<
+  PermissionsAccountsUpdateBody["inspectionPermissions"]
+>[number];
+
 export type PermissionAccount =
   PermissionsAccountsListResponse["accounts"][number];
 export type PermissionGrant = PermissionAccount["grants"][number];
@@ -183,10 +190,16 @@ export function listAccounts(
 export function readAccount(
   orgId: string,
   userAccountId: string,
+  includeInspection = false,
 ): Promise<PermissionsAccountsReadResponse> {
   const { method, path } = webApiRoutes["permissions.accounts.read"];
   return requestWebApi(
-    { method, path, params: { orgId, userAccountId } },
+    {
+      method,
+      path,
+      params: { orgId, userAccountId },
+      ...(includeInspection ? { query: { includeInspection: "true" } } : {}),
+    },
     permissionsAccountsReadResponseSchema,
   );
 }
