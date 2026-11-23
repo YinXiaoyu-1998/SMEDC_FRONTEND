@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { WebApiError } from "@/api/client";
 import { ActionButton } from "@/ui/ActionButton";
@@ -25,6 +25,7 @@ import {
   uploadIsReady,
   type Draft,
   type Edit,
+  type ReusablePhoto,
   type Upload,
 } from "./employeeDraft";
 import {
@@ -62,16 +63,28 @@ export function Summary({
 
 export function SheetEditor({
   sheetId,
+  identityKey,
   scope,
   canFill,
+  canReusePhotos,
+  reusablePhotos,
+  rememberPhotos,
+  markPhoto,
+  forgetPhotos,
   csrfToken,
   onClose,
   onChange,
   onVoid,
 }: {
   sheetId: string;
+  identityKey: string;
   scope: Scope;
   canFill: boolean;
+  canReusePhotos: boolean;
+  reusablePhotos: ReusablePhoto[];
+  rememberPhotos: (sheet: Sheet) => void;
+  markPhoto: (photo: ReusablePhoto) => void;
+  forgetPhotos: () => void;
   csrfToken: string;
   onClose: () => void;
   onChange: () => void;
@@ -79,7 +92,14 @@ export function SheetEditor({
 }) {
   const t = useEmployeeText();
   const remote = useQuery({
-    queryKey: ["inspection-employee", "sheet", scope, sheetId, canFill],
+    queryKey: [
+      "inspection-employee",
+      identityKey,
+      "sheet",
+      scope,
+      sheetId,
+      canFill,
+    ],
     queryFn: ({ signal }) => readSheet(sheetId, signal),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -121,6 +141,27 @@ export function SheetEditor({
     sheet.storeId === scope.storeId &&
     sheet.inspectionDate === scope.inspectionDate;
 
+  const photoScopeUncertain =
+    !!remote.error ||
+    blocked ||
+    showPhotosError ||
+    isUncertain(error) ||
+    isConflict(error);
+  useEffect(() => {
+    if (photoScopeUncertain || (sheet && !isSameScope)) {
+      forgetPhotos();
+    } else if (canReusePhotos && sheet && isSameScope) {
+      rememberPhotos(sheet);
+    }
+  }, [
+    photoScopeUncertain,
+    canReusePhotos,
+    isSameScope,
+    sheet,
+    forgetPhotos,
+    rememberPhotos,
+  ]);
+
   function updateEdit(edit: Edit, draft: Draft | undefined) {
     const id = edit.component.componentId;
     setEdits((previous) => {
@@ -137,7 +178,11 @@ export function SheetEditor({
     if (flight.current || disabled || review || attempt) return;
     flight.current = true;
     setUploading(edit.component.componentId);
-    const existing = edit.draft.kind === "append" ? edit.draft.uploads : [];
+    const previousDraft =
+      edit.draft.kind === "append"
+        ? edit.draft
+        : { kind: "append" as const, uploads: [] };
+    const existing = previousDraft.uploads;
     const request =
       previous?.failed && canReplay(previous.startedAt)
         ? previous
@@ -151,7 +196,7 @@ export function SheetEditor({
     } catch (caught) {
       result = { ...result, failed: isUncertain(caught) };
       updateEdit(edit, {
-        kind: "append",
+        ...previousDraft,
         uploads: [...existing.filter(({ id }) => id !== previous?.id), result],
       });
       if (caught instanceof WebApiError && caught.status === 404) {
@@ -172,7 +217,7 @@ export function SheetEditor({
       flight.current = false;
     }
     updateEdit(edit, {
-      kind: "append",
+      ...previousDraft,
       uploads: [...existing.filter(({ id }) => id !== previous?.id), result],
     });
   }
@@ -491,6 +536,18 @@ export function SheetEditor({
                 canFill={canFill}
                 disabled={disabled || !!review || !!attempt || !!remote.error}
                 uploading={uploading}
+                reusablePhotos={photoScopeUncertain ? [] : reusablePhotos}
+                onPhotoError={forgetPhotos}
+                onMarkPhoto={
+                  canReusePhotos && !photoScopeUncertain
+                    ? (photoId, label) =>
+                        markPhoto({
+                          photoId,
+                          sheetId: sheet.sheetId,
+                          label: `${sheet.name ?? sheet.templateTitle} · ${label}`,
+                        })
+                    : undefined
+                }
                 onEdit={updateEdit}
                 onUpload={upload}
               />

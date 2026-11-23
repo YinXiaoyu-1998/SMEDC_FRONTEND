@@ -19,6 +19,7 @@ import { Field } from "@/ui/Field";
 import { InlineError } from "@/ui/InlineError";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
+import { isAccessError } from "./employeeApi";
 import { TemplateEditor } from "./TemplateEditor";
 import type { TemplateStore } from "./TemplateBuilder";
 import styles from "./Templates.module.css";
@@ -45,6 +46,11 @@ export function InspectionTemplatesPage() {
   const [editor, setEditor] = useState({ dirty: false, busy: false });
   const onState = useCallback((state: typeof editor) => setEditor(state), []);
   const nextView = useRef<View | null>(null);
+  const [failedEdit, setFailedEdit] = useState<{
+    scopeKey: string;
+    error: unknown;
+  }>();
+
   const select = (next: View) => {
     if (next.template && !next.template.isNew) {
       queryClient.removeQueries({
@@ -76,11 +82,18 @@ export function InspectionTemplatesPage() {
     enabled: canManage,
     retry: false,
   });
-  const items = context.data ?? [];
+  const items =
+    canManage && !isAccessError(context.error) ? (context.data ?? []) : [];
   const enterprises = [
-    ...new Map(items.map((item) => [item.enterpriseKey, item.enterpriseName])),
+    ...new Map(
+      items
+        .filter((item) => item.kind === "enterprise")
+        .map((item) => [item.enterpriseKey, item.enterpriseName]),
+    ),
   ];
-  const enterpriseKey = view.enterpriseKey || enterprises[0]?.[0] || "";
+  const enterpriseKey = enterprises.some(([key]) => key === view.enterpriseKey)
+    ? view.enterpriseKey
+    : (enterprises[0]?.[0] ?? "");
   const stores = items.filter(
     (item): item is TemplateStore =>
       item.kind === "store" && item.enterpriseKey === enterpriseKey,
@@ -99,8 +112,9 @@ export function InspectionTemplatesPage() {
     getNextPageParam: (last) => last.nextCursor,
     enabled: canManage && enterpriseKey !== "",
     retry: false,
+    gcTime: 0,
   });
-  const opened = view.template;
+  const opened = view.enterpriseKey === enterpriseKey ? view.template : null;
   const details = useQuery({
     queryKey: [...listKey, "preview", opened?.id],
     queryFn: ({ signal }) => previewTemplate(enterpriseKey, opened!.id, signal),
@@ -109,13 +123,23 @@ export function InspectionTemplatesPage() {
     staleTime: 0,
     gcTime: 0,
   });
+  const scopeKey = JSON.stringify([orgId, accountId, enterpriseKey]);
+  const actionError =
+    failedEdit?.scopeKey === scopeKey ? failedEdit.error : undefined;
+  const blocked =
+    isAccessError(details.error) ||
+    isAccessError(templates.error) ||
+    !!actionError;
+  const editorVisible =
+    !blocked && !!opened && (opened.isNew || !!details.data);
+  const editorBusy = editorVisible && editor.busy;
   const choose = (next: View) => {
     if (
-      editor.busy ||
+      editorBusy ||
       (next.enterpriseKey === enterpriseKey && next.template?.id === opened?.id)
     )
       return;
-    if (editor.dirty) {
+    if (editorVisible && editor.dirty) {
       nextView.current = next;
       void discard.request();
     } else {
@@ -144,7 +168,7 @@ export function InspectionTemplatesPage() {
               <Field label={labels("enterprise")}>
                 <select
                   value={enterpriseKey}
-                  disabled={editor.busy}
+                  disabled={editorBusy}
                   onChange={(e) =>
                     choose({
                       enterpriseKey: e.currentTarget.value,
@@ -161,7 +185,7 @@ export function InspectionTemplatesPage() {
               </Field>
               <ActionButton
                 label={labels("create")}
-                disabled={editor.busy}
+                disabled={editorBusy || blocked}
                 onRun={() =>
                   choose({
                     enterpriseKey,
@@ -173,14 +197,14 @@ export function InspectionTemplatesPage() {
           ) : context.isSuccess ? (
             <p>{labels("empty")}</p>
           ) : null}
-          {enterpriseKey !== "" ? (
+          {enterpriseKey !== "" && !blocked ? (
             <section aria-label={labels("templates")} className={styles.list}>
               {templates.data?.pages
                 .flatMap((page) => page.items)
                 .map((template) => (
                   <ActionButton
                     key={template.templateId}
-                    disabled={editor.busy}
+                    disabled={editorBusy}
                     label={`${template.title || labels("unnamed")} · ${labels(template.activeTemplateVersionId ? "active" : "inactive")}`}
                     aria-pressed={opened?.id === template.templateId}
                     variant={
@@ -225,7 +249,20 @@ export function InspectionTemplatesPage() {
           {opened && !opened.isNew && details.isPending ? (
             <p role="status">{labels("loading")}</p>
           ) : null}
-          <InlineError error={details.error} />
+          <InlineError error={details.error ?? actionError} />
+          {actionError ? (
+            <ActionButton
+              label={labels("retry")}
+              variant="secondary"
+              onRun={() =>
+                void context.refetch().then((result) => {
+                  if (!result.isSuccess) return;
+                  select({ enterpriseKey, template: null });
+                  setFailedEdit(undefined);
+                })
+              }
+            />
+          ) : null}
           {details.isError ? (
             <ActionButton
               label={labels("retry")}
@@ -234,15 +271,16 @@ export function InspectionTemplatesPage() {
               onRun={() => void details.refetch()}
             />
           ) : null}
-          {session && opened && (opened.isNew || details.data) ? (
+          {session && opened && editorVisible ? (
             <TemplateEditor
-              key={opened.id}
+              key={JSON.stringify([orgId, accountId, enterpriseKey, opened.id])}
               initial={opened.isNew ? null : details.data!}
               enterpriseKey={enterpriseKey}
               templateId={opened.id}
               stores={stores}
               csrfToken={session.csrfToken}
               onState={onState}
+              onAccessError={(error) => setFailedEdit({ scopeKey, error })}
               onSaved={() =>
                 void queryClient.invalidateQueries({
                   queryKey: listKey,

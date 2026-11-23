@@ -29,6 +29,7 @@ export interface WebApiRequestInit {
   readonly body?: unknown;
   readonly csrfToken?: string;
   readonly signal?: AbortSignal;
+  readonly handleForbiddenLocally?: boolean;
 }
 
 export interface WebApiErrorInit {
@@ -186,7 +187,8 @@ export async function requestWebApi<T>(
 
   if (!response.ok) {
     if (response.status === 401) notify(unauthorizedHandler);
-    if (response.status === 403) notify(forbiddenHandler);
+    if (response.status === 403 && !request.handleForbiddenLocally)
+      notify(forbiddenHandler);
 
     const envelope = extractErrorEnvelope(payload);
     throw new WebApiError({

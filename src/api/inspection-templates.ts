@@ -30,7 +30,12 @@ export async function templateContext(signal: AbortSignal) {
   let cursor: string | null = null;
   do {
     const page: InspectionsContextResponse = await requestWebApi(
-      { ...route, query: { cursor, limit: 50 }, signal },
+      {
+        ...route,
+        query: { cursor, limit: 50 },
+        signal,
+        handleForbiddenLocally: true,
+      },
       inspectionsContextResponseSchema,
     );
     items.push(
@@ -63,6 +68,7 @@ export function listTemplates(
   return requestWebApi(
     {
       ...webApiRoutes["inspections.templates.list"],
+      handleForbiddenLocally: true,
       query: { enterpriseKey, cursor, limit: 20 },
       signal,
     },
@@ -80,6 +86,7 @@ export async function previewTemplate(
     requestWebApi(
       {
         ...route,
+        handleForbiddenLocally: true,
         params: { templateId },
         query: { enterpriseKey, cursor, limit: 50 },
         ...(signal ? { signal } : {}),
@@ -116,6 +123,7 @@ export function writeTemplate(
     return requestWebApi(
       {
         ...webApiRoutes["inspections.templates.create"],
+        handleForbiddenLocally: true,
         body: inspectionsTemplatesCreateBodySchema.parse({
           enterpriseKey,
           templateId,
@@ -129,6 +137,7 @@ export function writeTemplate(
   return requestWebApi(
     {
       ...webApiRoutes["inspections.templates.save"],
+      handleForbiddenLocally: true,
       params: { templateId },
       body: inspectionsTemplatesSaveBodySchema.parse({
         enterpriseKey,
@@ -156,6 +165,7 @@ export function setTemplateActivation(
           : "inspections.templates.deactivate"
       ],
       params: { templateId },
+      handleForbiddenLocally: true,
       body: { enterpriseKey, expectedDraftRevision },
       csrfToken,
     },

@@ -9,11 +9,13 @@ import {
   answerOf,
   parseScalar,
   points,
+  REUSABLE_PHOTO_LIMIT,
   uploadIsReady,
   type Component,
   type Draft,
   type Edit,
   type Question,
+  type ReusablePhoto,
   type Upload,
   type Value,
 } from "./employeeDraft";
@@ -28,6 +30,9 @@ type QuestionEditorProps = {
   canFill: boolean;
   disabled: boolean;
   uploading: string | undefined;
+  reusablePhotos: ReusablePhoto[];
+  onPhotoError: () => void;
+  onMarkPhoto: ((photoId: string, label: string) => void) | undefined;
   onEdit: (edit: Edit, draft: Draft | undefined) => void;
   onUpload: (edit: Edit, file: File, retry?: Upload) => Promise<void>;
 };
@@ -40,6 +45,9 @@ export function QuestionEditor(props: QuestionEditorProps) {
     canFill,
     disabled,
     uploading,
+    reusablePhotos,
+    onPhotoError,
+    onMarkPhoto,
     onEdit,
     onUpload,
   } = props;
@@ -85,6 +93,13 @@ export function QuestionEditor(props: QuestionEditorProps) {
                   draft={draft}
                   disabled={disabled}
                   busy={uploading === component.componentId}
+                  reusablePhotos={reusablePhotos}
+                  onPhotoError={onPhotoError}
+                  onMarkPhoto={
+                    onMarkPhoto &&
+                    ((photoId, label) =>
+                      onMarkPhoto(photoId, `${question.title} · ${label}`))
+                  }
                   change={(value) =>
                     onEdit(
                       {
@@ -212,6 +227,9 @@ function PhotoEditor({
   draft,
   disabled,
   busy,
+  reusablePhotos,
+  onPhotoError,
+  onMarkPhoto,
   change,
   upload,
 }: {
@@ -220,6 +238,9 @@ function PhotoEditor({
   draft: Draft | undefined;
   disabled: boolean;
   busy: boolean;
+  reusablePhotos: ReusablePhoto[];
+  onPhotoError: () => void;
+  onMarkPhoto: ((photoId: string, label: string) => void) | undefined;
   change: (value: Draft | undefined) => void;
   upload: (file: File, retry?: Upload) => Promise<void>;
 }) {
@@ -227,8 +248,23 @@ function PhotoEditor({
   const [fileError, setFileError] = useState<EmployeeTextKey>();
   const saved = Array.isArray(value) ? value : [];
   const pending = draft?.kind === "append" ? draft.uploads : [];
+  const reused = draft?.kind === "append" ? (draft.reused ?? []) : [];
   const removed = draft?.kind === "remove" ? draft.photoIds : [];
-  const atLimit = saved.length + pending.length >= 20;
+  const pendingCount = pending.length + reused.length;
+  const atLimit = saved.length + pendingCount >= 20;
+  const usedIds = new Set([
+    ...saved,
+    ...reused.map(({ photoId }) => photoId),
+    ...pending.map(({ photo }) => photo?.photoId),
+  ]);
+  const choices = reusablePhotos.filter(({ photoId }) => !usedIds.has(photoId));
+  function changePending(uploads: Upload[], selected: ReusablePhoto[]) {
+    change(
+      uploads.length || selected.length
+        ? { kind: "append", uploads, reused: selected }
+        : undefined,
+    );
+  }
 
   return (
     <>
@@ -254,6 +290,32 @@ function PhotoEditor({
           }}
         />
       </Field>
+      {choices.length > 0 && (
+        <Field
+          label={`${t("reusePhoto")} · ${label}`}
+          {...(reusablePhotos.length >= REUSABLE_PHOTO_LIMIT
+            ? { hint: t("reusePhotoLimit") }
+            : {})}
+        >
+          <select
+            value=""
+            disabled={disabled || removed.length > 0 || atLimit}
+            onChange={(event) => {
+              const photo = choices.find(
+                ({ photoId }) => photoId === event.target.value,
+              );
+              if (photo) changePending(pending, [...reused, photo]);
+            }}
+          >
+            <option value="">{t("choose")}</option>
+            {choices.map(({ photoId, label }) => (
+              <option key={photoId} value={photoId}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       {busy && <p role="status">{t("upload")}…</p>}
       {fileError && (
         <p role="alert" className={styles.missing}>
@@ -266,7 +328,7 @@ function PhotoEditor({
             label={t("clearPhotos")}
             variant="secondary"
             disabled={
-              disabled || pending.length > 0 || removed.length === saved.length
+              disabled || pendingCount > 0 || removed.length === saved.length
             }
             onRun={() => change({ kind: "remove", photoIds: saved, all: true })}
           />
@@ -284,14 +346,31 @@ function PhotoEditor({
         {saved.map((photoId, index) => {
           const removing = removed.includes(photoId);
           const photoLabel = `${label} · ${t("photo")} ${index + 1}`;
+          const marked = reusablePhotos.some(
+            (photo) => photo.photoId === photoId,
+          );
+          const markLabel = t(marked ? "markedReusePhoto" : "markReusePhoto");
           return (
             <li key={photoId}>
-              <Photo photoId={photoId} label={photoLabel} />
+              <Photo
+                photoId={photoId}
+                label={photoLabel}
+                onUnavailable={onPhotoError}
+              />
+              {onMarkPhoto && (
+                <ActionButton
+                  label={markLabel}
+                  variant="secondary"
+                  aria-label={`${markLabel} ${photoLabel}`}
+                  disabled={disabled || removing || marked}
+                  onRun={() => onMarkPhoto(photoId, photoLabel)}
+                />
+              )}
               <ActionButton
                 label={t(removing ? "undo" : "remove")}
                 variant="secondary"
                 aria-label={`${t(removing ? "undo" : "remove")} ${photoLabel}`}
-                disabled={disabled || pending.length > 0}
+                disabled={disabled || pendingCount > 0}
                 onRun={() => {
                   const photoIds = removing
                     ? removed.filter((id) => id !== photoId)
@@ -306,6 +385,27 @@ function PhotoEditor({
             </li>
           );
         })}
+        {reused.map((photo) => (
+          <li key={photo.photoId}>
+            <Photo
+              photoId={photo.photoId}
+              label={photo.label}
+              onUnavailable={onPhotoError}
+            />
+            <ActionButton
+              label={t("remove")}
+              variant="secondary"
+              aria-label={`${t("remove")} ${photo.label}`}
+              disabled={disabled}
+              onRun={() =>
+                changePending(
+                  pending,
+                  reused.filter(({ photoId }) => photoId !== photo.photoId),
+                )
+              }
+            />
+          </li>
+        ))}
         {pending.map((item) => (
           <li key={item.id}>
             {item.photo && uploadIsReady(item) ? (
@@ -331,9 +431,7 @@ function PhotoEditor({
                 aria-label={`${t("remove")} ${item.file.name}`}
                 onRun={() => {
                   const uploads = pending.filter(({ id }) => id !== item.id);
-                  change(
-                    uploads.length ? { kind: "append", uploads } : undefined,
-                  );
+                  changePending(uploads, reused);
                 }}
               />
             </div>
@@ -344,7 +442,15 @@ function PhotoEditor({
   );
 }
 
-function Photo({ photoId, label }: { photoId: string; label: string }) {
+function Photo({
+  photoId,
+  label,
+  onUnavailable,
+}: {
+  photoId: string;
+  label: string;
+  onUnavailable?: () => void;
+}) {
   const t = useEmployeeText();
   const [failed, setFailed] = useState(false);
   return (
@@ -362,7 +468,10 @@ function Photo({ photoId, label }: { photoId: string; label: string }) {
           loading="lazy"
           src={photoUrl(photoId)}
           alt={label}
-          onError={() => setFailed(true)}
+          onError={() => {
+            setFailed(true);
+            onUnavailable?.();
+          }}
         />
       )}
     </a>
@@ -426,6 +535,11 @@ export function DraftDisplay({
     <>
       <span>{t("append")}</span>
       <ul className={styles.photos}>
+        {draft.reused?.map(({ photoId, label }) => (
+          <li key={photoId}>
+            <Photo photoId={photoId} label={label} />
+          </li>
+        ))}
         {draft.uploads.map((item) => (
           <li key={item.id}>
             {item.photo && uploadIsReady(item) ? (

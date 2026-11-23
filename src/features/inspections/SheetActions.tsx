@@ -53,11 +53,21 @@ export function SheetActions({
           onChange();
           return null;
         }
-        return {
-          preview,
-          ...beginWrite(),
-          questions: sheet.questions,
-        };
+        const titles = new Map(
+          preview.questionTitles?.map((item) => [item.questionId, item]),
+        );
+        if (
+          preview.clearedQuestionIds.some(
+            (id) =>
+              !titles.get(id)?.sourceTitle || !titles.get(id)?.targetTitle,
+          ) ||
+          preview.addedQuestionIds.some((id) => !titles.get(id)?.targetTitle) ||
+          preview.removedQuestionIds.some((id) => !titles.get(id)?.sourceTitle)
+        ) {
+          setProblem("replacementTitlesUnavailable");
+          return null;
+        }
+        return { preview, ...beginWrite(), titles, questions: sheet.questions };
       } catch (error) {
         setProblem(isConflict(error) ? "noReplacement" : errorText(error));
         onError(error);
@@ -199,15 +209,20 @@ export function SheetActions({
                 ) : (
                   <ul>
                     {ids.map((id) => {
-                      const title = prepared.questions.find(
+                      const titles = prepared.titles.get(id);
+                      const local = prepared.questions.find(
                         (question) => question.questionId === id,
                       )?.title;
-                      return (
-                        <li className={styles.identifier} key={id}>
-                          {title && `${title} · `}
-                          <code>{id}</code>
-                        </li>
-                      );
+                      const title =
+                        titles?.sourceTitle &&
+                        titles.targetTitle &&
+                        titles.sourceTitle !== titles.targetTitle
+                          ? `${titles.sourceTitle} → ${titles.targetTitle}`
+                          : (titles?.targetTitle ??
+                            titles?.sourceTitle ??
+                            local ??
+                            t("unnamedQuestion"));
+                      return <li key={id}>{title}</li>;
                     })}
                   </ul>
                 )}

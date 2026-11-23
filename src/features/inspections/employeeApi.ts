@@ -135,7 +135,11 @@ export async function save(patch: Patch, csrfToken: string) {
 
 export function previewReplacement(sheetId: string) {
   return requestWebApi(
-    { ...webApiRoutes["inspections.sheets.replacement"], params: { sheetId } },
+    {
+      ...webApiRoutes["inspections.sheets.replacement"],
+      params: { sheetId },
+      query: { includeTitles: "true" },
+    },
     inspectionsSheetsReplacementResponseSchema,
   );
 }
