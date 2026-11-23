@@ -205,9 +205,51 @@ describe("巡检深链登录", () => {
     );
   });
 
+  it("登录后回到巡检模板深链", async () => {
+    let signedIn = false;
+    const fetchMock = vi.fn<FetchFunction>(async (_input, init) => {
+      if ((init?.method ?? "GET") === "POST") {
+        signedIn = true;
+        return jsonResponse(templateMaintainerSession);
+      }
+      return signedIn
+        ? jsonResponse(templateMaintainerSession)
+        : jsonResponse(
+            {
+              error: {
+                code: "BROWSER_SIGN_IN_REQUIRED",
+                message: "请先登录",
+              },
+            },
+            401,
+          );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { router } = renderApp({
+      session: null,
+      initialEntries: ["/login?next=%2Finspections%2Ftemplates"],
+    });
+    fillCredentials("zhangsan@example.com", "secret-123");
+
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/inspections/templates");
+    });
+    expect(
+      await screen.findByRole("heading", { name: "巡检模板" }),
+    ).toBeInTheDocument();
+  });
+
   it("登录后回到巡检深链而不是默认首页", async () => {
-    const fetchMock = vi.fn<FetchFunction>(async (_input, init) =>
-      (init?.method ?? "GET") === "POST"
+    let signedIn = false;
+    const fetchMock = vi.fn<FetchFunction>(async (_input, init) => {
+      if ((init?.method ?? "GET") === "POST") {
+        signedIn = true;
+        return jsonResponse(inspectingEmployeeSession);
+      }
+      return signedIn
         ? jsonResponse(inspectingEmployeeSession)
         : jsonResponse(
             {
@@ -217,8 +259,8 @@ describe("巡检深链登录", () => {
               },
             },
             401,
-          ),
-    );
+          );
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const { router } = renderApp({
