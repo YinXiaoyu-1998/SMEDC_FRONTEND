@@ -1,5 +1,7 @@
 // 固定业务类别由后端领域模型注册；前端只负责显示与校验，不自行命名。
 // 顺序与 SME_DATA_CENTER packages/domain/src/business-authorization.ts 保持一致。
+export const INSPECTION_CATEGORY_KEY = "inspection_questionnaire";
+
 export const FIXED_BUSINESS_CATEGORY_KEYS = [
   "business",
   "dishes",
@@ -12,6 +14,7 @@ export const FIXED_BUSINESS_CATEGORY_KEYS = [
   "store_reviews",
   "delivery_ledger",
   "quarantine_certificate",
+  INSPECTION_CATEGORY_KEY,
   "ledger_pdf",
 ] as const;
 

@@ -1,0 +1,118 @@
+import type { TextTuple } from "@/i18n/text";
+import { useText } from "@/i18n/useText";
+
+const messages = {
+  enterprise: ["巡检企业", "Inspection enterprise"],
+  empty: [
+    "暂无可维护的巡检模板。",
+    "No inspection templates available to manage.",
+  ],
+  unavailable: [
+    "当前账号没有模板维护权限。",
+    "This account has no template maintenance access.",
+  ],
+  create: ["新建模板", "New template"],
+  unnamed: ["未命名模板", "Untitled template"],
+  templates: ["模板列表", "Templates"],
+  active: ["已启用", "Active"],
+  inactive: ["未启用", "Inactive"],
+  more: ["加载更多模板", "Load more templates"],
+  title: ["模板名称", "Template name"],
+  stores: ["适用门店", "Applicable stores"],
+  retired: ["当前不可用", "Currently unavailable"],
+  mode: ["同店同日份数", "Sheets per store and date"],
+  noMode: ["未选择", "Choose a copy rule"],
+  single: ["单份", "Single sheet"],
+  multiple: ["多份", "Multiple sheets"],
+  questions: ["题目", "Questions"],
+  questionTitle: ["题目名称", "Question title"],
+  category: ["题目分类", "Question category"],
+  addQuestion: ["添加题目", "Add question"],
+  copy: ["复制题目", "Copy question"],
+  removeQuestion: ["移除题目", "Remove question"],
+  add: ["添加组件", "Add component"],
+  remove: ["移除组件", "Remove component"],
+  up: ["上移", "Move up"],
+  down: ["下移", "Move down"],
+  kind: ["组件类型", "Component type"],
+  sop: ["标准定义（SOP）", "Standard (SOP)"],
+  score: ["评分", "Score"],
+  comment: ["评价", "Comment"],
+  photo: ["照片", "Photo"],
+  status: ["状态", "Status"],
+  label: ["组件标签", "Component label"],
+  sopText: ["标准说明", "Standard instructions"],
+  required: ["作答必填", "Required answer"],
+  min: ["最低分", "Minimum score"],
+  max: ["最高分", "Maximum score"],
+  scoreHint: ["分值最多一位小数。", "Use at most one decimal place."],
+  invalidScore: [
+    "请检查分值范围和小数位数。",
+    "Check the score bounds and decimal precision.",
+  ],
+  oversize: [
+    "模板超出保存大小限制。",
+    "The template exceeds the save size limit.",
+  ],
+  option: ["选项名称", "Option name"],
+  addOption: ["添加状态选项", "Add status option"],
+  removeOption: ["移除选项", "Remove option"],
+  manual: [
+    "必填由每个作答组件的设置决定。条件取证、扣分和整改要求写入标准说明，由填写人依据现场情况判断。",
+    "Each answer component controls whether it is required. Record conditional evidence, deductions, and follow-up in the standard for staff to apply.",
+  ],
+  prev: ["上一页题目", "Previous questions"],
+  next: ["下一页题目", "Next questions"],
+  save: ["保存草稿", "Save draft"],
+  activate: ["启用模板", "Activate template"],
+  deactivate: ["停用模板", "Deactivate template"],
+  activateHint: [
+    "确认启用下方已预览的草稿修订。门店和份数设置将用于新建巡检卷。",
+    "Confirm the previewed draft revision. Its stores and copy rule will apply to new sheets.",
+  ],
+  deactivateHint: [
+    "停用后停止新建该模板的巡检卷。已有巡检卷仍可按权限补填。",
+    "Deactivation stops new sheets. Authorized staff can still update existing sheets.",
+  ],
+  draftRevision: ["草稿修订", "Draft revision"],
+  activeRevision: ["启用修订", "Active revision"],
+  maxScore: ["全卷满分", "Maximum score"],
+  unscored: ["—", "—"],
+  checks: ["已保存草稿预览", "Saved draft preview"],
+  ready: ["草稿通过启用校验。", "The draft passed activation checks."],
+  saved: ["草稿已保存。", "Draft saved."],
+  savedNeedsPreview: [
+    "读取已保存修订后可继续启用。",
+    "Load the saved revision to continue with activation.",
+  ],
+  reload: ["重新读取预览", "Reload preview"],
+  conflict: [
+    "服务器上的草稿已更新。请比较修订后再保存。",
+    "The server draft changed. Compare the revisions before saving.",
+  ],
+  server: ["服务器草稿", "Server draft"],
+  local: ["本地草稿", "Your draft"],
+  useServer: ["载入服务器草稿", "Load server draft"],
+  keepMine: [
+    "保留本地草稿并采用最新修订",
+    "Keep my draft against the latest revision",
+  ],
+  conflictHint: [
+    "保留本地草稿后，下一次保存将以此处的完整草稿替换最新版本。",
+    "Keeping your draft makes the next save replace the latest draft with your complete local definition.",
+  ],
+  discard: ["放弃未保存的模板更改？", "Discard unsaved template changes?"],
+  discardHint: [
+    "切换模板后，本次未保存的改动将清除。",
+    "Switching templates discards the unsaved changes.",
+  ],
+  discardAction: ["放弃更改", "Discard changes"],
+  cancel: ["取消", "Cancel"],
+  loading: ["正在读取巡检模板…", "Loading inspection templates…"],
+  retry: ["重试", "Retry"],
+} as const satisfies Record<string, TextTuple>;
+
+export function useTemplateText() {
+  const { locale } = useText();
+  return (key: keyof typeof messages) => messages[key][locale === "zh" ? 0 : 1];
+}

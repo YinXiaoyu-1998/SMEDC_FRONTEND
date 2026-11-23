@@ -33,7 +33,13 @@ import {
   type Translate,
 } from "./labels";
 
-export type GrantInput = PermissionsAccountsUpdateBody["grants"][number];
+// 契约允许单独的巡检授权请求；包 12 只沿用既有的 grants 请求形状，巡检授权由包 14 接入
+type GrantsUpdateBody = Extract<
+  PermissionsAccountsUpdateBody,
+  { grants: unknown }
+>;
+
+export type GrantInput = GrantsUpdateBody["grants"][number];
 
 export type GrantOwnership = "group" | "store";
 
@@ -308,7 +314,7 @@ export function validateAccountDraft(
 export function accountUpdateBody(
   draft: AccountDraft,
   expectedVersion: string,
-): PermissionsAccountsUpdateBody {
+): GrantsUpdateBody {
   const grants: GrantInput[] = [];
   for (const grant of draft.grants) {
     const converted = draftToGrant(grant);

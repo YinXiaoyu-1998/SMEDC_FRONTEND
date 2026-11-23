@@ -4,6 +4,8 @@ export const appPaths = {
   home: "/",
   login: "/login",
   ledger: "/ledger",
+  inspections: "/inspections",
+  inspectionTemplates: "/inspections/templates",
   directory: (orgId: string) => `/admin/${encodeURIComponent(orgId)}/directory`,
   permissions: (orgId: string) =>
     `/admin/${encodeURIComponent(orgId)}/permissions`,
@@ -17,6 +19,8 @@ const internalOrigin = "http://smedc.local";
 const knownPathPatterns: readonly RegExp[] = [
   /^\/$/,
   /^\/ledger$/,
+  /^\/inspections$/,
+  /^\/inspections\/templates$/,
   /^\/admin\/[^/]+\/permissions$/,
   /^\/admin\/[^/]+\/directory$/,
   /^\/admin\/[^/]+\/workflows$/,
@@ -58,10 +62,28 @@ export function sanitizeNextPath(rawNext: string | null): string | null {
   return `${pathname}${url.search}`;
 }
 
+/** 看卷与填写共用同一入口；具体按钮差异由巡检页按 canFillInspections 处理。 */
+export function canAccessInspections(session: Session): boolean {
+  return (
+    session.canReadInspections === true || session.canFillInspections === true
+  );
+}
+
+export function canMaintainInspectionTemplates(session: Session): boolean {
+  return session.canManageInspectionTemplates === true;
+}
+
 export function resolveHomePath(session: Session): string {
-  return session.canManageSettings
-    ? appPaths.permissions(session.identity.orgId)
-    : appPaths.ledger;
+  if (session.canManageSettings) {
+    return appPaths.permissions(session.identity.orgId);
+  }
+  if (canAccessInspections(session)) {
+    return appPaths.inspections;
+  }
+  if (canMaintainInspectionTemplates(session)) {
+    return appPaths.inspectionTemplates;
+  }
+  return appPaths.ledger;
 }
 
 export function resolveLoginTarget(

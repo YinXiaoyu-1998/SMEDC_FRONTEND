@@ -25,6 +25,7 @@ export interface DraftBaseline<Draft> {
 export interface PreparedSave<Draft> {
   readonly confirmation: Confirmation;
   readonly draft: Draft;
+  readonly baseline: Draft;
   readonly expectedVersion: string;
 }
 
@@ -34,7 +35,11 @@ export interface DraftSaveOptions<Draft, Result extends DraftWriteResult> {
   readonly validate: (draft: Draft, baseline: Draft) => string | null;
   /** 语义差异；同时决定保存按钮是否可用与确认弹窗内容 */
   readonly confirmation: (draft: Draft, baseline: Draft) => Confirmation;
-  readonly submit: (draft: Draft, expectedVersion: string) => Promise<Result>;
+  readonly submit: (
+    draft: Draft,
+    expectedVersion: string,
+    baseline: Draft,
+  ) => Promise<Result>;
   /** 保存成功后作为新基线的草稿（通常来自服务端响应） */
   readonly nextBaseline: (result: Result, draft: Draft) => Draft;
   readonly reload: () => Promise<DraftBaseline<Draft>>;
@@ -155,6 +160,7 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
       return {
         confirmation: buildConfirmation(draft, base.snapshot),
         draft,
+        baseline: base.snapshot,
         expectedVersion: base.version,
       };
     },
@@ -165,6 +171,7 @@ export function useDraftSave<Draft, Result extends DraftWriteResult>(
         const result = await optionsRef.current.submit(
           prepared.draft,
           prepared.expectedVersion,
+          prepared.baseline,
         );
         const nextDraft = optionsRef.current.nextBaseline(
           result,

@@ -1,0 +1,104 @@
+.stack,
+.builder {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.builder {
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-4);
+}
+
+.toolbar,
+.list,
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toolbar h2,
+.review h2 {
+  font-size: var(--font-size-lg);
+  margin: 0;
+}
+
+.storeChoices,
+.question,
+.component,
+.review {
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.question,
+.component {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.question legend,
+.component legend,
+.storeChoices legend {
+  padding: 0 var(--space-2);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.component {
+  background: var(--color-bg);
+}
+
+.storeChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.checkLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checkLabel input[type="checkbox"] {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.note,
+.facts dt {
+  color: var(--color-text-muted);
+}
+
+.note,
+.facts dd {
+  margin: 0;
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.review summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.review p,
+.review li {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

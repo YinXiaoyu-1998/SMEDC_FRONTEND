@@ -29,6 +29,7 @@ export interface WebApiRequestInit {
   readonly body?: unknown;
   readonly csrfToken?: string;
   readonly signal?: AbortSignal;
+  readonly handleForbiddenLocally?: boolean;
 }
 
 export interface WebApiErrorInit {
@@ -150,9 +151,7 @@ export async function requestWebApi<T>(
 
   const headers = new Headers();
   headers.set("accept", "application/json");
-  if (request.body !== undefined) {
-    headers.set("content-type", "application/json");
-  }
+
   if (request.csrfToken !== undefined && request.method !== "GET") {
     headers.set("x-csrf-token", request.csrfToken);
   }
@@ -163,7 +162,12 @@ export async function requestWebApi<T>(
     cache: "no-store",
     headers,
   };
-  if (request.body !== undefined) init.body = JSON.stringify(request.body);
+  if (request.body instanceof FormData) {
+    init.body = request.body;
+  } else if (request.body !== undefined) {
+    headers.set("content-type", "application/json");
+    init.body = JSON.stringify(request.body);
+  }
   if (request.signal !== undefined) init.signal = request.signal;
 
   let response: Response;
@@ -183,7 +187,8 @@ export async function requestWebApi<T>(
 
   if (!response.ok) {
     if (response.status === 401) notify(unauthorizedHandler);
-    if (response.status === 403) notify(forbiddenHandler);
+    if (response.status === 403 && !request.handleForbiddenLocally)
+      notify(forbiddenHandler);
 
     const envelope = extractErrorEnvelope(payload);
     throw new WebApiError({

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { WebApiError } from "@/api/client";
 import type {
   PermissionAccount,
+  PermissionCategory,
   PermissionsAccountsUpdateResponse,
 } from "@/api/permissions";
 import { VERSION_CONFLICT_CODE } from "@/api/permissions";
@@ -16,6 +17,7 @@ import { InlineError } from "@/ui/InlineError";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
 import { DraftFeedback, LevelSelect, SearchInput } from "./components";
+import { INSPECTION_CATEGORY_KEY } from "./constants";
 import type { Confirmation } from "./diff";
 import {
   accountDiff,
@@ -37,6 +39,7 @@ import {
   grantLocationLabel,
 } from "./labels";
 import { GrantEditor } from "./GrantEditor";
+import { InspectionAccountPanel } from "./InspectionAccountPanel";
 import {
   DraftConflict,
   ListHeader,
@@ -51,6 +54,26 @@ import { useDraftSave } from "./useDraftSave";
 import { useRegisterDraft } from "./useRegisterDraft";
 
 const NEW_GRANT = "\u0000new";
+
+// The server preserves inspection access on general account writes. Exclude
+// its category from both the controls and the draft sent by this editor.
+function generalAccountDraft(
+  account: Parameters<typeof accountToDraft>[0],
+  categories: readonly PermissionCategory[],
+): AccountDraft {
+  const draft = accountToDraft(account);
+  const inspectionId = categories.find(
+    ({ key }) => key === INSPECTION_CATEGORY_KEY,
+  )?.id;
+  if (inspectionId === undefined) return draft;
+  return {
+    ...draft,
+    grants: draft.grants.flatMap((grant) => {
+      const categoryIds = grant.categoryIds.filter((id) => id !== inspectionId);
+      return categoryIds.length === 0 ? [] : [{ ...grant, categoryIds }];
+    }),
+  };
+}
 
 export function AccountsSection() {
   const { t } = useText();
@@ -250,10 +273,10 @@ function AccountPanel({
   const data = scope.bundle;
   const baseline = useMemo(
     () => ({
-      snapshot: accountToDraft(account),
+      snapshot: generalAccountDraft(account, data.categories),
       version: account.authorizationVersion,
     }),
-    [account],
+    [account, data.categories],
   );
 
   const save = useDraftSave<AccountDraft, PermissionsAccountsUpdateResponse>({
@@ -280,10 +303,7 @@ function AccountPanel({
         accountUpdateBody(draft, expectedVersion),
       ),
     nextBaseline: (result) =>
-      accountToDraft({
-        clearance: result.value.clearance,
-        grants: result.value.grants,
-      }),
+      generalAccountDraft(result.value, data.categories),
     reload: async () => {
       const next = await scope.reload();
       const latest = next.accounts.find((item) => item.id === account.id);
@@ -295,7 +315,7 @@ function AccountPanel({
         });
       }
       return {
-        snapshot: accountToDraft(latest),
+        snapshot: generalAccountDraft(latest, next.categories),
         version: latest.authorizationVersion,
       };
     },
@@ -312,6 +332,7 @@ function AccountPanel({
   }, [onDirtyChange, save.conflict, save.isDirty]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [inspectionOpen, setInspectionOpen] = useState(false);
   const pendingRemoval = useRef<string | null>(null);
 
   const removeFlow = useConfirmFlow<{ confirmation: Confirmation }, void>({
@@ -390,6 +411,21 @@ function AccountPanel({
       ? null
       : (save.draft.grants.find((grant) => grant.id === editingId) ?? null);
 
+  if (inspectionOpen) {
+    return (
+      <InspectionAccountPanel
+        account={account}
+        onClose={() => setInspectionOpen(false)}
+        onSaved={() => {
+          scope.setNotice("permissions.saved");
+          onClose();
+        }}
+        onDirtyChange={onDirtyChange}
+        returnFocusRef={returnFocusRef}
+      />
+    );
+  }
+
   return (
     <>
       <Panel
@@ -438,6 +474,16 @@ function AccountPanel({
           />
         </Field>
 
+        <div className={styles.actions}>
+          <ActionButton
+            label={t("permissions.inspection.open")}
+            variant="secondary"
+            disabled={
+              save.isDirty || save.conflict || scope.busy || account.disabled
+            }
+            onRun={() => setInspectionOpen(true)}
+          />
+        </div>
         <ObjectListHead
           title={t("permissions.grants")}
           action={

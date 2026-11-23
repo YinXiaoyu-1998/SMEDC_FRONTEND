@@ -54,14 +54,14 @@ describe("会话模块", () => {
     signedIn = false;
     fetchMock.mockReset();
     fetchMock.mockImplementation(async (input, init) => {
-      const url = String(input);
+      const url = new URL(String(input), "http://localhost");
       const method = init?.method ?? "GET";
 
-      if (url === "/api/web/v1/session" && method === "POST") {
+      if (url.pathname === "/api/web/v1/session" && method === "POST") {
         signedIn = true;
         return jsonResponse(sessionPayload);
       }
-      if (url === "/api/web/v1/session" && method === "GET") {
+      if (url.pathname === "/api/web/v1/session" && method === "GET") {
         return signedIn
           ? jsonResponse(sessionPayload)
           : jsonResponse(
@@ -74,7 +74,7 @@ describe("会话模块", () => {
               401,
             );
       }
-      if (url === "/api/web/v1/session" && method === "DELETE") {
+      if (url.pathname === "/api/web/v1/session" && method === "DELETE") {
         signedIn = false;
         return jsonResponse({ signedOut: true });
       }
@@ -124,6 +124,27 @@ describe("会话模块", () => {
 
     const csrfToken = result.current.session.data?.csrfToken ?? "";
     expect(csrfToken).toBe("csrf-token-1");
+
+    // 新客户端显式请求巡检能力；旧后端不返回这些可选字段时仍按旧形状工作
+    const sessionReadsAndLogins = fetchMock.mock.calls.filter(
+      ([input, init]) => {
+        const url = new URL(String(input), "http://localhost");
+        const method = init?.method ?? "GET";
+        return (
+          url.pathname === "/api/web/v1/session" &&
+          (method === "GET" || method === "POST")
+        );
+      },
+    );
+    expect(sessionReadsAndLogins.length).toBeGreaterThan(0);
+    for (const [input] of sessionReadsAndLogins) {
+      expect(
+        new URL(String(input), "http://localhost").searchParams.get(
+          "includeInspection",
+        ),
+      ).toBe("true");
+    }
+    expect(result.current.session.data?.canReadInspections).toBeUndefined();
 
     await act(async () => {
       await result.current.logout.mutateAsync(csrfToken);

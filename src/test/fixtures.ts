@@ -28,3 +28,26 @@ export const employeeSession: Session = {
   csrfToken: "csrf-token-2",
   canManageSettings: false,
 };
+
+// 巡检能力是服务端按账号下发的可选字段：旧会话没有这些字段时保持原有导航和首页
+export const inspectionViewerSession: Session = {
+  ...employeeSession,
+  canReadInspections: true,
+  canFillInspections: false,
+};
+
+export const inspectingEmployeeSession: Session = {
+  ...employeeSession,
+  canReadInspections: true,
+  canFillInspections: true,
+};
+
+export const templateMaintainerSession: Session = {
+  ...employeeSession,
+  canManageInspectionTemplates: true,
+};
+
+export const inspectionLeadSession: Session = {
+  ...inspectingEmployeeSession,
+  canManageInspectionTemplates: true,
+};

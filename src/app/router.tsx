@@ -7,6 +7,8 @@ import { NotFoundPage } from "@/app/NotFoundPage";
 import { RouteErrorPage } from "@/app/RouteErrorPage";
 import { SessionGate } from "@/app/SessionGate";
 import { DirectoryPage } from "@/features/directory/Page";
+import { InspectionsPage } from "@/features/inspections/Page";
+import { InspectionTemplatesPage } from "@/features/inspections/TemplatesPage";
 import { LedgerPage } from "@/features/ledger/Page";
 import { PermissionsPage } from "@/features/permissions/Page";
 import { WorkflowsPage } from "@/features/workflows/Page";
@@ -25,6 +27,8 @@ export const routes: RouteObject[] = [
         path: "admin/:orgId/workflows/:enterpriseKey",
         element: <WorkflowsPage />,
       },
+      { path: "inspections", element: <InspectionsPage /> },
+      { path: "inspections/templates", element: <InspectionTemplatesPage /> },
       { path: "ledger", element: <LedgerPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],

@@ -14,6 +14,8 @@ export const baseMessages = {
   "nav.permissions": ["权限设置", "Permissions"],
   "nav.directory": ["企业资料", "Enterprise directory"],
   "nav.workflows": ["自动任务", "Automations"],
+  "nav.inspections": ["巡检", "Inspections"],
+  "nav.inspectionTemplates": ["巡检模板", "Inspection templates"],
   "nav.ledger": ["台账下载中心", "Ledger downloads"],
   "nav.logout": ["退出登录", "Sign out"],
   "nav.logoutFailed": [
@@ -50,6 +52,8 @@ export const baseMessages = {
   "pages.permissions.title": ["权限设置", "Permissions"],
   "pages.workflows.title": ["自动任务", "Automations"],
   "pages.ledger.title": ["台账下载中心", "Ledger downloads"],
+  "pages.inspections.title": ["巡检", "Inspections"],
+  "pages.inspectionTemplates.title": ["巡检模板", "Inspection templates"],
   "errors.notFound.title": ["页面不存在", "Page not found"],
   "errors.notFound.description": [
     "你访问的地址不存在或已被移除。",

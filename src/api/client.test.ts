@@ -174,6 +174,30 @@ describe("requestWebApi", () => {
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
+  it("巡检上传保留 FormData 和 CSRF，由浏览器生成 multipart 边界", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ ok: true }));
+    const body = new FormData();
+    body.append(
+      "file",
+      new Blob(["photo"], { type: "image/png" }),
+      "photo.png",
+    );
+    await requestWebApi(
+      {
+        method: "POST",
+        path: "/api/web/v1/inspections/photos",
+        body,
+        csrfToken: "token",
+      },
+      echoSchema,
+    );
+    const { init } = lastRequest();
+    expect(init?.body).toBe(body);
+    const headers = new Headers(init?.headers);
+    expect(headers.get("content-type")).toBeNull();
+    expect(headers.get("x-csrf-token")).toBe("token");
+  });
+
   it("POST 与 DELETE 自动带 x-csrf-token，GET 不带", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ ok: true }));
 

@@ -114,6 +114,10 @@ export const permissionsMessages = {
     "原始配送台账（内部）",
     "Raw delivery ledger (internal)",
   ],
+  "permissions.category.inspection_questionnaire": [
+    "门店巡检问卷",
+    "Store inspection questionnaires",
+  ],
   "permissions.category.ledger_pdf": ["配送台账 PDF", "Delivery ledger PDF"],
   "permissions.category.quarantine_certificate": [
     "检疫证明",
@@ -748,4 +752,40 @@ export const permissionsMessages = {
 
   "permissions.diff.addedItem": ["新增{label}", "Added {label}"],
   "permissions.diff.removedItem": ["删除{label}", "Removed {label}"],
+  "permissions.inspection.open": ["巡检权限", "Inspection permissions"],
+  "permissions.inspection.enterprise": ["巡检企业", "Inspection enterprise"],
+  "permissions.inspection.templates": ["可维护模板", "Can maintain templates"],
+  "permissions.inspection.all": [
+    "全部门店（包括以后新增）",
+    "All stores, including future stores",
+  ],
+  "permissions.inspection.fixed": ["指定门店", "Selected stores"],
+  "permissions.inspection.none": ["无权限", "No access"],
+  "permissions.inspection.read": ["可看", "Can read"],
+  "permissions.inspection.write": ["可看和填写", "Can read and fill"],
+  "permissions.inspection.save": [
+    "保存巡检权限",
+    "Save inspection permissions",
+  ],
+  "permissions.inspection.coverage": ["查看范围", "Read coverage"],
+  "permissions.inspection.saveImpact": [
+    "巡检填写权限按门店设置。模板维护权限对所选企业生效。",
+    "Fill access is set by store. Template maintenance applies to the selected enterprise.",
+  ],
+  "permissions.inspection.futureImpact": [
+    "改为指定门店后，以后新增的门店需要单独授权。请核对下方保留的门店名单。",
+    "After switching to selected stores, grant access to newly added stores individually. Review the retained stores below.",
+  ],
+  "permissions.inspection.unavailable": [
+    "请确认业务企业，并在类别与密级中补齐门店巡检问卷。",
+    "Confirm the business enterprise and add the store inspection category under Categories and clearance.",
+  ],
+  "permissions.inspection.noStores": [
+    "没有可配置的正式门店。",
+    "There are no confirmed stores to configure.",
+  ],
+  "permissions.inspection.tooMany": [
+    "指定查看门店和填写门店分别最多 1,000 家。",
+    "Select at most 1,000 read stores and 1,000 fill stores.",
+  ],
 } as const satisfies TextDictionary;

@@ -14,6 +14,9 @@ import {
 // 查询键只由模块定义，避免调用方各写一份导致失效不一致
 export const sessionQueryKey = ["web-api", "session"] as const;
 
+// 新客户端显式请求巡检能力；旧后端没有这些可选字段时，页面按无巡检权限处理
+const SESSION_QUERY = { includeInspection: "true" } as const;
+
 export type Session = SessionReadResponse;
 
 export interface LoginCredentials {
@@ -25,7 +28,11 @@ export interface LoginCredentials {
 export async function read(): Promise<Session | null> {
   try {
     return await requestWebApi(
-      { method: "GET", path: webApiRoutes["session.read"].path },
+      {
+        method: "GET",
+        path: webApiRoutes["session.read"].path,
+        query: SESSION_QUERY,
+      },
       sessionReadResponseSchema,
     );
   } catch (error) {
@@ -44,6 +51,7 @@ export async function login(
     {
       method: "POST",
       path: webApiRoutes["session.login"].path,
+      query: SESSION_QUERY,
       body: { email, password },
     },
     sessionLoginResponseSchema,
