@@ -546,6 +546,14 @@ export const rInspectionsSheetsReplacementSchema2Schema = z
   .array(rInspectionsSheetsReplacementSchema0Schema)
   .max(200);
 
+export const rInspectionsSheetsReplacementSchema4Schema = z.string().max(120);
+
+export const rInspectionsSheetsReplacementSchema3Schema = z.strictObject({
+  questionId: rInspectionsSheetsReplacementSchema0Schema,
+  sourceTitle: rInspectionsSheetsReplacementSchema4Schema.optional(),
+  targetTitle: rInspectionsSheetsReplacementSchema4Schema.optional(),
+});
+
 export const bInspectionsSheetsVoidSchema0Schema = z
   .number()
   .int()
@@ -6420,7 +6428,9 @@ export type InspectionsSheetsReplacementParams = z.infer<
   typeof inspectionsSheetsReplacementParamsSchema
 >;
 
-export const inspectionsSheetsReplacementQuerySchema = z.strictObject({});
+export const inspectionsSheetsReplacementQuerySchema = z.strictObject({
+  includeTitles: z.literal("true").optional(),
+});
 
 export type InspectionsSheetsReplacementQuery = z.infer<
   typeof inspectionsSheetsReplacementQuerySchema
@@ -6436,6 +6446,10 @@ export const inspectionsSheetsReplacementResponseSchema = z.strictObject({
   clearedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
   addedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
   removedQuestionIds: rInspectionsSheetsReplacementSchema2Schema,
+  questionTitles: z
+    .array(rInspectionsSheetsReplacementSchema3Schema)
+    .max(400)
+    .optional(),
 });
 
 export type InspectionsSheetsReplacementResponse = z.infer<

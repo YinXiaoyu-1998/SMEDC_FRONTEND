@@ -11,9 +11,31 @@ export type Upload = {
   photo?: { photoId: string; expiresAt: string } | undefined;
   failed?: boolean | undefined;
 };
+export type ReusablePhoto = { photoId: string; sheetId: string; label: string };
+export const REUSABLE_PHOTO_LIMIT = 40;
+
+export function photosSeenIn(sheet: Sheet): ReusablePhoto[] {
+  const photos = new Map<string, ReusablePhoto>();
+  for (const question of sheet.questions)
+    for (const component of question.components) {
+      if (component.kind !== "photo") continue;
+      const value = answerOf(question, component.componentId).value;
+      if (!Array.isArray(value)) continue;
+      for (const [index, photoId] of value.entries()) {
+        photos.set(photoId, {
+          photoId,
+          sheetId: sheet.sheetId,
+          label: `${sheet.name ?? sheet.templateTitle} · ${question.title} · ${component.label} ${index + 1}`,
+        });
+        if (photos.size === REUSABLE_PHOTO_LIMIT) return [...photos.values()];
+      }
+    }
+  return [...photos.values()];
+}
+
 export type Draft =
   | { kind: "scalar"; text: string }
-  | { kind: "append"; uploads: Upload[] }
+  | { kind: "append"; uploads: Upload[]; reused?: ReusablePhoto[] }
   | { kind: "remove"; photoIds: string[]; all: boolean };
 
 export type Edit = {
@@ -75,10 +97,17 @@ export function changeFor({
   const { componentId } = component;
   const expectedComponentRevision = answer.componentRevision;
   if (draft.kind === "append") {
-    const photoIds = draft.uploads.flatMap((upload) =>
+    const uploaded = draft.uploads.flatMap((upload) =>
       uploadIsReady(upload) && upload.photo ? [upload.photo.photoId] : [],
     );
-    return photoIds.length > 0 && photoIds.length === draft.uploads.length
+    if (uploaded.length !== draft.uploads.length) return undefined;
+    const photoIds = [
+      ...new Set([
+        ...uploaded,
+        ...(draft.reused ?? []).map(({ photoId }) => photoId),
+      ]),
+    ];
+    return photoIds.length
       ? { op: "appendPhotos", componentId, photoIds }
       : undefined;
   }

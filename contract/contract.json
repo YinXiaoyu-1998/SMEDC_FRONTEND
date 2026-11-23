@@ -2952,7 +2952,12 @@
         },
         "query": {
           "type": "object",
-          "properties": {},
+          "properties": {
+            "includeTitles": {
+              "type": "string",
+              "const": "true"
+            }
+          },
           "additionalProperties": false
         }
       },
@@ -2985,6 +2990,13 @@
           },
           "removedQuestionIds": {
             "$ref": "#/$defs/r_inspections_sheets_replacement___schema2"
+          },
+          "questionTitles": {
+            "maxItems": 400,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/r_inspections_sheets_replacement___schema3"
+            }
           }
         },
         "required": [
@@ -3016,6 +3028,26 @@
             "items": {
               "$ref": "#/$defs/r_inspections_sheets_replacement___schema0"
             }
+          },
+          "r_inspections_sheets_replacement___schema3": {
+            "type": "object",
+            "properties": {
+              "questionId": {
+                "$ref": "#/$defs/r_inspections_sheets_replacement___schema0"
+              },
+              "sourceTitle": {
+                "$ref": "#/$defs/r_inspections_sheets_replacement___schema4"
+              },
+              "targetTitle": {
+                "$ref": "#/$defs/r_inspections_sheets_replacement___schema4"
+              }
+            },
+            "required": ["questionId"],
+            "additionalProperties": false
+          },
+          "r_inspections_sheets_replacement___schema4": {
+            "type": "string",
+            "maxLength": 120
           }
         }
       },

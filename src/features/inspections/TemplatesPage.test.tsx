@@ -1,4 +1,10 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import type { TemplateDefinition } from "@/api/inspection-templates";
@@ -33,7 +39,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-function setup(existing = false) {
+function setup(existing = false, otherEnterprise = false) {
+  let allowed = true;
+  let denied = false;
   let templateId: string | null = existing ? existingId : null;
   let definition: TemplateDefinition = {
     title: "服务器草稿",
@@ -62,33 +70,53 @@ function setup(existing = false) {
       if (pathname.endsWith("/context"))
         return jsonResponse({
           items: [
-            {
-              kind: "enterprise",
-              enterpriseKey,
-              enterpriseName: "体验企业",
-              ...capabilities,
-            },
-            {
-              kind: "store",
-              enterpriseKey,
-              enterpriseName: "体验企业",
-              storeId,
-              officialName: "体验门店",
-              retired: false,
-              ...capabilities,
-            },
+            ...(allowed
+              ? [
+                  {
+                    kind: "enterprise",
+                    enterpriseKey,
+                    enterpriseName: "体验企业",
+                    ...capabilities,
+                  },
+                  {
+                    kind: "store",
+                    enterpriseKey,
+                    enterpriseName: "体验企业",
+                    storeId,
+                    officialName: "体验门店",
+                    retired: false,
+                    ...capabilities,
+                  },
+                ]
+              : []),
+            ...(otherEnterprise
+              ? [
+                  {
+                    kind: "enterprise",
+                    enterpriseKey: "other-ent",
+                    enterpriseName: "仍可管理的企业",
+                    ...capabilities,
+                  },
+                ]
+              : []),
           ],
           nextCursor: null,
         });
       if (method === "GET" && pathname.endsWith("/templates"))
         return jsonResponse({
           items:
-            templateId === null
+            templateId === null ||
+            searchParams.get("enterpriseKey") === "other-ent"
               ? []
               : [{ ...status(), title: definition.title }],
           nextCursor: null,
         });
       if (method === "GET" && pathname.endsWith("/" + templateId)) {
+        if (denied)
+          return jsonResponse(
+            { error: { code: "INSPECTION_FORBIDDEN", message: "not allowed" } },
+            403,
+          );
         const cursor = searchParams.get("cursor");
         pageReads.push(cursor);
         const questions = definition.questions.map((question) => ({
@@ -135,11 +163,23 @@ function setup(existing = false) {
       return jsonResponse(status());
     }),
   );
-  renderApp({
+  const { queryClient } = renderApp({
     session: templateMaintainerSession,
     initialEntries: ["/inspections/templates"],
   });
   return {
+    async revokeDetails() {
+      denied = true;
+      await queryClient.invalidateQueries({
+        queryKey: ["inspection-templates"],
+      });
+    },
+    async revokeContext() {
+      allowed = false;
+      await queryClient.invalidateQueries({
+        queryKey: ["inspection-template-context"],
+      });
+    },
     writes,
     pageReads,
     updateElsewhere: () => {
@@ -290,3 +330,28 @@ it("loads every preview page before saving and keeps edits after a revision conf
     expect(screen.getByRole("button", { name: "保存草稿" })).toBeDisabled(),
   );
 });
+
+it.each(["context", "details"] as const)(
+  "hides cached template data after a %s permission change while keeping other enterprises available",
+  async (source) => {
+    const app = setup(true, true);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "服务器草稿 · 未启用" }),
+    );
+    await screen.findByLabelText("模板名称");
+    await act(async () => {
+      if (source === "context") await app.revokeContext();
+      else await app.revokeDetails();
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText("模板名称")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "服务器草稿 · 未启用" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "仍可管理的企业" }),
+    ).toBeInTheDocument();
+  },
+);

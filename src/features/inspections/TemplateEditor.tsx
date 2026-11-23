@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { InlineError } from "@/ui/InlineError";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
+import { isAccessError } from "./employeeApi";
 import {
   completeDefinition,
   draftFromPreview,
@@ -31,6 +32,7 @@ export function TemplateEditor({
   stores,
   csrfToken,
   onState,
+  onAccessError,
   onSaved,
 }: {
   initial: TemplatePreview | null;
@@ -40,6 +42,7 @@ export function TemplateEditor({
   csrfToken: string;
   onState: (state: { dirty: boolean; busy: boolean }) => void;
   onSaved: () => void;
+  onAccessError: (error: unknown) => void;
 }) {
   const t = useTemplateText();
   const { locale } = useText();
@@ -73,6 +76,12 @@ export function TemplateEditor({
     ).length <=
       512 * 1024;
   const blocked = conflict || busy !== null;
+
+  function showError(failure: unknown) {
+    if (isAccessError(failure)) onAccessError(failure);
+    else if (isTemplateConflict(failure)) setConflict(true);
+    else setError(failure);
+  }
 
   function adopt(data: TemplatePreview, keepDraft = false) {
     const value = draftFromPreview(data);
@@ -114,8 +123,7 @@ export function TemplateEditor({
       onSaved();
       await readPreview(committed.draftRevision, false);
     } catch (failure) {
-      if (isTemplateConflict(failure)) setConflict(true);
-      else setError(failure);
+      showError(failure);
     } finally {
       setBusy(null);
     }
@@ -139,8 +147,7 @@ export function TemplateEditor({
         onSaved();
         await readPreview(result.draftRevision, false);
       } catch (failure) {
-        if (isTemplateConflict(failure)) setConflict(true);
-        else setError(failure);
+        showError(failure);
       }
     },
   });
@@ -168,7 +175,7 @@ export function TemplateEditor({
     try {
       await readPreview(revision, dirty);
     } catch (failure) {
-      setError(failure);
+      showError(failure);
     } finally {
       setBusy(null);
     }

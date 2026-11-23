@@ -379,3 +379,114 @@ it("keeps the draft after a concurrent write and saves against the new revision 
   );
   expect(await screen.findByText("答案已保存。")).toBeInTheDocument();
 });
+
+it("shows added and renamed titles before confirming replacement", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockInspectionApi(true, (url) => {
+      if (!url.pathname.endsWith("/replacement")) return;
+      expect(url.searchParams.get("includeTitles")).toBe("true");
+      return jsonResponse({
+        sheetId: sheet.sheetId,
+        sourceTemplateVersionId: sheet.templateVersionId,
+        targetTemplateVersionId: id(24),
+        expectedActiveRevision: 2,
+        expectedSheetRevision: 1,
+        retainedQuestionIds: [],
+        clearedQuestionIds: [question.questionId],
+        addedQuestionIds: [id(25)],
+        removedQuestionIds: [],
+        questionTitles: [
+          {
+            questionId: question.questionId,
+            sourceTitle: question.title,
+            targetTitle: "冷柜消毒",
+          },
+          { questionId: id(25), targetTitle: "排水沟检查" },
+        ],
+      });
+    }),
+  );
+  await openSheet();
+  fireEvent.click(await screen.findByRole("button", { name: "预览换版" }));
+  expect(await screen.findByText("冷柜整洁 → 冷柜消毒")).toBeInTheDocument();
+  expect(screen.getByText("排水沟检查")).toBeInTheDocument();
+  expect(screen.queryByText(id(25))).not.toBeInTheDocument();
+});
+
+it("reuses an authorized photo from a different sheet in the same scope without uploading it again", async () => {
+  const photoId = id(31);
+  const other = { ...sheet, sheetId: id(32), name: "晚班" };
+  let patch: InspectionsPatchesBody | undefined;
+  vi.stubGlobal(
+    "fetch",
+    mockInspectionApi(true, (url, init) => {
+      if (url.pathname.endsWith("/day"))
+        return jsonResponse({ items: [sheet, other], nextCursor: null });
+      if (url.pathname.endsWith(`/sheets/${sheet.sheetId}`))
+        return jsonResponse(
+          readResponse(
+            question.answers.map((answer) =>
+              answer.componentId === id(8)
+                ? { ...answer, value: [photoId], componentRevision: 1 }
+                : answer,
+            ),
+            2,
+          ),
+        );
+      if (url.pathname.endsWith(`/sheets/${other.sheetId}`))
+        return jsonResponse({
+          ...readResponse(question.answers, 2),
+          sheetId: other.sheetId,
+          name: other.name,
+        });
+      if (url.pathname.endsWith("/photos") && init?.method === "POST")
+        throw new Error("Reusing a photo must not upload it again");
+      if (url.pathname.endsWith("/patches") && init?.method === "POST") {
+        patch = JSON.parse(String(init.body)) as InspectionsPatchesBody;
+        return jsonResponse({
+          results: [
+            {
+              status: "applied",
+              sheetId: other.sheetId,
+              templateVersionId: other.templateVersionId,
+              sheetRevision: 3,
+              progress: "complete",
+              missingRequiredCount: 0,
+              missingRequired: [],
+            },
+          ],
+        });
+      }
+    }),
+  );
+  await openSheet();
+  expect(
+    await screen.findByRole("img", { name: "原图 · 照片 1" }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "返回列表" }));
+  fireEvent.click(await screen.findByRole("button", { name: "查看 晚班" }));
+  expect(await screen.findByText("待补齐")).toBeInTheDocument();
+  fireEvent.change(await screen.findByLabelText("复用照片 · 原图"), {
+    target: { value: photoId },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "保存答案" }));
+  await waitFor(() =>
+    expect(patch?.patches[0]).toMatchObject({
+      sheetId: other.sheetId,
+      changes: [
+        { op: "appendPhotos", componentId: id(8), photoIds: [photoId] },
+      ],
+    }),
+  );
+  await screen.findByText("答案已保存。");
+  fireEvent.change(screen.getByLabelText("巡检日期"), {
+    target: { value: "2026-11-24" },
+  });
+  fireEvent.change(screen.getByLabelText("巡检日期"), {
+    target: { value: scope.inspectionDate },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "查看 晚班" }));
+  await screen.findByLabelText("原图");
+  expect(screen.queryByLabelText("复用照片 · 原图")).not.toBeInTheDocument();
+});

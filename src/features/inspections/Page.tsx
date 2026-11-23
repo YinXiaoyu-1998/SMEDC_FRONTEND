@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import {
@@ -23,7 +23,13 @@ import {
   isConflict,
   isUncertain,
   type Scope,
+  type Sheet,
 } from "./employeeApi";
+import {
+  photosSeenIn,
+  REUSABLE_PHOTO_LIMIT,
+  type ReusablePhoto,
+} from "./employeeDraft";
 import { errorText, useEmployeeText } from "./employeeText";
 import { SheetEditor, Summary } from "./SheetEditor";
 import styles from "./Employee.module.css";
@@ -49,18 +55,24 @@ export function InspectionsPage() {
     <PageFrame title={t("pages.inspections.title")}>
       {session?.canReadInspections && (
         <ScopePicker
-          key={session.identity.userAccountId}
+          key={JSON.stringify([
+            session.identity.orgId,
+            session.identity.userAccountId,
+          ])}
           csrfToken={session.csrfToken}
-          accountId={session.identity.userAccountId}
+          identityKey={JSON.stringify([
+            session.identity.orgId,
+            session.identity.userAccountId,
+          ])}
         />
       )}
     </PageFrame>
   );
 }
 
-function useContextPages(accountId: string, enterpriseKey?: string) {
+function useContextPages(identityKey: string, enterpriseKey?: string) {
   return useInfiniteQuery({
-    queryKey: ["inspection-employee", accountId, "context", enterpriseKey],
+    queryKey: ["inspection-employee", identityKey, "context", enterpriseKey],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>
       context(
@@ -78,10 +90,10 @@ function useContextPages(accountId: string, enterpriseKey?: string) {
 
 function ScopePicker({
   csrfToken,
-  accountId,
+  identityKey,
 }: {
   csrfToken: string;
-  accountId: string;
+  identityKey: string;
 }) {
   const t = useEmployeeText();
   const [enterpriseKey, setEnterprise] = useState("");
@@ -95,8 +107,8 @@ function ScopePicker({
       ? dateFromUrl
       : today(),
   );
-  const enterpriseList = useContextPages(accountId);
-  const storeList = useContextPages(accountId, enterpriseKey);
+  const enterpriseList = useContextPages(identityKey);
+  const storeList = useContextPages(identityKey, enterpriseKey);
 
   const enterprises =
     enterpriseList.data?.pages.flatMap(({ items }) =>
@@ -206,7 +218,7 @@ function ScopePicker({
           key={JSON.stringify(scope.data)}
           scope={scope.data}
           csrfToken={csrfToken}
-          accountId={accountId}
+          identityKey={identityKey}
         />
       ) : (
         <p className={styles.muted}>
@@ -223,16 +235,48 @@ function ScopePicker({
 function InspectionDay({
   scope,
   csrfToken,
-  accountId,
+  identityKey,
 }: {
   scope: Scope;
   csrfToken: string;
-  accountId: string;
+  identityKey: string;
 }) {
   const t = useEmployeeText();
   const [selected, select] = useState<string>();
+  const [photoScope, setPhotoScope] = useState<{
+    allowed: boolean;
+    photos: ReusablePhoto[];
+  }>({
+    allowed: false,
+    photos: [],
+  });
+  const forgetPhotos = useCallback(
+    () =>
+      setPhotoScope((old) =>
+        old.photos.length ? { ...old, photos: [] } : old,
+      ),
+    [],
+  );
+  const rememberPhotos = useCallback((sheet: Sheet) => {
+    setPhotoScope((old) => {
+      if (!old.allowed) return old;
+      const combined = new Map(
+        old.photos
+          .filter((photo) => photo.sheetId !== sheet.sheetId)
+          .map((photo) => [photo.photoId, photo]),
+      );
+      for (const photo of photosSeenIn(sheet)) {
+        combined.delete(photo.photoId);
+        combined.set(photo.photoId, photo);
+      }
+      return {
+        ...old,
+        photos: [...combined.values()].slice(-REUSABLE_PHOTO_LIMIT),
+      };
+    });
+  }, []);
   const access = useQuery({
-    queryKey: ["inspection-employee", accountId, "scope", scope],
+    queryKey: ["inspection-employee", identityKey, "scope", scope],
     queryFn: ({ signal }) => context(scope, signal),
     gcTime: 0,
     retry: false,
@@ -246,13 +290,17 @@ function InspectionDay({
     !isAccessError(access.error);
   const allowWrite = preflight?.canFillInspections === true && allowRead;
   const dayList = useInfiniteQuery({
-    queryKey: ["inspection-employee", accountId, "day", scope],
+    queryKey: ["inspection-employee", identityKey, "day", scope],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) => day(scope, pageParam, signal),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: allowRead,
     retry: false,
   });
+  const canReusePhotos = allowWrite && !access.error && !dayList.error;
+  // Throw away photo choices before rendering a changed or uncertain access state.
+  if (photoScope.allowed !== canReusePhotos)
+    setPhotoScope({ allowed: canReusePhotos, photos: [] });
   const entries = dayList.data?.pages.flatMap((page) => page.items) ?? [];
   const templates = entries.filter((entry) => entry.kind === "template");
   const sheets = entries.filter((entry) => entry.kind === "sheet");
@@ -285,12 +333,20 @@ function InspectionDay({
       <SheetEditor
         key={`${selected}:${allowWrite}`}
         sheetId={selected}
+        identityKey={identityKey}
         scope={scope}
+        reusablePhotos={
+          canReusePhotos && photoScope.allowed ? photoScope.photos : []
+        }
+        canReusePhotos={canReusePhotos}
+        rememberPhotos={rememberPhotos}
+        forgetPhotos={forgetPhotos}
         canFill={allowWrite}
         csrfToken={csrfToken}
         onClose={() => select(undefined)}
         onChange={refresh}
         onVoid={() => {
+          forgetPhotos();
           select(undefined);
           refresh();
         }}
