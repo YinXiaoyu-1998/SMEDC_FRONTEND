@@ -414,8 +414,41 @@ it("shows added and renamed titles before confirming replacement", async () => {
   expect(screen.queryByText(id(25))).not.toBeInTheDocument();
 });
 
-it("reuses an authorized photo from a different sheet in the same scope without uploading it again", async () => {
-  const photoId = id(31);
+it("selects and reuses the 41st authorized photo across sheets without uploading it again", async () => {
+  const photoId = id(1040);
+  const filled = [20, 20, 1].map((count, index) => ({
+    component: {
+      componentId: index === 0 ? id(8) : id(108 + index),
+      kind: "photo" as const,
+      label: index === 2 ? "第三图组" : `图组 ${index + 1}`,
+      required: true,
+    },
+    photoIds: Array.from({ length: count }, (_, at) =>
+      id(1000 + index * 20 + at),
+    ),
+  }));
+  const sourceSheet = {
+    ...readResponse(question.answers, 2),
+    questions: [
+      {
+        ...question,
+        components: [
+          ...question.components.filter(({ kind }) => kind !== "photo"),
+          ...filled.map(({ component }) => component),
+        ],
+        answers: [
+          ...question.answers.filter(
+            ({ componentId }) => componentId !== id(8),
+          ),
+          ...filled.map(({ component, photoIds }) => ({
+            componentId: component.componentId,
+            componentRevision: 1,
+            value: photoIds,
+          })),
+        ],
+      },
+    ],
+  };
   const other = { ...sheet, sheetId: id(32), name: "晚班" };
   let patch: InspectionsPatchesBody | undefined;
   vi.stubGlobal(
@@ -424,16 +457,7 @@ it("reuses an authorized photo from a different sheet in the same scope without 
       if (url.pathname.endsWith("/day"))
         return jsonResponse({ items: [sheet, other], nextCursor: null });
       if (url.pathname.endsWith(`/sheets/${sheet.sheetId}`))
-        return jsonResponse(
-          readResponse(
-            question.answers.map((answer) =>
-              answer.componentId === id(8)
-                ? { ...answer, value: [photoId], componentRevision: 1 }
-                : answer,
-            ),
-            2,
-          ),
-        );
+        return jsonResponse(sourceSheet);
       if (url.pathname.endsWith(`/sheets/${other.sheetId}`))
         return jsonResponse({
           ...readResponse(question.answers, 2),
@@ -461,9 +485,18 @@ it("reuses an authorized photo from a different sheet in the same scope without 
     }),
   );
   await openSheet();
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "加入待复用照片 第三图组 · 照片 1",
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "返回列表" }));
+  fireEvent.click(await screen.findByRole("button", { name: "查看 卫生巡检" }));
   expect(
-    await screen.findByRole("img", { name: "原图 · 照片 1" }),
-  ).toBeInTheDocument();
+    await screen.findByRole("button", {
+      name: "已加入待复用照片 第三图组 · 照片 1",
+    }),
+  ).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "返回列表" }));
   fireEvent.click(await screen.findByRole("button", { name: "查看 晚班" }));
   expect(await screen.findByText("待补齐")).toBeInTheDocument();

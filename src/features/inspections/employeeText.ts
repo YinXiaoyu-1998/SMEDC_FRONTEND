@@ -66,6 +66,12 @@ const messages = {
   pending: ["待保存", "Unsaved"],
   photo: ["照片", "Photo"],
   reusePhoto: ["复用照片", "Reuse a photo"],
+  markReusePhoto: ["加入待复用照片", "Add to reusable photos"],
+  markedReusePhoto: ["已加入待复用照片", "Added to reusable photos"],
+  reusePhotoLimit: [
+    "保留最近加入的 40 张照片。",
+    "Keeps the 40 most recently added photos.",
+  ],
   unnamedQuestion: ["未命名题目", "Untitled question"],
   replacementTitlesUnavailable: [
     "未能读取变更题目名称，请重新预览。",

@@ -26,7 +26,7 @@ import {
   type Sheet,
 } from "./employeeApi";
 import {
-  photosSeenIn,
+  prunePhotoChoices,
   REUSABLE_PHOTO_LIMIT,
   type ReusablePhoto,
 } from "./employeeDraft";
@@ -260,21 +260,23 @@ function InspectionDay({
   const rememberPhotos = useCallback((sheet: Sheet) => {
     setPhotoScope((old) => {
       if (!old.allowed) return old;
-      const combined = new Map(
-        old.photos
-          .filter((photo) => photo.sheetId !== sheet.sheetId)
-          .map((photo) => [photo.photoId, photo]),
-      );
-      for (const photo of photosSeenIn(sheet)) {
-        combined.delete(photo.photoId);
-        combined.set(photo.photoId, photo);
-      }
-      return {
-        ...old,
-        photos: [...combined.values()].slice(-REUSABLE_PHOTO_LIMIT),
-      };
+      const photos = prunePhotoChoices(old.photos, sheet);
+      return photos === old.photos ? old : { ...old, photos };
     });
   }, []);
+  const markPhoto = (photo: ReusablePhoto) => {
+    setPhotoScope((old) =>
+      old.allowed
+        ? {
+            ...old,
+            photos: [
+              ...old.photos.filter(({ photoId }) => photoId !== photo.photoId),
+              photo,
+            ].slice(-REUSABLE_PHOTO_LIMIT),
+          }
+        : old,
+    );
+  };
   const access = useQuery({
     queryKey: ["inspection-employee", identityKey, "scope", scope],
     queryFn: ({ signal }) => context(scope, signal),
@@ -340,6 +342,7 @@ function InspectionDay({
         }
         canReusePhotos={canReusePhotos}
         rememberPhotos={rememberPhotos}
+        markPhoto={markPhoto}
         forgetPhotos={forgetPhotos}
         canFill={allowWrite}
         csrfToken={csrfToken}

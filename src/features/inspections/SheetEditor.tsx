@@ -69,6 +69,7 @@ export function SheetEditor({
   canReusePhotos,
   reusablePhotos,
   rememberPhotos,
+  markPhoto,
   forgetPhotos,
   csrfToken,
   onClose,
@@ -82,6 +83,7 @@ export function SheetEditor({
   canReusePhotos: boolean;
   reusablePhotos: ReusablePhoto[];
   rememberPhotos: (sheet: Sheet) => void;
+  markPhoto: (photo: ReusablePhoto) => void;
   forgetPhotos: () => void;
   csrfToken: string;
   onClose: () => void;
@@ -536,6 +538,16 @@ export function SheetEditor({
                 uploading={uploading}
                 reusablePhotos={photoScopeUncertain ? [] : reusablePhotos}
                 onPhotoError={forgetPhotos}
+                onMarkPhoto={
+                  canReusePhotos && !photoScopeUncertain
+                    ? (photoId, label) =>
+                        markPhoto({
+                          photoId,
+                          sheetId: sheet.sheetId,
+                          label: `${sheet.name ?? sheet.templateTitle} · ${label}`,
+                        })
+                    : undefined
+                }
                 onEdit={updateEdit}
                 onUpload={upload}
               />

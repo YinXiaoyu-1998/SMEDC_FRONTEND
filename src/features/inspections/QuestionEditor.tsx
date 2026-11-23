@@ -9,6 +9,7 @@ import {
   answerOf,
   parseScalar,
   points,
+  REUSABLE_PHOTO_LIMIT,
   uploadIsReady,
   type Component,
   type Draft,
@@ -31,6 +32,7 @@ type QuestionEditorProps = {
   uploading: string | undefined;
   reusablePhotos: ReusablePhoto[];
   onPhotoError: () => void;
+  onMarkPhoto: ((photoId: string, label: string) => void) | undefined;
   onEdit: (edit: Edit, draft: Draft | undefined) => void;
   onUpload: (edit: Edit, file: File, retry?: Upload) => Promise<void>;
 };
@@ -45,6 +47,7 @@ export function QuestionEditor(props: QuestionEditorProps) {
     uploading,
     reusablePhotos,
     onPhotoError,
+    onMarkPhoto,
     onEdit,
     onUpload,
   } = props;
@@ -92,6 +95,11 @@ export function QuestionEditor(props: QuestionEditorProps) {
                   busy={uploading === component.componentId}
                   reusablePhotos={reusablePhotos}
                   onPhotoError={onPhotoError}
+                  onMarkPhoto={
+                    onMarkPhoto &&
+                    ((photoId, label) =>
+                      onMarkPhoto(photoId, `${question.title} · ${label}`))
+                  }
                   change={(value) =>
                     onEdit(
                       {
@@ -221,6 +229,7 @@ function PhotoEditor({
   busy,
   reusablePhotos,
   onPhotoError,
+  onMarkPhoto,
   change,
   upload,
 }: {
@@ -231,6 +240,7 @@ function PhotoEditor({
   busy: boolean;
   reusablePhotos: ReusablePhoto[];
   onPhotoError: () => void;
+  onMarkPhoto: ((photoId: string, label: string) => void) | undefined;
   change: (value: Draft | undefined) => void;
   upload: (file: File, retry?: Upload) => Promise<void>;
 }) {
@@ -281,7 +291,12 @@ function PhotoEditor({
         />
       </Field>
       {choices.length > 0 && (
-        <Field label={`${t("reusePhoto")} · ${label}`}>
+        <Field
+          label={`${t("reusePhoto")} · ${label}`}
+          {...(reusablePhotos.length >= REUSABLE_PHOTO_LIMIT
+            ? { hint: t("reusePhotoLimit") }
+            : {})}
+        >
           <select
             value=""
             disabled={disabled || removed.length > 0 || atLimit}
@@ -331,6 +346,10 @@ function PhotoEditor({
         {saved.map((photoId, index) => {
           const removing = removed.includes(photoId);
           const photoLabel = `${label} · ${t("photo")} ${index + 1}`;
+          const marked = reusablePhotos.some(
+            (photo) => photo.photoId === photoId,
+          );
+          const markLabel = t(marked ? "markedReusePhoto" : "markReusePhoto");
           return (
             <li key={photoId}>
               <Photo
@@ -338,6 +357,15 @@ function PhotoEditor({
                 label={photoLabel}
                 onUnavailable={onPhotoError}
               />
+              {onMarkPhoto && (
+                <ActionButton
+                  label={markLabel}
+                  variant="secondary"
+                  aria-label={`${markLabel} ${photoLabel}`}
+                  disabled={disabled || removing || marked}
+                  onRun={() => onMarkPhoto(photoId, photoLabel)}
+                />
+              )}
               <ActionButton
                 label={t(removing ? "undo" : "remove")}
                 variant="secondary"

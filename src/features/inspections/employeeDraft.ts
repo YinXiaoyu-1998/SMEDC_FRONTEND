@@ -14,23 +14,23 @@ export type Upload = {
 export type ReusablePhoto = { photoId: string; sheetId: string; label: string };
 export const REUSABLE_PHOTO_LIMIT = 40;
 
-export function photosSeenIn(sheet: Sheet): ReusablePhoto[] {
-  const photos = new Map<string, ReusablePhoto>();
+export function prunePhotoChoices(
+  photos: ReusablePhoto[],
+  sheet: Sheet,
+): ReusablePhoto[] {
+  const absent = new Set(
+    photos
+      .filter(({ sheetId }) => sheetId === sheet.sheetId)
+      .map(({ photoId }) => photoId),
+  );
+  if (!absent.size) return photos;
   for (const question of sheet.questions)
-    for (const component of question.components) {
-      if (component.kind !== "photo") continue;
-      const value = answerOf(question, component.componentId).value;
-      if (!Array.isArray(value)) continue;
-      for (const [index, photoId] of value.entries()) {
-        photos.set(photoId, {
-          photoId,
-          sheetId: sheet.sheetId,
-          label: `${sheet.name ?? sheet.templateTitle} · ${question.title} · ${component.label} ${index + 1}`,
-        });
-        if (photos.size === REUSABLE_PHOTO_LIMIT) return [...photos.values()];
-      }
+    for (const { value } of question.answers) {
+      if (Array.isArray(value))
+        for (const photoId of value) absent.delete(photoId);
+      if (!absent.size) return photos;
     }
-  return [...photos.values()];
+  return photos.filter(({ photoId }) => !absent.has(photoId));
 }
 
 export type Draft =
