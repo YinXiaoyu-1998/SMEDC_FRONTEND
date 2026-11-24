@@ -1117,9 +1117,7 @@ describe("权限设置页", () => {
       within(panel).getByRole("button", { name: "新增授权条目" }),
     );
     const editor = await screen.findByRole("dialog", { name: "新增授权条目" });
-    fireEvent.change(within(editor).getByLabelText("业务企业"), {
-      target: { value: "ent-1" },
-    });
+    expect(within(editor).getByLabelText("业务企业")).toHaveValue("ent-1");
     fireEvent.change(within(editor).getByLabelText("资料归属"), {
       target: { value: "store" },
     });
@@ -1421,6 +1419,12 @@ describe("权限设置页", () => {
     if (row === null) throw new Error("找不到文档行");
     fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
     const panel = await screen.findByRole("dialog", { name: "编辑文档配置" });
+    fireEvent.click(within(panel).getByRole("button", { name: "新增范围" }));
+    const scope = await screen.findByRole("dialog", { name: "新增范围" });
+    expect(within(scope).getByLabelText("业务企业")).toHaveValue("ent-1");
+    fireEvent.click(within(scope).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(scope).not.toBeInTheDocument());
+
     fireEvent.change(within(panel).getByLabelText("密级"), {
       target: { value: "3" },
     });

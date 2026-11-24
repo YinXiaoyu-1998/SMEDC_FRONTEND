@@ -1,5 +1,6 @@
 import { useMemo, useState, type RefObject } from "react";
 
+import { singleEnterpriseKey } from "@/features/singleEnterpriseKey";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
@@ -73,22 +74,16 @@ export function GrantEditor({
   readonly returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const { t } = useText();
-  const [draft, setDraft] = useState<GrantDraft>(() =>
-    grant === null ? emptyGrant(orgId, createId()) : grant,
+  const [initial] = useState<GrantDraft>(
+    () =>
+      grant ?? {
+        ...emptyGrant(orgId, createId()),
+        enterpriseKey: singleEnterpriseKey(data.enterprises),
+      },
   );
+  const [draft, setDraft] = useState(initial);
   const [issue, setIssue] = useState<string | null>(null);
-  const [initial] = useState<GrantDraft | null>(grant);
-  const dirty = useMemo(() => {
-    if (initial === null) {
-      return (
-        draft.enterpriseKey !== "" ||
-        draft.ownership !== "" ||
-        draft.categoryIds.length > 0 ||
-        Object.keys(draft.dimensions).length > 0
-      );
-    }
-    return !sameGrant(initial, draft);
-  }, [draft, initial]);
+  const dirty = !sameGrant(initial, draft);
   const discardFlow = useConfirmFlow<void, void>({
     prepare: () => undefined,
     submit: () => {
