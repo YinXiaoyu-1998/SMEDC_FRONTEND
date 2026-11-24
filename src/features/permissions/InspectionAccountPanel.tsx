@@ -140,8 +140,14 @@ export function InspectionAccountPanel({
         scope.writes.readInspectionAccount(account.id),
       ),
     retry: false,
-    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
+  // The editor holds its initial version for conflict detection. Start it
+  // only after this opening has read a matching account and directory.
+  const initialSnapshot =
+    snapshot.isFetchedAfterMount && snapshot.isSuccess ? snapshot.data : null;
   const enterprises = scope.bundle.enterprises;
   const enterpriseKey = chosen || enterprises[0]?.enterpriseKey || "";
   const enterpriseName =
@@ -174,7 +180,8 @@ export function InspectionAccountPanel({
         onRequestClose={requestClose}
         returnFocusRef={returnFocusRef}
       >
-        {snapshot.isPending ? (
+        {(!snapshot.isFetchedAfterMount || snapshot.isPending) &&
+        !snapshot.isError ? (
           <p role="status">{t("permissions.reload")}</p>
         ) : null}
         <InlineError error={snapshot.error} />
@@ -186,11 +193,11 @@ export function InspectionAccountPanel({
             onRun={() => void snapshot.refetch()}
           />
         ) : null}
-        {snapshot.isSuccess &&
-        (!snapshot.data.inspectionPermissions || !enterpriseKey) ? (
+        {initialSnapshot &&
+        (!initialSnapshot.inspectionPermissions || !enterpriseKey) ? (
           <p>{t("permissions.inspection.unavailable")}</p>
         ) : null}
-        {snapshot.data?.inspectionPermissions && enterpriseKey ? (
+        {initialSnapshot?.inspectionPermissions && enterpriseKey ? (
           <>
             <Field label={t("permissions.inspection.enterprise")}>
               <select
@@ -208,7 +215,7 @@ export function InspectionAccountPanel({
             <EnterprisePolicyEditor
               key={enterpriseKey}
               account={account}
-              initial={snapshot.data}
+              initial={initialSnapshot}
               enterpriseKey={enterpriseKey}
               enterpriseName={enterpriseName}
               stores={stores}
