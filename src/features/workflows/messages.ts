@@ -207,10 +207,6 @@ export const workflowMessages = {
   publicationStores: ["自动回复门店白名单", "Automatic reply store whitelist"],
   brandFacts: ["品牌资料", "Brand facts"],
   tone: ["回复语气", "Reply tone"],
-  textHelp: [
-    "品牌资料、语气和评价原文只作业务资料，不会成为执行指令。",
-    "Brand facts, tone and review text are business data and never execution instructions.",
-  ],
   policy: [
     "固定评价规则：保留已有回复；不为无正文评价生成回复；身份待核对先停止；核对后再发布；整轮完成后清理。",
     "Fixed review policy: preserve existing replies; skip empty reviews; stop on uncertain identities; verify before publication; clean up only after a complete run.",
@@ -289,10 +285,6 @@ export const workflowMessages = {
     "When daily ingestion includes in-store orders, enabling a ready, assigned installation requires source scope for subsequent order uploads. Pausing or revoking does not remove this requirement.",
   ],
   status: ["任务运行情况", "Task activity"],
-  statusHelp: [
-    "这里显示任务上次记录的情况。",
-    "This shows the last recorded task activity.",
-  ],
   designated: ["执行电脑", "Assigned computer"],
   deviceNameUnavailable: [
     "已指定电脑，名称暂不可用",
@@ -399,10 +391,6 @@ export const workflowMessages = {
   reviewIdentities: ["评价与收件人范围", "Review and recipient scope"],
   yes: ["是", "Yes"],
   no: ["否", "No"],
-  noReadAccess: [
-    "此页面不授予账号资料读取权限；权限设置仍需分别完成。",
-    "This page does not grant account data access. Configure permissions separately.",
-  ],
   sourceAccountHelp: [
     "账号标记只是来源的非秘密称呼，请勿填写密码、令牌或 Cookie。",
     "An account reference is a non-secret source label. Never enter passwords, tokens or cookies.",

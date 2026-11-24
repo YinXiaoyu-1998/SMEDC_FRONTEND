@@ -402,7 +402,6 @@ export function ConfigurationSection({
                   maxLength={2000}
                   onChange={(tone) => onChange({ ...values, tone })}
                 />
-                <p className={styles.hint}>{w("textHelp")}</p>
               </>
             )}
           />

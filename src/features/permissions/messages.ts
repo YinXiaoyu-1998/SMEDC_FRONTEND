@@ -294,10 +294,6 @@ export const permissionsMessages = {
   "permissions.status.archived": ["已归档", "Archived"],
 
   // 页面外壳（原型 v2）：页头、状态区、分区导航
-  "permissions.subtitle": [
-    "管理资料类别、业务条件和账号的访问范围。",
-    "Manage document categories, business conditions and account access.",
-  ],
   "permissions.banner.label": ["业务权限状态", "Business permission status"],
   "permissions.closePanel": ["关闭编辑面板", "Close editor"],
   "permissions.discardDescription": [
@@ -358,14 +354,6 @@ export const permissionsMessages = {
   "permissions.segmented.document": ["文档类别", "Document categories"],
   "permissions.segmented.fixed": ["固定类别", "Fixed categories"],
   "permissions.searchCategory": ["搜索类别", "Search categories"],
-  "permissions.categoryListHint": [
-    "查看文档的归属与业务条件。",
-    "Review ownership and required conditions for documents.",
-  ],
-  "permissions.fixedListHint": [
-    "为系统内置的业务资料设置密级。",
-    "Set confidentiality levels for built-in business materials.",
-  ],
   "permissions.docCategoryHint": [
     "文档类别定义可用的资料归属与必需业务条件。",
     "Document categories define supported ownership and required conditions.",
@@ -379,10 +367,6 @@ export const permissionsMessages = {
   "permissions.archivedCategories": ["已停用类别", "Retired categories"],
 
   // 业务条件与取值
-  "permissions.conditionHint": [
-    "条件用于描述类别和账号授权的适用范围。",
-    "Conditions describe the scope of categories and account grants.",
-  ],
   "permissions.conditionList": ["业务条件", "Business conditions"],
   "permissions.searchCondition": ["搜索业务条件", "Search conditions"],
   "permissions.editCondition": ["编辑业务条件", "Edit condition"],
@@ -417,10 +401,6 @@ export const permissionsMessages = {
     "已登记的业务企业",
     "Registered businesses",
   ],
-  "permissions.enterpriseSectionHint": [
-    "标识用于关联授权和文档范围。",
-    "The business key links grants and document scopes.",
-  ],
   "permissions.storeDirectory": ["门店目录", "Store directory"],
   "permissions.storeDirectoryHint": [
     "这里只读展示精确门店；维护正式门店请前往企业资料。",
@@ -433,10 +413,6 @@ export const permissionsMessages = {
   "permissions.storePending": ["待确认", "Pending"],
   "permissions.storeHistorical": ["历史", "Historical"],
   "permissions.searchStore": ["搜索门店", "Search stores"],
-  "permissions.enterprisePreviewHint": [
-    "预览只计算企业标识，不登记企业。",
-    "Preview only computes the business key; nothing is registered.",
-  ],
   "permissions.enterprisePreviewInvalid": [
     "请先填写业务企业名称。",
     "Enter a business name first.",
@@ -447,10 +423,6 @@ export const permissionsMessages = {
   ],
 
   // 账号授权
-  "permissions.accountListHint": [
-    "查看账号密级与当前授予的业务范围。",
-    "Review account clearance and current business grants.",
-  ],
   "permissions.searchAccount": ["搜索账号", "Search accounts"],
   "permissions.accountPanel": ["编辑账号授权", "Edit account grants"],
   "permissions.accountRoleHint": [
@@ -482,15 +454,7 @@ export const permissionsMessages = {
   "permissions.levelField": ["密级", "Level"],
 
   // 普通文档
-  "permissions.documentListHint": [
-    "按名称或 ID 查找文档，并设置类别、文件密级与完整范围。",
-    "Find documents by name or ID, then set category, file level and complete scopes.",
-  ],
   "permissions.editDocument": ["编辑文档配置", "Edit document"],
-  "permissions.documentPanelHint": [
-    "只显示权限属性，不提供正文或下载。",
-    "Only permission attributes are shown; no content or downloads.",
-  ],
   "permissions.addDocumentScope": ["新增范围", "Add scope"],
   "permissions.editScope": ["编辑范围", "Edit scope"],
   "permissions.scopeComplete": ["完成范围", "Done"],
@@ -520,10 +484,6 @@ export const permissionsMessages = {
   "permissions.status.off": ["已停用", "Retired"],
 
   "permissions.remove": ["删除", "Remove"],
-  "permissions.accountSaveImpact": [
-    "保存后，系统会按更新后的授权计算可读取范围。",
-    "After saving, read access is computed from the updated grants.",
-  ],
   "permissions.conflict.scopeServerRemoved": [
     "服务器已删除一个你未改动的范围，已按服务器结果移除。",
     "The server removed a scope you did not change; it is removed.",
@@ -539,10 +499,6 @@ export const permissionsMessages = {
   "permissions.scopeRemoveImpact": [
     "保存文档配置后，这个范围才会移除。",
     "This scope is removed only after the document is saved.",
-  ],
-  "permissions.documentSaveImpact": [
-    "保存后，文档的读取范围按新的类别、密级与范围计算。",
-    "After saving, document access follows the new category, level and scopes.",
   ],
   "permissions.valueWriteImpact": [
     "本次只写这一个取值；已保存的授权引用保持不变。",

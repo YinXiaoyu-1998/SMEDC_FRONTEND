@@ -814,22 +814,14 @@ export function DirectoryPage() {
           })()}
         {enterprise && tab === "employees" && (
           <div className={styles.catalog}>
-            <p className={styles.scopeHint}>
-              {employees.data?.access === "none"
-                ? L([
-                    "当前没有员工档案读取权限。仍可尝试新增。",
-                    "No employee read access. You may still create a record.",
-                  ])
-                : employees.data?.access === "partial"
-                  ? L([
-                      "仅显示当前获准范围内的员工。",
-                      "Showing only your authorized scope.",
-                    ])
-                  : L([
-                      "显示当前获准范围内的员工。",
-                      "Showing your authorized scope.",
-                    ])}
-            </p>
+            {employees.data?.access === "none" && (
+              <p className={styles.scopeHint}>
+                {L([
+                  "当前没有员工档案读取权限。仍可尝试新增。",
+                  "No employee read access. You may still create a record.",
+                ])}
+              </p>
+            )}
             <div className={styles.employeeFilters}>
               <label className={styles.field}>
                 {L(["姓名", "Name"])}

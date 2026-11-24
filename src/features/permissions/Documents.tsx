@@ -188,10 +188,7 @@ export function DocumentsSection({ active }: { readonly active: boolean }) {
   return (
     <>
       <section className={styles.catalogCard}>
-        <ListHeader
-          title={t("permissions.tabs.documents")}
-          description={t("permissions.documentListHint")}
-        />
+        <ListHeader title={t("permissions.tabs.documents")} />
         <form
           className={styles.toolbar}
           onSubmit={(event) => {
@@ -401,7 +398,6 @@ function DocumentPanel({
     confirmation: (draft, base) => ({
       subject: `${record.title} · ${documentStatusLabel(t, record.status)}`,
       diff: documentDiff(t, data, draft, base),
-      impact: t("permissions.documentSaveImpact"),
       fullBefore: describeDocument(t, data, base),
       fullAfter: describeDocument(t, data, draft),
     }),
@@ -527,9 +523,6 @@ function DocumentPanel({
           </>
         }
       >
-        <p className={styles.inlineNote}>
-          {t("permissions.documentPanelHint")}
-        </p>
         {record.valid ? null : (
           <p className={styles.error} role="alert">
             {t("permissions.attributesNotReady")}

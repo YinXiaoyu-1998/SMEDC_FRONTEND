@@ -57,10 +57,7 @@ function PageHeader({
         <span className={styles.pageIcon}>
           <AdminIcon name="shield" />
         </span>
-        <div>
-          <h1 className={styles.pageTitle}>{t("pages.permissions.title")}</h1>
-          <p className={styles.subtitle}>{t("permissions.subtitle")}</p>
-        </div>
+        <h1 className={styles.pageTitle}>{t("pages.permissions.title")}</h1>
       </div>
       {action === undefined ? null : (
         <ActionButton

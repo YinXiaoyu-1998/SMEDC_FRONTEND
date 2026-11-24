@@ -136,7 +136,6 @@ export function WorkflowEditor({
         </span>
         <div className={styles.enterpriseInfo}>
           <h2 className={styles.enterpriseName}>{enterpriseName}</h2>
-          <p className={styles.hint}>{w("noReadAccess")}</p>
           <p className={styles.hint}>{w("installHelp")}</p>
         </div>
       </div>

@@ -11,7 +11,7 @@ import styles from "./ConfirmDialog.module.css";
 export interface ConfirmDialogProps<Prepared> {
   readonly flow: ConfirmFlow<Prepared>;
   readonly title: string;
-  readonly description: string;
+  readonly description?: string;
   readonly confirmLabel: string;
   readonly cancelLabel: string;
   readonly children?: ReactNode;
@@ -59,11 +59,16 @@ export function ConfirmDialog<Prepared>({
         <Dialog.Content
           className={[styles.content, className].filter(Boolean).join(" ")}
           onCloseAutoFocus={handleCloseAutoFocus}
+          {...(description === undefined
+            ? { "aria-describedby": undefined }
+            : {})}
         >
           <Dialog.Title className={styles.title}>{title}</Dialog.Title>
-          <Dialog.Description className={styles.description}>
-            {description}
-          </Dialog.Description>
+          {description === undefined ? null : (
+            <Dialog.Description className={styles.description}>
+              {description}
+            </Dialog.Description>
+          )}
           {children === undefined ? null : (
             <div className={styles.body}>{children}</div>
           )}

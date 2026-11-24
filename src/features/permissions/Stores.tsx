@@ -102,7 +102,6 @@ function EnterpriseDirectory() {
     >
       <ListHeader
         title={t("permissions.enterpriseSection")}
-        description={t("permissions.enterpriseSectionHint")}
         action={
           <Link to={appPaths.directory(scope.orgId)}>
             {t("permissions.goToDirectory")}
@@ -367,9 +366,6 @@ function EnterprisePanel({
             {t(permissionsErrorKey(previewError))}
           </p>
         )}
-        <p className={styles.inlineNote}>
-          {t("permissions.enterprisePreviewHint")}
-        </p>
         {save.conflict ? (
           save.conflictConfirmation === null ? (
             <div className={styles.conflict} role="alert">
