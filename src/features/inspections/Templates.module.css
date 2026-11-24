@@ -132,20 +132,63 @@
 .dragHandle {
   cursor: grab;
   touch-action: none;
+  user-select: none;
 }
 
-.question[data-dragging] {
-  opacity: 0.55;
+.questionSlot {
+  position: relative;
+  display: grid;
+  min-inline-size: 0;
 }
 
-.question[data-dragging] .dragHandle {
+.question {
+  background: var(--color-bg);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.questionSlot[data-dragging] {
+  z-index: 1;
+  outline: 1px dashed var(--color-accent);
+  outline-offset: -1px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
   cursor: grabbing;
 }
 
-.question[data-drop="before"] {
-  border-block-start-color: currentColor;
+.questionSlot[data-dragging] > .question {
+  position: fixed;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow: 0 10px 26px rgb(23 32 51 / 18%);
+  will-change: transform;
 }
 
-.question[data-drop="after"] {
-  border-block-end-color: currentColor;
+.questionSlot[data-drop]::after {
+  position: absolute;
+  z-index: 2;
+  inset-inline: 0;
+  block-size: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  content: "";
+  pointer-events: none;
+}
+
+.questionSlot[data-drop="before"]::after {
+  inset-block-start: calc(var(--space-2) * -1);
+}
+
+.questionSlot[data-drop="after"]::after {
+  inset-block-end: calc(var(--space-2) * -1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .question {
+    transition: none;
+  }
 }
