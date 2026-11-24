@@ -305,6 +305,9 @@ it("saves all five component kinds with stable identities and activates only the
     target: { value: "正常" },
   });
   expect(
+    screen.queryByRole("button", { name: /^(上移|下移)$/ }),
+  ).not.toBeInTheDocument();
+  expect(
     screen.queryByRole("button", { name: "启用模板" }),
   ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));

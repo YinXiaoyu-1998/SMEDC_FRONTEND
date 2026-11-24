@@ -9,7 +9,6 @@ import {
   copyQuestion,
   newComponent,
   newQuestion,
-  rearrange,
   type ComponentInput,
   type QuestionInput,
   type TemplateDraft,
@@ -380,20 +379,6 @@ function QuestionEditor({
               <div className={styles.toolbar}>
                 <ActionButton
                   variant="ghost"
-                  label={t("up")}
-                  disabled={i === 0}
-                  onRun={() =>
-                    components(rearrange(question.components, i, -1))
-                  }
-                />
-                <ActionButton
-                  variant="ghost"
-                  label={t("down")}
-                  disabled={i === question.components.length - 1}
-                  onRun={() => components(rearrange(question.components, i, 1))}
-                />
-                <ActionButton
-                  variant="ghost"
                   label={t("remove")}
                   onRun={() =>
                     components(question.components.filter((_, j) => i !== j))
@@ -515,28 +500,6 @@ function ComponentEditor({
                   }}
                 />
               </Field>
-              <ActionButton
-                variant="ghost"
-                label={t("up")}
-                disabled={index === 0}
-                onRun={() =>
-                  onChange({
-                    ...component,
-                    options: rearrange(options, index, -1),
-                  })
-                }
-              />
-              <ActionButton
-                variant="ghost"
-                label={t("down")}
-                disabled={index === options.length - 1}
-                onRun={() =>
-                  onChange({
-                    ...component,
-                    options: rearrange(options, index, 1),
-                  })
-                }
-              />
               <ActionButton
                 variant="ghost"
                 label={t("removeOption")}

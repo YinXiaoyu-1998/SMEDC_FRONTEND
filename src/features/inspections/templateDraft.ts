@@ -126,14 +126,6 @@ export function copyQuestion(question: QuestionInput): QuestionInput {
   };
 }
 
-export function rearrange<T>(items: T[], index: number, shift: -1 | 1): T[] {
-  const next = index + shift;
-  if (next < 0 || next >= items.length) return items;
-  const copy = [...items];
-  [copy[index], copy[next]] = [copy[next]!, copy[index]!];
-  return copy;
-}
-
 export function sameDraft(a: TemplateDraft, b: TemplateDraft): boolean {
   return stableSerialize(a) === stableSerialize(b);
 }
