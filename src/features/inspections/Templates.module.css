@@ -102,3 +102,50 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+.questionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.questionToggle,
+.dragHandle {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: var(--space-2);
+  font: inherit;
+}
+
+.questionToggle {
+  flex: 1 1 10rem;
+  display: flex;
+  gap: var(--space-2);
+  text-align: start;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.question[data-dragging] {
+  opacity: 0.55;
+}
+
+.question[data-dragging] .dragHandle {
+  cursor: grabbing;
+}
+
+.question[data-drop="before"] {
+  border-block-start-color: currentColor;
+}
+
+.question[data-drop="after"] {
+  border-block-end-color: currentColor;
+}

@@ -38,10 +38,9 @@ export function draftFromPreview(
     title,
     copyMode: copyMode ?? null,
     storeIds,
-    questions: questions.map(({ questionId, title, category, components }) => ({
+    questions: questions.map(({ questionId, title, components }) => ({
       questionId,
       title,
-      category,
       components: components.map((component) =>
         component.kind === "score"
           ? {
@@ -112,7 +111,6 @@ export function newQuestion(): QuestionInput {
   return {
     questionId: crypto.randomUUID(),
     title: "",
-    category: "",
     components: [newComponent("sop")],
   };
 }

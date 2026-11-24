@@ -55,9 +55,6 @@ export function QuestionEditor(props: QuestionEditorProps) {
   return (
     <li className={styles.question}>
       <header>
-        {question.category && (
-          <p className={styles.muted}>{question.category}</p>
-        )}
         <h3>{question.title}</h3>
       </header>
       {question.components.map((component) => {

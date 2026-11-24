@@ -700,7 +700,6 @@ export const bInspectionsTemplatesCreateSchema8Schema = z.union([
 export const bInspectionsTemplatesCreateSchema7Schema = z.strictObject({
   questionId: bInspectionsTemplatesCreateSchema0Schema,
   title: bInspectionsTemplatesCreateSchema3Schema,
-  category: z.string().max(120),
   components: z.array(bInspectionsTemplatesCreateSchema8Schema).max(12),
 });
 
@@ -827,7 +826,6 @@ export const bInspectionsTemplatesCreateActiveSchema8Schema = z.union([
 export const bInspectionsTemplatesCreateActiveSchema7Schema = z.strictObject({
   questionId: bInspectionsTemplatesCreateActiveSchema0Schema,
   title: bInspectionsTemplatesCreateActiveSchema3Schema,
-  category: z.string().max(120),
   components: z.array(bInspectionsTemplatesCreateActiveSchema8Schema).max(12),
 });
 
@@ -1084,7 +1082,6 @@ export const bInspectionsTemplatesSaveSchema6Schema = z.union([
 export const bInspectionsTemplatesSaveSchema5Schema = z.strictObject({
   questionId: bInspectionsTemplatesSaveSchema3Schema,
   title: bInspectionsTemplatesSaveSchema0Schema,
-  category: z.string().max(120),
   components: z.array(bInspectionsTemplatesSaveSchema6Schema).max(12),
 });
 

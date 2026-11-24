@@ -427,8 +427,7 @@ function DraftSummary({
       {draft.questions.map((question, index) => (
         <details key={question.questionId}>
           <summary>
-            {index + 1}. {question.title || t("questionTitle")} ·{" "}
-            {question.category}
+            {index + 1}. {question.title || t("questionTitle")}
           </summary>
           <ul>
             {question.components.map((component) => (
