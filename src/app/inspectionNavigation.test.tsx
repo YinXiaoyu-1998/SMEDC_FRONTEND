@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -81,26 +81,61 @@ describe("巡检导航与路由", () => {
     expect(screen.getByRole("heading", { name: "巡检" })).toBeInTheDocument();
   });
 
-  it("仅模板维护账号看到独立的巡检模板入口", async () => {
+  it("仅模板维护账号从统一巡检入口进入模板页", async () => {
     const { router } = renderApp({
       session: templateMaintainerSession,
       initialEntries: ["/ledger"],
     });
 
-    expect(screen.getByRole("link", { name: "巡检模板" })).toHaveAttribute(
-      "href",
-      "/inspections/templates",
-    );
-    expect(
-      screen.queryByRole("link", { name: "巡检" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "管理设置" }),
-    ).not.toBeInTheDocument();
+    const primary = within(screen.getByRole("navigation", { name: "主导航" }));
+    const entry = primary.getByRole("link", { name: "巡检" });
+    expect(entry).toHaveAttribute("href", "/inspections/templates");
+    expect(primary.queryByRole("link", { name: "巡检模板" })).toBeNull();
+    expect(primary.queryByRole("link", { name: "管理设置" })).toBeNull();
+    fireEvent.click(entry);
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/ledger");
+      expect(router.state.location.pathname).toBe("/inspections/templates");
     });
+    const sections = within(
+      screen.getByRole("navigation", { name: "巡检子导航" }),
+    );
+    expect(sections.getByRole("link", { name: "巡检模板" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(sections.queryByRole("link", { name: "巡检副本" })).toBeNull();
+  });
+
+  it("同时有两项权限时，巡检子页签切换并高亮当前页", async () => {
+    const { router } = renderApp({
+      session: inspectionLeadSession,
+      initialEntries: ["/inspections"],
+    });
+    const primary = within(screen.getByRole("navigation", { name: "主导航" }));
+    expect(primary.queryByRole("link", { name: "巡检模板" })).toBeNull();
+    const sections = () =>
+      within(screen.getByRole("navigation", { name: "巡检子导航" }));
+    expect(sections().getByRole("link", { name: "巡检副本" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    fireEvent.click(sections().getByRole("link", { name: "巡检模板" }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/inspections/templates");
+    });
+    expect(primary.getByRole("link", { name: "巡检" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(sections().getByRole("link", { name: "巡检模板" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      sections().getByRole("link", { name: "巡检副本" }),
+    ).not.toHaveAttribute("aria-current");
   });
 
   it("仅模板维护账号访问根路径时进入巡检模板", async () => {

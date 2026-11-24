@@ -1,0 +1,31 @@
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: var(--space-3);
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tab:hover,
+.tab[aria-current="page"] {
+  color: var(--color-accent-strong);
+}
+
+.tab[aria-current="page"] {
+  border-bottom-color: var(--color-accent);
+}
+
+.tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
