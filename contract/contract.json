@@ -8855,7 +8855,7 @@
             "humanChallengeToken": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 2048
+              "maxLength": 4096
             }
           },
           "required": ["email"],
@@ -8916,11 +8916,11 @@
                 "type": "string",
                 "const": "start"
               },
-              "siteKey": {
+              "captcha": {
                 "$ref": "#/$defs/r_registration_session___schema0"
               }
             },
-            "required": ["status", "siteKey"],
+            "required": ["status", "captcha"],
             "additionalProperties": false
           },
           {
@@ -8930,7 +8930,7 @@
                 "type": "string",
                 "const": "sent"
               },
-              "siteKey": {
+              "captcha": {
                 "$ref": "#/$defs/r_registration_session___schema0"
               },
               "email": {
@@ -8952,7 +8952,7 @@
             },
             "required": [
               "status",
-              "siteKey",
+              "captcha",
               "email",
               "csrfToken",
               "expiresAt",
@@ -8967,7 +8967,7 @@
                 "type": "string",
                 "const": "verified"
               },
-              "siteKey": {
+              "captcha": {
                 "$ref": "#/$defs/r_registration_session___schema0"
               },
               "email": {
@@ -8977,7 +8977,7 @@
                 "$ref": "#/$defs/r_registration_session___schema2"
               }
             },
-            "required": ["status", "siteKey", "email", "csrfToken"],
+            "required": ["status", "captcha", "email", "csrfToken"],
             "additionalProperties": false
           },
           {
@@ -8987,7 +8987,7 @@
                 "type": "string",
                 "const": "email_in_use"
               },
-              "siteKey": {
+              "captcha": {
                 "$ref": "#/$defs/r_registration_session___schema0"
               },
               "email": {
@@ -8997,14 +8997,25 @@
                 "$ref": "#/$defs/r_registration_session___schema2"
               }
             },
-            "required": ["status", "siteKey", "email", "csrfToken"],
+            "required": ["status", "captcha", "email", "csrfToken"],
             "additionalProperties": false
           }
         ],
         "$defs": {
           "r_registration_session___schema0": {
-            "type": "string",
-            "minLength": 1
+            "type": "object",
+            "properties": {
+              "prefix": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]{1,64}$"
+              },
+              "sceneId": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
+            },
+            "required": ["prefix", "sceneId"],
+            "additionalProperties": false
           },
           "r_registration_session___schema1": {
             "type": "string",

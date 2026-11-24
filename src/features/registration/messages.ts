@@ -32,6 +32,8 @@ export const registrationMessages = {
     "重新开始邮箱验证",
     "Start email verification again",
   ],
+  "registration.humanCheck": ["开始人机验证", "Start verification"],
+  "registration.humanVerified": ["人机验证已完成", "Challenge completed"],
   "registration.challengeError": [
     "人机验证加载失败，请刷新本页后重试。",
     "The human check could not load. Refresh this page to try again.",

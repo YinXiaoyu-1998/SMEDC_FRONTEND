@@ -1343,7 +1343,10 @@ export const rPermissionsMeReadSchema3Schema = z.strictObject({
 
 export const bPermissionsStoresUpsertSchema0Schema = z.string().min(1).max(255);
 
-export const rRegistrationSessionSchema0Schema = z.string().min(1);
+export const rRegistrationSessionSchema0Schema = z.strictObject({
+  prefix: z.string().regex(new RegExp("^[A-Za-z0-9]{1,64}$")),
+  sceneId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
+});
 
 export const rRegistrationSessionSchema1Schema = z.string().min(1).max(320);
 
@@ -8300,7 +8303,7 @@ export type RegistrationCompleteResponse = z.infer<
 
 export const registrationSendCodeBodySchema = z.strictObject({
   email: z.string().min(1).max(320),
-  humanChallengeToken: z.string().min(1).max(2048).optional(),
+  humanChallengeToken: z.string().min(1).max(4096).optional(),
 });
 
 export type RegistrationSendCodeBody = z.infer<
@@ -8362,11 +8365,11 @@ export type RegistrationSessionQuery = z.infer<
 export const registrationSessionResponseSchema = z.union([
   z.strictObject({
     status: z.literal("start"),
-    siteKey: rRegistrationSessionSchema0Schema,
+    captcha: rRegistrationSessionSchema0Schema,
   }),
   z.strictObject({
     status: z.literal("sent"),
-    siteKey: rRegistrationSessionSchema0Schema,
+    captcha: rRegistrationSessionSchema0Schema,
     email: rRegistrationSessionSchema1Schema,
     csrfToken: rRegistrationSessionSchema2Schema,
     expiresAt: z
@@ -8386,13 +8389,13 @@ export const registrationSessionResponseSchema = z.union([
   }),
   z.strictObject({
     status: z.literal("verified"),
-    siteKey: rRegistrationSessionSchema0Schema,
+    captcha: rRegistrationSessionSchema0Schema,
     email: rRegistrationSessionSchema1Schema,
     csrfToken: rRegistrationSessionSchema2Schema,
   }),
   z.strictObject({
     status: z.literal("email_in_use"),
-    siteKey: rRegistrationSessionSchema0Schema,
+    captcha: rRegistrationSessionSchema0Schema,
     email: rRegistrationSessionSchema1Schema,
     csrfToken: rRegistrationSessionSchema2Schema,
   }),

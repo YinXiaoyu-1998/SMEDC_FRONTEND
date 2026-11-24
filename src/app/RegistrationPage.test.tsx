@@ -28,7 +28,7 @@ it("已验证邮箱的本人创建首管后进入新组织权限页", async () =
         return jsonResponse({
           status: "verified",
           email,
-          siteKey: "site-key",
+          captcha: { prefix: "synthetic", sceneId: "registration-scene" },
           csrfToken: "csrf-value",
         });
       if (path.endsWith("/registration/complete")) {
@@ -72,7 +72,7 @@ it("邮箱在运维并发开户后引导登录，不能再提交首管开户", a
         return jsonResponse({
           status: "verified",
           email: "owner@example.com",
-          siteKey: "site-key",
+          captcha: { prefix: "synthetic", sceneId: "registration-scene" },
           csrfToken: "csrf",
         });
       return jsonResponse(
@@ -103,17 +103,16 @@ it("发信失败后恢复浏览器绑定，等待冷却后在当前页重试", a
   const baseTime = Date.now();
   let bound = false;
   const sendHeaders: Headers[] = [];
-  vi.stubGlobal("turnstile", {
-    ready: (callback: () => void) => callback(),
-    render: (
-      _: HTMLElement,
-      options: { callback: (token: string) => void },
-    ) => {
-      options.callback("human-proof");
-      return "widget";
+  vi.stubGlobal(
+    "initAliyunCaptcha",
+    (options: {
+      success: (token: string) => void;
+      getInstance: (instance: object) => void;
+    }) => {
+      options.getInstance({});
+      options.success("human-proof");
     },
-    remove: () => {},
-  });
+  );
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -124,12 +123,15 @@ it("发信失败后恢复浏览器绑定，等待冷却后在当前页重试", a
             ? {
                 status: "sent",
                 email,
-                siteKey: "site-key",
+                captcha: { prefix: "synthetic", sceneId: "registration-scene" },
                 csrfToken: "recovered-csrf",
                 expiresAt: new Date(baseTime + 600_000).toISOString(),
                 resendAvailableAt: new Date(baseTime + 60_000).toISOString(),
               }
-            : { status: "start", siteKey: "site-key" },
+            : {
+                status: "start",
+                captcha: { prefix: "synthetic", sceneId: "registration-scene" },
+              },
         );
       if (path.endsWith("/registration/send-code")) {
         sendHeaders.push(new Headers(init?.headers));

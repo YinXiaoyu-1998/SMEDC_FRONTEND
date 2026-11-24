@@ -1,76 +1,125 @@
-import { useEffect, useRef, useState } from "react";
-import { useText } from "@/i18n/useText";
+import { useEffect, useId, useState } from "react";
 
-interface Turnstile {
-  ready(fn: () => void): void;
-  render(element: HTMLElement, options: Record<string, unknown>): string;
-  remove(id: string): void;
-}
+import { useText } from "@/i18n/useText";
+import { Button } from "@/ui/Button";
+
+const sdkUrl =
+  "https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js";
+
+type CaptchaOptions = {
+  SceneId: string;
+  mode: "popup";
+  element: string;
+  button: string;
+  language: "cn" | "en";
+  success: (parameter: string) => void;
+  fail: () => void;
+  getInstance: (instance: { destroy?: () => void }) => void;
+  onError: () => void;
+};
+
 declare global {
   interface Window {
-    turnstile?: Turnstile;
+    AliyunCaptchaConfig?: { region: "cn"; prefix: string };
+    initAliyunCaptcha?: (options: CaptchaOptions) => void;
   }
 }
 
+let sdkLoad: Promise<void> | undefined;
+function loadCaptchaSdk(prefix: string): Promise<void> {
+  window.AliyunCaptchaConfig = { region: "cn", prefix };
+  if (window.initAliyunCaptcha) return Promise.resolve();
+  sdkLoad ??= new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = sdkUrl;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      script.remove();
+      reject(new Error("Captcha script unavailable"));
+    };
+    document.head.append(script);
+  }).catch((error: unknown) => {
+    sdkLoad = undefined;
+    throw error;
+  });
+  return sdkLoad;
+}
+
 export function Challenge({
-  siteKey,
+  prefix,
+  sceneId,
   onToken,
 }: {
-  siteKey: string;
+  prefix: string;
+  sceneId: string;
   onToken: (token: string) => void;
 }) {
-  const container = useRef<HTMLDivElement>(null);
+  const id = useId().replace(/[^\w-]/g, "");
   const { t, locale } = useText();
+  const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [verified, setVerified] = useState(false);
+
   useEffect(() => {
     let active = true;
-    let widget: string | undefined;
-    const failedChallenge = () => {
-      if (active) {
-        setFailed(true);
-        onToken("");
-      }
-    };
-    const mount = () =>
-      window.turnstile?.ready(() => {
-        if (!active || !container.current) return;
-        widget = window.turnstile!.render(container.current, {
-          sitekey: siteKey,
-          action: "registration",
-          language: locale === "zh" ? "zh-cn" : "en",
-          size: "flexible",
-          callback: (token: string) => {
-            if (active) {
-              setFailed(false);
-              onToken(token);
-            }
-          },
-          "expired-callback": () => {
-            if (active) onToken("");
-          },
-          "error-callback": failedChallenge,
-        });
-      });
-    const script = document.createElement("script");
-    if (window.turnstile) mount();
-    else {
-      script.src =
-        "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async = true;
-      script.onload = mount;
-      script.onerror = failedChallenge;
-      document.head.append(script);
-    }
-    return () => {
-      active = false;
-      if (widget !== undefined) window.turnstile?.remove(widget);
-      script.remove();
+    let instance: { destroy?: () => void } | undefined;
+    const failure = () => {
+      if (!active) return;
+      setFailed(true);
+      setVerified(false);
       onToken("");
     };
-  }, [siteKey, onToken, locale]);
+    void loadCaptchaSdk(prefix)
+      .then(() => {
+        if (!active) return;
+        if (!window.initAliyunCaptcha) return failure();
+        window.initAliyunCaptcha({
+          SceneId: sceneId,
+          mode: "popup",
+          element: `#registration-captcha-${id}`,
+          button: `#registration-captcha-button-${id}`,
+          language: locale === "zh" ? "cn" : "en",
+          success(parameter) {
+            if (!active) return;
+            setFailed(false);
+            setVerified(true);
+            onToken(parameter);
+          },
+          fail() {
+            if (!active) return;
+            setVerified(false);
+            onToken("");
+          },
+          getInstance(nextInstance) {
+            if (!active) {
+              nextInstance.destroy?.();
+              return;
+            }
+            instance = nextInstance;
+            setReady(true);
+          },
+          onError: failure,
+        });
+      })
+      .catch(failure);
+    return () => {
+      active = false;
+      instance?.destroy?.();
+      onToken("");
+    };
+  }, [id, locale, onToken, prefix, sceneId]);
+
   return (
     <>
-      <div ref={container} />
+      <div id={`registration-captcha-${id}`} />
+      <Button
+        id={`registration-captcha-button-${id}`}
+        variant="secondary"
+        disabled={!ready || verified}
+      >
+        {t(verified ? "registration.humanVerified" : "registration.humanCheck")}
+      </Button>
       {failed && <p role="alert">{t("registration.challengeError")}</p>}
     </>
   );

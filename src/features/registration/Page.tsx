@@ -113,7 +113,7 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
           ...sent,
           status: "sent",
           email: recipient,
-          siteKey: session.siteKey,
+          captcha: session.captcha,
         });
         setCode("");
         setNow(Date.now());
@@ -152,7 +152,7 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
       setSession({
         status: result.status,
         email: session.email,
-        siteKey: session.siteKey,
+        captcha: session.captcha,
         csrfToken: session.csrfToken,
       });
     } catch (failure) {
@@ -252,8 +252,9 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
               </label>
               {!sameRecipient && (
                 <Challenge
-                  key={challengeAttempt}
-                  siteKey={session.siteKey}
+                  key={`${challengeAttempt}-${locale}`}
+                  prefix={session.captcha.prefix}
+                  sceneId={session.captcha.sceneId}
                   onToken={setToken}
                 />
               )}
