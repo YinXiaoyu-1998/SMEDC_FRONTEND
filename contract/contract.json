@@ -5546,7 +5546,7 @@
                 },
                 "mode": {
                   "type": "string",
-                  "enum": ["legacy", "preparing", "enabled", "suspended"]
+                  "enum": ["enabled", "suspended"]
                 },
                 "authorizationVersion": {
                   "type": "string"
@@ -5853,7 +5853,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["legacy", "preparing", "enabled", "suspended"]
+            "enum": ["enabled", "suspended"]
           },
           "authorizationVersion": {
             "type": "string"
@@ -7120,147 +7120,6 @@
       ]
     },
     {
-      "id": "permissions.cutover.activate",
-      "method": "POST",
-      "path": "/api/web/v1/orgs/:orgId/permissions/cutover/activate",
-      "auth": "session-write",
-      "summary": "按期望版本并显式确认后启用业务授权",
-      "request": {
-        "params": {
-          "type": "object",
-          "properties": {
-            "orgId": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,64}$"
-            }
-          },
-          "required": ["orgId"],
-          "additionalProperties": false
-        },
-        "body": {
-          "type": "object",
-          "properties": {
-            "expectedVersion": {
-              "type": "string",
-              "pattern": "^(0|[1-9]\\d*)$",
-              "description": "客户端读到的 authorizationVersion；过期写入整笔回滚。"
-            },
-            "confirm": {
-              "type": "boolean",
-              "const": true
-            }
-          },
-          "required": ["expectedVersion", "confirm"],
-          "additionalProperties": false
-        }
-      },
-      "response": {
-        "type": "object",
-        "properties": {
-          "authorizationVersion": {
-            "type": "string"
-          },
-          "value": {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "enum": ["legacy", "preparing", "enabled", "suspended"]
-              }
-            },
-            "required": ["mode"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["authorizationVersion", "value"],
-        "additionalProperties": false
-      },
-      "errors": [
-        "AUTHORIZATION_ADMIN_REQUIRED",
-        "AUTHORIZATION_CUTOVER_NOT_READY",
-        "AUTHORIZATION_SUSPENDED",
-        "AUTHORIZATION_VERSION_CONFLICT",
-        "BROWSER_ACCESS_DENIED",
-        "BROWSER_SECURITY_CHECK_FAILED",
-        "BROWSER_SIGN_IN_REQUIRED",
-        "INTERNAL_ERROR",
-        "INVALID_PERMISSION_CONFIGURATION",
-        "WEB_API_INVALID_REQUEST"
-      ]
-    },
-    {
-      "id": "permissions.cutover.read",
-      "method": "GET",
-      "path": "/api/web/v1/orgs/:orgId/permissions/cutover",
-      "auth": "session",
-      "summary": "检查业务授权启用前的准备项",
-      "request": {
-        "params": {
-          "type": "object",
-          "properties": {
-            "orgId": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,64}$"
-            }
-          },
-          "required": ["orgId"],
-          "additionalProperties": false
-        }
-      },
-      "response": {
-        "type": "object",
-        "properties": {
-          "authorizationVersion": {
-            "type": "string"
-          },
-          "mode": {
-            "type": "string",
-            "enum": ["legacy", "preparing", "enabled", "suspended"]
-          },
-          "ready": {
-            "type": "boolean"
-          },
-          "missing": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "type": "string"
-                },
-                "targetId": {
-                  "type": "string"
-                }
-              },
-              "required": ["code", "targetId"],
-              "additionalProperties": false
-            }
-          },
-          "accountsWithoutGrants": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "authorizationVersion",
-          "mode",
-          "ready",
-          "missing",
-          "accountsWithoutGrants"
-        ],
-        "additionalProperties": false
-      },
-      "errors": [
-        "AUTHORIZATION_ADMIN_REQUIRED",
-        "BROWSER_ACCESS_DENIED",
-        "BROWSER_SIGN_IN_REQUIRED",
-        "INTERNAL_ERROR",
-        "WEB_API_INVALID_REQUEST"
-      ]
-    },
-    {
       "id": "permissions.cutover.suspend",
       "method": "POST",
       "path": "/api/web/v1/orgs/:orgId/permissions/cutover/suspend",
@@ -7306,7 +7165,7 @@
             "properties": {
               "mode": {
                 "type": "string",
-                "enum": ["legacy", "preparing", "enabled", "suspended"]
+                "const": "suspended"
               }
             },
             "required": ["mode"],
@@ -8467,7 +8326,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["legacy", "preparing", "enabled", "suspended"]
+            "enum": ["enabled", "suspended"]
           },
           "authorizationVersion": {
             "type": "string"
@@ -8862,6 +8721,367 @@
         "INVALID_PERMISSION_CONFIGURATION",
         "WEB_API_INVALID_REQUEST"
       ]
+    },
+    {
+      "id": "registration.complete",
+      "method": "POST",
+      "path": "/api/web/v1/registration/complete",
+      "auth": "anonymous-write",
+      "summary": "创建已验证邮箱的新企业和首位管理员并登录，需要注册 CSRF 令牌",
+      "request": {
+        "body": {
+          "type": "object",
+          "properties": {
+            "organizationName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "displayName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "password": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": ["organizationName", "displayName", "password"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "identity": {
+            "type": "object",
+            "properties": {
+              "userAccountId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "displayName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "email": {
+                "type": "string",
+                "minLength": 1
+              },
+              "orgId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "organizationName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "employee"]
+              },
+              "clearance": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              }
+            },
+            "required": [
+              "userAccountId",
+              "displayName",
+              "email",
+              "orgId",
+              "organizationName",
+              "role",
+              "clearance"
+            ],
+            "additionalProperties": false
+          },
+          "csrfToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "canManageSettings": {
+            "type": "boolean"
+          },
+          "canReadInspections": {
+            "type": "boolean"
+          },
+          "canFillInspections": {
+            "type": "boolean"
+          },
+          "canManageInspectionTemplates": {
+            "type": "boolean"
+          }
+        },
+        "required": ["identity", "csrfToken", "canManageSettings"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "REGISTRATION_CODE_EXPIRED",
+        "REGISTRATION_EMAIL_IN_USE",
+        "REGISTRATION_PASSWORD_REJECTED",
+        "REGISTRATION_UNAVAILABLE",
+        "REGISTRATION_VERIFICATION_REQUIRED",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 8192
+        }
+      }
+    },
+    {
+      "id": "registration.sendCode",
+      "method": "POST",
+      "path": "/api/web/v1/registration/send-code",
+      "auth": "anonymous-write",
+      "summary": "发出或重发注册邮箱验证码，已有注册会话时需要 CSRF 令牌",
+      "request": {
+        "body": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 320
+            },
+            "humanChallengeToken": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          },
+          "required": ["email"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "csrfToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "resendAvailableAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": ["csrfToken", "expiresAt", "resendAvailableAt"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "REGISTRATION_DELIVERY_FAILED",
+        "REGISTRATION_HUMAN_CHECK_FAILED",
+        "REGISTRATION_RATE_LIMITED",
+        "REGISTRATION_UNAVAILABLE",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 8192
+        }
+      }
+    },
+    {
+      "id": "registration.session",
+      "method": "GET",
+      "path": "/api/web/v1/registration/session",
+      "auth": "anonymous",
+      "summary": "读取当前浏览器的注册进度和人机验证配置",
+      "request": {},
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "start"
+              },
+              "captcha": {
+                "$ref": "#/$defs/r_registration_session___schema0"
+              }
+            },
+            "required": ["status", "captcha"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "sent"
+              },
+              "captcha": {
+                "$ref": "#/$defs/r_registration_session___schema0"
+              },
+              "email": {
+                "$ref": "#/$defs/r_registration_session___schema1"
+              },
+              "csrfToken": {
+                "$ref": "#/$defs/r_registration_session___schema2"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              "resendAvailableAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              }
+            },
+            "required": [
+              "status",
+              "captcha",
+              "email",
+              "csrfToken",
+              "expiresAt",
+              "resendAvailableAt"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "verified"
+              },
+              "captcha": {
+                "$ref": "#/$defs/r_registration_session___schema0"
+              },
+              "email": {
+                "$ref": "#/$defs/r_registration_session___schema1"
+              },
+              "csrfToken": {
+                "$ref": "#/$defs/r_registration_session___schema2"
+              }
+            },
+            "required": ["status", "captcha", "email", "csrfToken"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "const": "email_in_use"
+              },
+              "captcha": {
+                "$ref": "#/$defs/r_registration_session___schema0"
+              },
+              "email": {
+                "$ref": "#/$defs/r_registration_session___schema1"
+              },
+              "csrfToken": {
+                "$ref": "#/$defs/r_registration_session___schema2"
+              }
+            },
+            "required": ["status", "captcha", "email", "csrfToken"],
+            "additionalProperties": false
+          }
+        ],
+        "$defs": {
+          "r_registration_session___schema0": {
+            "type": "object",
+            "properties": {
+              "prefix": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]{1,64}$"
+              },
+              "sceneId": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
+            },
+            "required": ["prefix", "sceneId"],
+            "additionalProperties": false
+          },
+          "r_registration_session___schema1": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 320
+          },
+          "r_registration_session___schema2": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "REGISTRATION_UNAVAILABLE"
+      ]
+    },
+    {
+      "id": "registration.verifyCode",
+      "method": "POST",
+      "path": "/api/web/v1/registration/verify-code",
+      "auth": "anonymous-write",
+      "summary": "验证当前注册会话的邮箱验证码，需要注册 CSRF 令牌",
+      "request": {
+        "body": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[0-9]{6}$"
+            }
+          },
+          "required": ["code"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["verified", "email_in_use"]
+          }
+        },
+        "required": ["status"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "REGISTRATION_ATTEMPTS_EXHAUSTED",
+        "REGISTRATION_CODE_EXPIRED",
+        "REGISTRATION_CODE_INVALID",
+        "REGISTRATION_UNAVAILABLE",
+        "REGISTRATION_VERIFICATION_REQUIRED",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 8192
+        }
+      }
     },
     {
       "id": "session.login",

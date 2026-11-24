@@ -10,18 +10,10 @@ export const permissionsMessages = {
   "permissions.tabs.dimensions": ["业务条件", "Business conditions"],
   "permissions.tabs.accounts": ["账号授权", "Account permissions"],
   "permissions.tabs.documents": ["普通文档", "Documents"],
-  "permissions.mode.legacy": [
-    "未启用 · 仍按原有规则读取",
-    "Not activated · original read rules apply",
-  ],
-  "permissions.mode.preparing": [
-    "准备中 · 仍按原有规则读取",
-    "Preparing · original read rules apply",
-  ],
   "permissions.mode.suspended": ["业务读取已暂停", "Business reads suspended"],
   "permissions.statusHint": [
-    "如需切换或恢复，请联系管理员或运维处理。",
-    "Contact your administrator or operator to switch or restore access.",
+    "如需恢复读取，请联系运维。",
+    "Contact your operator to restore access.",
   ],
   "permissions.loading": ["正在读取配置…", "Loading configuration…"],
   "permissions.reload": ["重新读取配置", "Reload configuration"],
@@ -264,10 +256,6 @@ export const permissionsMessages = {
     "Sources and real-data backfills are never inferred. Review missing items separately and obtain approval.",
   ],
   "permissions.empty": ["暂无条目", "No items yet"],
-  "permissions.error.notReady": [
-    "尚有缺项，暂不能启用",
-    "Missing items prevent activation",
-  ],
   "permissions.error.suspended": [
     "业务读取已暂停，请联系运维核对恢复要求。",
     "Business reads are suspended. Contact your operator about recovery.",

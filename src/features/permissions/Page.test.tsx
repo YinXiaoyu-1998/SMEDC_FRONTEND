@@ -18,7 +18,7 @@ import { INSPECTION_CATEGORY_KEY } from "./constants";
 
 interface MockState {
   version: string;
-  mode: "legacy" | "preparing" | "enabled" | "suspended";
+  mode: "enabled" | "suspended";
   clearance: number;
   categories: PermissionCategory[];
   stores: PermissionStore[];
@@ -124,7 +124,7 @@ function createState(): MockState {
     role: "admin",
     disabled: false,
     clearance: 2,
-    mode: "preparing",
+    mode: "enabled",
     authorizationVersion: "7",
     categories: [
       {
@@ -180,7 +180,7 @@ function createState(): MockState {
 
   return {
     version: "7",
-    mode: "preparing",
+    mode: "enabled",
     clearance: 2,
     categories: [
       categoryBusiness,
@@ -946,11 +946,7 @@ describe("权限设置页", () => {
     ).toBe(false);
   });
 
-  const statusModes = [
-    ["legacy", "未启用 · 仍按原有规则读取"],
-    ["preparing", "准备中 · 仍按原有规则读取"],
-    ["suspended", "业务读取已暂停"],
-  ] as const;
+  const statusModes = [["suspended", "业务读取已暂停"]] as const;
   it.each(statusModes)(
     "%s 模式只显示简短状态与联系提示",
     async (mode, label) => {
@@ -961,7 +957,7 @@ describe("权限设置页", () => {
 
       expect(await screen.findByText(label)).toBeInTheDocument();
       expect(
-        screen.getByText("如需切换或恢复，请联系管理员或运维处理。"),
+        screen.getByText("如需恢复读取，请联系运维。"),
       ).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "查看启用状态" })).toBeNull();
       expect(screen.queryByRole("tab", { name: "检查与启用" })).toBeNull();
@@ -975,9 +971,7 @@ describe("权限设置页", () => {
     await screen.findByRole("heading", { name: "文档类别" });
 
     expect(screen.queryByRole("region", { name: "业务权限状态" })).toBeNull();
-    expect(
-      screen.queryByText("如需切换或恢复，请联系管理员或运维处理。"),
-    ).toBeNull();
+    expect(screen.queryByText("如需恢复读取，请联系运维。")).toBeNull();
   });
 
   it("编辑固定类别密级时确认摘要只有密级一项，并按冻结版本提交", async () => {
@@ -1497,7 +1491,9 @@ describe("权限设置页", () => {
   });
 
   it("切换语言后分区与按钮使用英文词组", async () => {
-    renderPermissions();
+    const state = createState();
+    state.mode = "suspended";
+    renderPermissions({ state });
     await screen.findByRole("heading", { name: "文档类别" });
     fireEvent.click(screen.getByRole("button", { name: "English" }));
 
@@ -1510,13 +1506,9 @@ describe("权限设置页", () => {
     expect(
       screen.getByRole("button", { name: "Document categories" }),
     ).toBeInTheDocument();
+    expect(screen.getByText("Business reads suspended")).toBeInTheDocument();
     expect(
-      screen.getByText("Preparing · original read rules apply"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Contact your administrator or operator to switch or restore access.",
-      ),
+      screen.getByText("Contact your operator to restore access."),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "中文" }));

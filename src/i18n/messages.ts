@@ -1,9 +1,11 @@
+import { registrationMessages } from "@/features/registration/messages";
 import { ledgerMessages } from "@/features/ledger/messages";
 import { permissionsMessages } from "@/features/permissions/messages";
 import type { TextDictionary } from "@/i18n/text";
 
 // 这里只放跨业务复用的通用 UI 文案；业务文案由各 feature 通过 mergeText 合并进字典
 export const baseMessages = {
+  ...registrationMessages,
   "app.brand": ["企业智脑", "SMEDC"],
   "app.skipToContent": ["跳到主要内容", "Skip to main content"],
   "app.loading": ["正在加载", "Loading"],

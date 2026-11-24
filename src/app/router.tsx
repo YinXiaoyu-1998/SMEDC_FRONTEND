@@ -1,3 +1,4 @@
+import { RegistrationPage } from "@/features/registration/Page";
 import type { RouteObject } from "react-router";
 import { createBrowserRouter } from "react-router";
 
@@ -15,6 +16,16 @@ import { WorkflowsPage } from "@/features/workflows/Page";
 
 // 路由表独立导出：浏览器用 createBrowserRouter，测试用 createMemoryRouter 复用同一份定义
 export const routes: RouteObject[] = [
+  {
+    path: "/register",
+    element: <RegistrationPage verifyPage={false} />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    path: "/register/verify",
+    element: <RegistrationPage verifyPage />,
+    errorElement: <RouteErrorPage />,
+  },
   {
     element: <SessionGate />,
     errorElement: <RouteErrorPage />,

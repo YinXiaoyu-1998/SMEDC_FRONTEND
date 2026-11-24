@@ -24,7 +24,7 @@ function validateEmail(email: string): string | null {
 
 function validatePassword(password: string): string | null {
   if (password === "") return "login.error.passwordRequired";
-  if (password.length > PASSWORD_MAX_LENGTH)
+  if (Array.from(password.normalize("NFC")).length > PASSWORD_MAX_LENGTH)
     return "login.error.passwordTooLong";
   return null;
 }
@@ -179,6 +179,8 @@ export function LoginPage() {
             {t("login.submit")}
           </Button>
         </form>
+        <a href="/register">{t("registration.title")}</a>
+        <p>{t("registration.employee")}</p>
       </section>
     </main>
   );
