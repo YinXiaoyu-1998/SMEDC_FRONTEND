@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { PermissionCategory, PermissionsBundle } from "@/api/permissions";
+import { singleEnterpriseKey } from "@/features/singleEnterpriseKey";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
@@ -36,16 +37,16 @@ export function DocumentScopeEditor({
   readonly onCancel: () => void;
 }) {
   const { t } = useText();
-  const [draft, setDraft] = useState<DocumentScopeDraft>(
-    () => initial ?? emptyDocumentScope(),
+  const [baseline] = useState<DocumentScopeDraft>(
+    () =>
+      initial ?? {
+        ...emptyDocumentScope(),
+        enterpriseKey: singleEnterpriseKey(data.enterprises),
+      },
   );
+  const [draft, setDraft] = useState(baseline);
   const [issue, setIssue] = useState<string | null>(null);
-  const dirty =
-    initial === null
-      ? draft.enterpriseKey !== "" ||
-        draft.ownership !== "" ||
-        Object.keys(draft.dimensions).length > 0
-      : !sameScopeTuple(initial, draft);
+  const dirty = !sameScopeTuple(baseline, draft);
   const discardFlow = useConfirmFlow<void, void>({
     prepare: () => undefined,
     submit: () => {

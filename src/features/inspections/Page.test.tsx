@@ -136,9 +136,7 @@ async function selectScope() {
     initialEntries: [`/inspections?date=${scope.inspectionDate}`],
   });
   await screen.findByRole("option", { name: "样例企业" });
-  fireEvent.change(screen.getByLabelText("企业"), {
-    target: { value: scope.enterpriseKey },
-  });
+  expect(screen.getByLabelText("企业")).toHaveValue(scope.enterpriseKey);
   await screen.findByRole("option", { name: "东门店" });
   fireEvent.change(screen.getByLabelText("门店"), {
     target: { value: scope.storeId },
@@ -151,6 +149,70 @@ async function openSheet() {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+
+it.each([true, false])(
+  "only preselects a single inspection enterprise once the context proves completeness (store row: %s)",
+  async (hasStore) => {
+    const enterprise = {
+      kind: "enterprise",
+      enterpriseKey: scope.enterpriseKey,
+      enterpriseName: "样例企业",
+      canReadInspections: true,
+      canFillInspections: false,
+      canManageInspectionTemplates: false,
+    };
+    const fetchMock = mockInspectionApi(false, (url) => {
+      if (
+        !url.pathname.endsWith("/context") ||
+        url.searchParams.has("enterpriseKey")
+      ) {
+        return undefined;
+      }
+      const store = {
+        ...enterprise,
+        kind: "store",
+        storeId: scope.storeId,
+        officialName: "东门店",
+        retired: false,
+      };
+      return url.searchParams.has("cursor")
+        ? jsonResponse({
+            items: [
+              {
+                ...enterprise,
+                enterpriseKey: "other",
+                enterpriseName: "其他企业",
+              },
+            ],
+            nextCursor: null,
+          })
+        : jsonResponse({
+            items: hasStore ? [enterprise, store] : [enterprise],
+            nextCursor: "more-context",
+          });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderApp({
+      session: inspectingEmployeeSession,
+      initialEntries: ["/inspections"],
+    });
+
+    await screen.findByRole("option", { name: "样例企业" });
+    expect(screen.getByLabelText("企业")).toHaveValue(
+      hasStore ? scope.enterpriseKey : "",
+    );
+    if (hasStore) {
+      await screen.findByRole("option", { name: "东门店" });
+      expect(screen.getByLabelText("门店")).toHaveValue("");
+      expect(screen.queryByRole("button", { name: "加载更多" })).toBeNull();
+    } else {
+      expect(screen.getByLabelText("门店")).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: "加载更多" }));
+      await screen.findByRole("option", { name: "其他企业" });
+      expect(screen.getByLabelText("企业")).toHaveValue("");
+    }
+  },
+);
 
 it("shows the fixed SOP and missing photo without offering writes to a read-only store", async () => {
   vi.stubGlobal("fetch", mockInspectionApi(false));

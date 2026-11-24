@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 
 import type { PermissionsEnterprisesListResponse } from "@/api/generated/contract";
 import { appPaths } from "@/app/paths";
+import { singleEnterpriseKey } from "@/features/singleEnterpriseKey";
 import { ActionButton } from "@/ui/ActionButton";
 import { PageSection } from "@/ui/PageSection";
 import { ErrorNotice } from "@/features/workflows/ErrorNotice";
@@ -28,7 +29,8 @@ export function EnterprisePicker({
 }: EnterprisePickerProps) {
   const { w } = useWorkflowText();
   const navigate = useNavigate();
-  const [selected, setSelected] = useState("");
+  const [choice, setChoice] = useState<string>();
+  const selected = choice ?? singleEnterpriseKey(enterprises);
   const [busy, setBusy] = useState(false);
   const [fieldError, setFieldError] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -65,7 +67,7 @@ export function EnterprisePicker({
           disabled={busy}
           error={fieldError ? w("selectEnterpriseRequired") : undefined}
           onChange={(value) => {
-            setSelected(value);
+            setChoice(value);
             if (value !== "") setFieldError(false);
           }}
         />

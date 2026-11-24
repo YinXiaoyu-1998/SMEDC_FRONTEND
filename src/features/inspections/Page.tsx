@@ -8,6 +8,7 @@ import {
   type InspectionsDayResponse,
 } from "@/api/generated/contract";
 import { useSession } from "@/api/session";
+import { singleEnterpriseKey } from "@/features/singleEnterpriseKey";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { Field } from "@/ui/Field";
@@ -96,7 +97,7 @@ function ScopePicker({
   identityKey: string;
 }) {
   const t = useEmployeeText();
-  const [enterpriseKey, setEnterprise] = useState("");
+  const [selectedEnterprise, setEnterprise] = useState<string>();
   const [storeId, setStore] = useState("");
   const [search] = useSearchParams();
   const dateFromUrl = search.get("date");
@@ -108,14 +109,22 @@ function ScopePicker({
       : today(),
   );
   const enterpriseList = useContextPages(identityKey);
+  const contextItems =
+    enterpriseList.data?.pages.flatMap(({ items }) => items) ?? [];
+  const enterprises = contextItems.filter(
+    (item) => item.kind === "enterprise" && item.canReadInspections,
+  );
+  // The context API lists all enterprises before the first store.
+  const hasMoreEnterprises =
+    enterpriseList.hasNextPage &&
+    !contextItems.some((item) => item.kind === "store");
+  const enterpriseKey =
+    selectedEnterprise ??
+    (hasMoreEnterprises || isAccessError(enterpriseList.error)
+      ? ""
+      : singleEnterpriseKey(enterprises));
   const storeList = useContextPages(identityKey, enterpriseKey);
 
-  const enterprises =
-    enterpriseList.data?.pages.flatMap(({ items }) =>
-      items.filter(
-        (item) => item.kind === "enterprise" && item.canReadInspections,
-      ),
-    ) ?? [];
   const stores =
     storeList.data?.pages.flatMap(({ items }) =>
       items.filter((item) => item.kind === "store" && item.canReadInspections),
@@ -152,7 +161,7 @@ function ScopePicker({
               ))}
             </select>
           </Field>
-          {enterpriseList.hasNextPage && (
+          {hasMoreEnterprises && (
             <ActionButton
               label={t("loadMore")}
               variant="secondary"
@@ -166,7 +175,10 @@ function ScopePicker({
             <select
               value={storeId}
               disabled={!enterpriseKey}
-              onChange={(event) => setStore(event.target.value)}
+              onChange={(event) => {
+                setEnterprise(enterpriseKey);
+                setStore(event.target.value);
+              }}
             >
               <option value="">{t("choose")}</option>
               {stores.map(
@@ -224,7 +236,7 @@ function ScopePicker({
         />
       ) : (
         <p className={styles.muted}>
-          {(!enterpriseList.hasNextPage && enterprises.length === 0) ||
+          {(!hasMoreEnterprises && enterprises.length === 0) ||
           (enterpriseKey && !storeList.hasNextPage && stores.length === 0)
             ? t("unavailable")
             : t("chooseScope")}
