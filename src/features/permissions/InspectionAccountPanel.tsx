@@ -18,6 +18,7 @@ import { stableSerialize } from "@/ui/stableSerialize";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
 import { DraftFeedback } from "./components";
+import { INSPECTION_CATEGORY_KEY } from "./constants";
 import { DraftConflict, Panel, PermissionConfirmDialog } from "./panel";
 import styles from "./Permissions.module.css";
 import { usePermissionsScope } from "./scope";
@@ -160,6 +161,18 @@ export function InspectionAccountPanel({
       ? [{ storeId: store.storeId, name: store.officialName ?? store.name }]
       : [],
   );
+  const inspectionCategory = scope.bundle.categories.find(
+    (category) => category.key === INSPECTION_CATEGORY_KEY,
+  );
+  const setupGaps: string[] = [];
+  if (!enterpriseKey) {
+    setupGaps.push("permissions.inspection.missingEnterprise");
+  }
+  if (inspectionCategory === undefined) {
+    setupGaps.push("permissions.inspection.missingCategory");
+  } else if (inspectionCategory.confidentialityLevel === null) {
+    setupGaps.push("permissions.inspection.missingLevel");
+  }
   const discard = useConfirmFlow({ prepare: () => undefined, submit: onClose });
   const requestClose = () => {
     if (editorState.saving) return;
@@ -193,10 +206,22 @@ export function InspectionAccountPanel({
             onRun={() => void snapshot.refetch()}
           />
         ) : null}
-        {initialSnapshot &&
-        (!initialSnapshot.inspectionPermissions || !enterpriseKey) ? (
-          <p>{t("permissions.inspection.unavailable")}</p>
+        {initialSnapshot !== null &&
+        initialSnapshot.inspectionPermissions === undefined ? (
+          <p role="alert">{t("permissions.inspection.unavailable")}</p>
         ) : null}
+        {initialSnapshot === null || setupGaps.length === 0 ? null : (
+          <div className={styles.subcard}>
+            <p className={styles.inlineNote}>
+              {t("permissions.inspection.missing")}
+            </p>
+            <ul className={styles.stack}>
+              {setupGaps.map((key) => (
+                <li key={key}>{t(key)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {initialSnapshot?.inspectionPermissions && enterpriseKey ? (
           <>
             <Field label={t("permissions.inspection.enterprise")}>

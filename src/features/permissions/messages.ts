@@ -10,11 +10,6 @@ export const permissionsMessages = {
   "permissions.tabs.dimensions": ["业务条件", "Business conditions"],
   "permissions.tabs.accounts": ["账号授权", "Account permissions"],
   "permissions.tabs.documents": ["普通文档", "Documents"],
-  "permissions.tabs.readiness": ["检查与启用", "Check and activate"],
-  "permissions.intro": [
-    "先设置类别密级与业务目录，再为账号授权。保存配置与启用权限是两个独立步骤。",
-    "Set category levels and business directories, then grant account access. Saving and activation are separate steps.",
-  ],
   "permissions.mode.legacy": [
     "未启用 · 仍按原有规则读取",
     "Not activated · original read rules apply",
@@ -23,13 +18,12 @@ export const permissionsMessages = {
     "准备中 · 仍按原有规则读取",
     "Preparing · original read rules apply",
   ],
-  "permissions.mode.enabled": [
-    "已启用业务权限",
-    "Business permissions enabled",
-  ],
   "permissions.mode.suspended": ["业务读取已暂停", "Business reads suspended"],
+  "permissions.statusHint": [
+    "如需切换或恢复，请联系管理员或运维处理。",
+    "Contact your administrator or operator to switch or restore access.",
+  ],
   "permissions.loading": ["正在读取配置…", "Loading configuration…"],
-  "permissions.version": ["配置版本", "Configuration version"],
   "permissions.reload": ["重新读取配置", "Reload configuration"],
   "permissions.save": ["保存", "Save"],
   "permissions.saving": ["正在保存…", "Saving…"],
@@ -77,10 +71,6 @@ export const permissionsMessages = {
   ],
   "permissions.unset": ["未配置", "Not configured"],
   "permissions.notCreated": ["（尚未创建）", "(not created)"],
-  "permissions.checkFirst": [
-    "请先运行只读准备检查",
-    "Run the read-only preparation check first",
-  ],
   "permissions.choose": ["请选择", "Choose"],
   "permissions.level": ["密级", "Confidentiality level"],
   "permissions.clearance": ["账号密级", "Account clearance"],
@@ -91,18 +81,6 @@ export const permissionsMessages = {
   "permissions.fixedHelp": [
     "各可读取的固定类别分别配置密级，未配置项不会自动设为 0。",
     "Configure every readable fixed category level. Unset levels are never defaulted to 0.",
-  ],
-  "permissions.initializeCategories": [
-    "补齐资料类别",
-    "Add missing categories",
-  ],
-  "permissions.initializeCategoriesHelp": [
-    "补齐服务已支持的资料类别。新增类别的密级保持未配置；请随后设置密级和账号授权。",
-    "Add supported categories that are missing. New levels stay unset; configure their levels and account grants afterward.",
-  ],
-  "permissions.initializeDrafts": [
-    "请先保存或处理未保存的草稿，再补齐资料类别。",
-    "Save or resolve unsaved drafts before adding missing categories.",
   ],
   "permissions.internalLedger": [
     "原始配送台账仅供内部处理，不提供原始明细、汇总或原件读取。",
@@ -285,54 +263,7 @@ export const permissionsMessages = {
     "不自动猜测来源或回填真实资料；缺项先按准备报告另行核对并批准。",
     "Sources and real-data backfills are never inferred. Review missing items separately and obtain approval.",
   ],
-  "permissions.check": ["运行只读准备检查", "Run read-only preparation check"],
-  "permissions.ready": ["配置准备就绪", "Configuration ready"],
-  "permissions.notReady": [
-    "尚有缺项，暂不能启用",
-    "Missing items prevent activation",
-  ],
   "permissions.empty": ["暂无条目", "No items yet"],
-  "permissions.target": ["对象", "Target"],
-  "permissions.issue": ["待处理事项", "Required action"],
-  "permissions.goToSection": ["前往处理", "Go to section"],
-  "permissions.accountsWithoutGrants": [
-    "以下账号没有读取授权（启用后仍无读取权）",
-    "These accounts have no read grants (they remain unable to read after activation)",
-  ],
-  "permissions.activate": [
-    "确认启用业务权限",
-    "Confirm business permission activation",
-  ],
-  "permissions.activateConfirm": ["确认启用", "Activate"],
-  "permissions.activateHelp": [
-    "启用后本企业读取将按新业务权限判定。保存不等于启用；历史缺项必须先补齐。",
-    "Activation switches this enterprise's reads to business permissions. Saving is not activation; historical missing items must be resolved first.",
-  ],
-  "permissions.alreadyEnabled": [
-    "本企业已启用。新增账号只需保存授权，无需再次激活。",
-    "This enterprise is already enabled. New accounts only need their grants saved, without reactivation.",
-  ],
-  "permissions.suspendedHelp": [
-    "读取已暂停，请联系运维核对恢复要求。本页不回退旧规则或绕过准备恢复。",
-    "Reads are suspended. Contact your operator about recovery. This page cannot restore legacy rules or bypass preparation.",
-  ],
-  "permissions.activated": [
-    "已启用业务权限。请在批准范围内做最小读取验证。",
-    "Business permissions enabled. Perform a minimal read verification within the approved scope.",
-  ],
-  "permissions.suspend": ["暂停业务读取", "Suspend business reads"],
-  "permissions.suspendHelp": [
-    "暂停后本企业的业务读取立即停止，只保留普通文档读取；恢复需要运维核对准备项。",
-    "Suspending stops this enterprise's business reads immediately; only document reads remain. Recovery requires operator review.",
-  ],
-  "permissions.suspendedNotice": [
-    "已暂停业务读取。",
-    "Business reads suspended.",
-  ],
-  "permissions.noDataClaim": [
-    "新空企业可先配置并启用；没有真实资料时只能声明配置就绪。",
-    "An empty enterprise can be configured and activated first. With no real documents, only configuration readiness can be claimed.",
-  ],
   "permissions.error.notReady": [
     "尚有缺项，暂不能启用",
     "Missing items prevent activation",
@@ -361,74 +292,6 @@ export const permissionsMessages = {
   "permissions.status.processing": ["处理中", "Processing"],
   "permissions.status.processing_failed": ["处理失败", "Processing failed"],
   "permissions.status.archived": ["已归档", "Archived"],
-  "permissions.missing.INTERNAL_CATEGORY_REQUIRED": [
-    "内部资料类别尚未初始化，请联系运维。",
-    "An internal data category has not been initialized. Contact your operator.",
-  ],
-  "permissions.missing.FIXED_CATEGORY_CLEARANCE_REQUIRED": [
-    "请配置固定类别密级",
-    "Configure the fixed category level",
-  ],
-  "permissions.missing.DIMENSION_NOT_READY": [
-    "请补齐类别所需业务条件",
-    "Complete the category's required conditions",
-  ],
-  "permissions.missing.DIMENSION_VALUE_REQUIRED": [
-    "请核对业务条件取值",
-    "Check condition values",
-  ],
-  "permissions.missing.EXACT_STORE_REFERENCE_REQUIRED": [
-    "请补齐精确门店引用",
-    "Complete exact store references",
-  ],
-  "permissions.missing.GRANT_CONFIGURATION_REQUIRED": [
-    "请修正账号的完整授权组合",
-    "Correct the account's complete grant tuples",
-  ],
-  "permissions.missing.GRANT_DIMENSION_REQUIRED": [
-    "请补齐授权的业务条件取值",
-    "Complete grant condition values",
-  ],
-  "permissions.missing.PARTITION_ATTRIBUTES_REQUIRED": [
-    "结构化资料属性缺失，请联系运维核对",
-    "Structured material attributes are missing; contact your operator",
-  ],
-  "permissions.missing.COST_CARD_ATTRIBUTES_REQUIRED": [
-    "成本卡权限属性缺失，请联系运维核对",
-    "Cost card permission attributes are missing; contact your operator",
-  ],
-  "permissions.missing.PDF_ATTRIBUTES_REQUIRED": [
-    "台账 PDF 属性缺失，请联系运维核对",
-    "Ledger PDF attributes are missing; contact your operator",
-  ],
-  "permissions.missing.READ_ADAPTER_NOT_READY": [
-    "服务读取能力尚未就绪，请联系运维",
-    "Server read support is not ready; contact your operator",
-  ],
-  "permissions.missing.RESOURCE_ATTRIBUTES_REQUIRED": [
-    "请补齐资料类别、密级和完整范围",
-    "Complete the material's category, level and scopes",
-  ],
-  "permissions.missing.STORE_REVIEW_ATTRIBUTES_REQUIRED": [
-    "店铺评价的企业或门店关联缺失，请核对",
-    "Check the review’s enterprise and exact store references",
-  ],
-  "permissions.missing.RESOURCE_CATEGORY_MISMATCH": [
-    "资料与类别不匹配，请核对",
-    "Check the material's category mismatch",
-  ],
-  "permissions.missing.SINGLE_STORE_REQUIRED": [
-    "此资料必须对应一个精确门店",
-    "This material must belong to one exact store",
-  ],
-  "permissions.missing.SOURCE_LINEAGE_REQUIRED": [
-    "原件来源关系缺失，须另行核对与批准补齐",
-    "Source lineage is missing; review and approve any supplement separately",
-  ],
-  "permissions.missing.DOCUMENT_ATTRIBUTES_REQUIRED": [
-    "文档权限属性缺失，请核对",
-    "Document permission attributes are missing",
-  ],
 
   // 页面外壳（原型 v2）：页头、状态区、分区导航
   "permissions.subtitle": [
@@ -436,23 +299,6 @@ export const permissionsMessages = {
     "Manage document categories, business conditions and account access.",
   ],
   "permissions.banner.label": ["业务权限状态", "Business permission status"],
-  "permissions.banner.legacy": [
-    "系统尚未启用业务权限，当前仍按原有规则读取。",
-    "Business permissions are not active yet; the original read rules still apply.",
-  ],
-  "permissions.banner.preparing": [
-    "完成准备检查后即可启用业务权限。",
-    "Run the preparation check, then activate business permissions.",
-  ],
-  "permissions.banner.enabled": [
-    "系统按账号授权和资料密级控制访问。",
-    "Access follows account grants and material confidentiality levels.",
-  ],
-  "permissions.banner.suspended": [
-    "业务资料的读取当前处于暂停状态。",
-    "Business material reads are suspended.",
-  ],
-  "permissions.viewReadiness": ["查看启用状态", "View activation status"],
   "permissions.closePanel": ["关闭编辑面板", "Close editor"],
   "permissions.discardDescription": [
     "切换分区会关闭当前编辑并丢弃未保存的草稿。请比较后选择是否放弃；不会自动合并或覆盖。",
@@ -511,10 +357,6 @@ export const permissionsMessages = {
   "permissions.panel.fixedCategories": ["固定类别", "Fixed categories"],
   "permissions.segmented.document": ["文档类别", "Document categories"],
   "permissions.segmented.fixed": ["固定类别", "Fixed categories"],
-  "permissions.addFixedMissing": [
-    "补齐固定类别",
-    "Add missing fixed categories",
-  ],
   "permissions.searchCategory": ["搜索类别", "Search categories"],
   "permissions.categoryListHint": [
     "查看文档的归属与业务条件。",
@@ -674,23 +516,6 @@ export const permissionsMessages = {
   "permissions.documentNoResults": ["没有匹配的文档", "No matching documents"],
   "permissions.documentMeta": ["文档属性", "Document attributes"],
 
-  // 检查与启用
-  "permissions.readinessHint": [
-    "检查当前配置，管理业务权限的启用状态。",
-    "Check the current configuration and manage activation.",
-  ],
-  "permissions.reportVersion": ["检查版本", "Check version"],
-  "permissions.reportIssues": ["待处理项目", "Open items"],
-  "permissions.reportReady": ["准备检查通过", "Check passed"],
-  "permissions.noIssues": ["没有待处理项目。", "No open items."],
-  "permissions.reloadHelp": [
-    "重新读取会替换页面上的服务端快照；有未保存草稿时请先处理。",
-    "Reloading replaces the server snapshot; resolve unsaved drafts first.",
-  ],
-  "permissions.reloadWithDrafts": [
-    "请先保存或放弃未保存的草稿，再重新读取配置。",
-    "Save or discard unsaved drafts before reloading.",
-  ],
   "permissions.status.active": ["使用中", "In use"],
   "permissions.status.off": ["已停用", "Retired"],
 
@@ -753,6 +578,23 @@ export const permissionsMessages = {
   "permissions.diff.addedItem": ["新增{label}", "Added {label}"],
   "permissions.diff.removedItem": ["删除{label}", "Removed {label}"],
   "permissions.inspection.open": ["巡检权限", "Inspection permissions"],
+  "permissions.inspection.missing": ["巡检配置缺项", "Inspection setup gaps"],
+  "permissions.inspection.missingEnterprise": [
+    "请先在「门店与业务企业」确认业务企业。",
+    "Confirm the business enterprise under Stores and businesses first.",
+  ],
+  "permissions.inspection.missingCategory": [
+    "未找到已登记的门店巡检问卷类别，请联系运维检查发布迁移。",
+    "The registered store inspection questionnaire category was not found. Contact your operator to check the release migration.",
+  ],
+  "permissions.inspection.missingLevel": [
+    "门店巡检问卷密级尚未配置，请在「类别与密级」设置巡检密级；设置前仍可继续配置巡检授权。",
+    "The store inspection questionnaire level is not configured. Set it under Categories and levels; inspection access can still be configured beforehand.",
+  ],
+  "permissions.inspection.unavailable": [
+    "巡检授权数据暂不可用，请联系运维核对账号权限服务。",
+    "Inspection access data is unavailable. Contact your operator to check the account permission service.",
+  ],
   "permissions.inspection.enterprise": ["巡检企业", "Inspection enterprise"],
   "permissions.inspection.templates": ["可维护模板", "Can maintain templates"],
   "permissions.inspection.all": [
@@ -776,13 +618,9 @@ export const permissionsMessages = {
     "改为指定门店后，以后新增的门店需要单独授权。请核对下方保留的门店名单。",
     "After switching to selected stores, grant access to newly added stores individually. Review the retained stores below.",
   ],
-  "permissions.inspection.unavailable": [
-    "请确认业务企业，并在类别与密级中补齐门店巡检问卷。",
-    "Confirm the business enterprise and add the store inspection category under Categories and clearance.",
-  ],
   "permissions.inspection.noStores": [
-    "没有可配置的正式门店。",
-    "There are no confirmed stores to configure.",
+    "该企业暂无已确认门店，请先在「门店与业务企业」维护精确门店。",
+    "This business has no confirmed stores. Add exact stores under Stores and businesses first.",
   ],
   "permissions.inspection.tooMany": [
     "指定查看门店和填写门店分别最多 1,000 家。",

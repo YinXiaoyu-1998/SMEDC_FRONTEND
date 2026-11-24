@@ -9,16 +9,12 @@ import type {
   PermissionDocument,
   PermissionEnterprise,
   PermissionStore,
-  PermissionsCutoverReadResponse,
 } from "@/api/permissions";
 import { adminSession } from "@/test/fixtures";
 import { jsonResponse } from "@/test/http";
 import { renderApp } from "@/test/renderApp";
 
-import {
-  FIXED_BUSINESS_CATEGORY_KEYS,
-  INSPECTION_CATEGORY_KEY,
-} from "./constants";
+import { INSPECTION_CATEGORY_KEY } from "./constants";
 
 interface MockState {
   version: string;
@@ -30,7 +26,6 @@ interface MockState {
   accounts: PermissionAccount[];
   enterprises: PermissionEnterprise[];
   documents: PermissionDocument[];
-  cutover: PermissionsCutoverReadResponse;
 }
 
 interface MockRequest {
@@ -69,6 +64,18 @@ function createState(): MockState {
     id: "cat-dishes",
     key: "dishes",
     name: "菜品销售",
+    kind: "fixed",
+    confidentialityLevel: null,
+    allowGroup: false,
+    allowStore: true,
+    retired: false,
+    dimensions: [],
+  };
+  const categoryInspection: PermissionCategory = {
+    orgId: ORG,
+    id: "cat-inspection",
+    key: INSPECTION_CATEGORY_KEY,
+    name: "门店巡检问卷",
     kind: "fixed",
     confidentialityLevel: null,
     allowGroup: false,
@@ -175,19 +182,17 @@ function createState(): MockState {
     version: "7",
     mode: "preparing",
     clearance: 2,
-    categories: [categoryBusiness, categoryDishes, categoryPolicy],
+    categories: [
+      categoryBusiness,
+      categoryDishes,
+      categoryInspection,
+      categoryPolicy,
+    ],
     stores: [store],
     dimensions: [dimension],
     accounts: [account],
     enterprises: [{ enterpriseKey: "ent-1", enterpriseName: "示例餐饮" }],
     documents,
-    cutover: {
-      authorizationVersion: "7",
-      mode: "preparing",
-      ready: true,
-      missing: [],
-      accountsWithoutGrants: [],
-    },
   };
 }
 
@@ -199,11 +204,6 @@ interface RouteDefinition {
 
 const routes: readonly RouteDefinition[] = [
   { name: "me.read", method: "GET", pattern: /\/permissions\/me$/ },
-  {
-    name: "categories.initialize",
-    method: "POST",
-    pattern: /\/permissions\/categories\/initialize$/,
-  },
   {
     name: "categories.create",
     method: "POST",
@@ -282,17 +282,6 @@ const routes: readonly RouteDefinition[] = [
     method: "GET",
     pattern: /\/permissions\/enterprises$/,
   },
-  {
-    name: "cutover.activate",
-    method: "POST",
-    pattern: /\/permissions\/cutover\/activate$/,
-  },
-  {
-    name: "cutover.suspend",
-    method: "POST",
-    pattern: /\/permissions\/cutover\/suspend$/,
-  },
-  { name: "cutover.read", method: "GET", pattern: /\/permissions\/cutover$/ },
 ];
 
 function resolveRoute(method: string, pathname: string): string {
@@ -378,6 +367,9 @@ function handleRequest(
         authorizationVersion: state.version,
         categories: account.categories,
         grants: account.grants,
+        ...(request.searchParams.get("includeInspection") === "true"
+          ? { inspectionPermissions: [] }
+          : {}),
       });
     }
     case "enterprises.list":
@@ -399,12 +391,6 @@ function handleRequest(
         nextCursor: null,
       });
     }
-    case "cutover.read":
-      return jsonResponse({
-        ...state.cutover,
-        authorizationVersion: state.version,
-        mode: state.mode,
-      });
     case "categories.update": {
       const body = request.body as {
         readonly expectedVersion: string;
@@ -476,13 +462,6 @@ function handleRequest(
       return jsonResponse({
         authorizationVersion: state.version,
         value: saved,
-      });
-    }
-    case "categories.initialize": {
-      state.version = nextVersion(state.version);
-      return jsonResponse({
-        authorizationVersion: state.version,
-        value: { createdCount: 1 },
       });
     }
     case "dimensions.update": {
@@ -776,24 +755,6 @@ function handleRequest(
       );
       return jsonResponse({ authorizationVersion: state.version, value });
     }
-    case "cutover.activate": {
-      state.version = nextVersion(state.version);
-      state.mode = "enabled";
-      state.cutover = { ...state.cutover, mode: "enabled" };
-      return jsonResponse({
-        authorizationVersion: state.version,
-        value: { mode: "enabled" },
-      });
-    }
-    case "cutover.suspend": {
-      state.version = nextVersion(state.version);
-      state.mode = "suspended";
-      state.cutover = { ...state.cutover, mode: "suspended" };
-      return jsonResponse({
-        authorizationVersion: state.version,
-        value: { mode: "suspended" },
-      });
-    }
     default:
       throw new Error(`未实现的接口：${route}`);
   }
@@ -899,37 +860,124 @@ describe("权限设置页", () => {
     }
   });
 
-  it("菜品销售已配置时，套餐子菜销售无需补齐单独类别", async () => {
+  it("重新打开权限页仍显示已登记且密级未配置的门店巡检问卷", async () => {
     const state = createState();
-    state.categories = FIXED_BUSINESS_CATEGORY_KEYS.filter(
-      (key: string) => key !== "combo_sales",
-    ).map((key) => ({
-      ...state.categories[0]!,
-      id: key,
-      key,
-      name: key,
-    }));
-    renderPermissions({ state });
+    const first = renderPermissions({ state });
+    await screen.findByRole("heading", { name: "文档类别" });
     fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
-    expect(await screen.findByText("菜品销售")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "补齐固定类别" })).toBeNull();
+
+    const firstRow = (await screen.findByText("门店巡检问卷")).closest("tr");
+    if (firstRow === null) throw new Error("找不到门店巡检问卷行");
+    expect(within(firstRow).getByText("未配置")).toBeInTheDocument();
+    expect(
+      first.fetchMock.mock.calls.some(([input]) =>
+        new URL(String(input), "http://localhost").pathname.endsWith(
+          "/permissions/categories",
+        ),
+      ),
+    ).toBe(true);
+    first.unmount();
+
+    const second = renderPermissions({ state });
+    await screen.findByRole("heading", { name: "文档类别" });
+    fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
+    const secondRow = (await screen.findByText("门店巡检问卷")).closest("tr");
+    if (secondRow === null) throw new Error("重新打开后找不到门店巡检问卷行");
+    expect(within(secondRow).getByText("未配置")).toBeInTheDocument();
+    expect(
+      second.fetchMock.mock.calls.some(([input]) =>
+        new URL(String(input), "http://localhost").pathname.endsWith(
+          "/permissions/categories",
+        ),
+      ),
+    ).toBe(true);
   });
 
-  it("offers on-demand initialization to an existing enterprise missing only inspections", async () => {
-    const state = createState();
-    state.categories = FIXED_BUSINESS_CATEGORY_KEYS.filter(
-      (key) => key !== INSPECTION_CATEGORY_KEY,
-    ).map((key) => ({ ...state.categories[0]!, id: key, key, name: key }));
-    const { fetchMock } = renderPermissions({ state });
+  it("未配置密级的巡检类别仍可打开并保存密级", async () => {
+    const { fetchMock } = renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
     fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
-    fireEvent.click(screen.getByRole("button", { name: "补齐固定类别" }));
-    const confirmation = await screen.findByRole("dialog", {
-      name: "补齐资料类别",
+
+    const row = (await screen.findByText("门店巡检问卷")).closest("tr");
+    if (row === null) throw new Error("找不到门店巡检问卷行");
+    expect(within(row).getByText("未配置")).toBeInTheDocument();
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+
+    const panel = await screen.findByRole("dialog", { name: "固定类别" });
+    const level = within(panel).getByLabelText("密级");
+    expect(level).toHaveValue("");
+    fireEvent.change(level, { target: { value: "2" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "保存" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "确认本次变更" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "固定类别" })).toBeNull();
     });
-    expect(within(confirmation).getByText("门店巡检问卷")).toBeInTheDocument();
+
     expect(
-      bodyOf(fetchMock, "POST", /\/permissions\/categories\/initialize$/),
-    ).toHaveLength(0);
+      bodyOf(fetchMock, "PATCH", /\/permissions\/categories\/cat-inspection$/),
+    ).toEqual([
+      {
+        expectedVersion: "7",
+        name: "门店巡检问卷",
+        confidentialityLevel: 2,
+      },
+    ]);
+  });
+
+  it("移除补齐固定类别、查看启用状态和检查与启用入口", async () => {
+    const { fetchMock } = renderPermissions();
+    await screen.findByRole("heading", { name: "文档类别" });
+    fireEvent.click(await screen.findByRole("button", { name: "固定类别" }));
+
+    expect(screen.queryByRole("button", { name: "补齐固定类别" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "查看启用状态" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "检查与启用" })).toBeNull();
+    const paths = fetchMock.mock.calls.map(
+      ([input]) => new URL(String(input), "http://localhost").pathname,
+    );
+    expect(
+      paths.some(
+        (path) =>
+          path.includes("/permissions/cutover") ||
+          path.endsWith("/permissions/categories/initialize"),
+      ),
+    ).toBe(false);
+  });
+
+  const statusModes = [
+    ["legacy", "未启用 · 仍按原有规则读取"],
+    ["preparing", "准备中 · 仍按原有规则读取"],
+    ["suspended", "业务读取已暂停"],
+  ] as const;
+  it.each(statusModes)(
+    "%s 模式只显示简短状态与联系提示",
+    async (mode, label) => {
+      const state = createState();
+      state.mode = mode;
+      renderPermissions({ state });
+      await screen.findByRole("heading", { name: "文档类别" });
+
+      expect(await screen.findByText(label)).toBeInTheDocument();
+      expect(
+        screen.getByText("如需切换或恢复，请联系管理员或运维处理。"),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "查看启用状态" })).toBeNull();
+      expect(screen.queryByRole("tab", { name: "检查与启用" })).toBeNull();
+    },
+  );
+
+  it("已启用模式不显示异常状态提示", async () => {
+    const state = createState();
+    state.mode = "enabled";
+    renderPermissions({ state });
+    await screen.findByRole("heading", { name: "文档类别" });
+
+    expect(screen.queryByRole("region", { name: "业务权限状态" })).toBeNull();
+    expect(
+      screen.queryByText("如需切换或恢复，请联系管理员或运维处理。"),
+    ).toBeNull();
   });
 
   it("编辑固定类别密级时确认摘要只有密级一项，并按冻结版本提交", async () => {
@@ -1402,42 +1450,7 @@ describe("权限设置页", () => {
     ).toBeInTheDocument();
   });
 
-  it("准备检查通过且版本一致时才发送启用请求", async () => {
-    const { fetchMock } = renderPermissions();
-    await screen.findByRole("heading", { name: "文档类别" });
-    await openTab("检查与启用");
-
-    const activate = await screen.findByRole("button", {
-      name: "确认启用业务权限",
-    });
-    expect(activate).toBeDisabled();
-
-    fireEvent.click(screen.getByRole("button", { name: "运行只读准备检查" }));
-    await screen.findByText("准备检查通过");
-    expect(activate).toBeEnabled();
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: "确认启用业务权限" }),
-    );
-    const confirm = await screen.findByRole("dialog", {
-      name: "确认启用业务权限",
-    });
-    fireEvent.click(within(confirm).getByRole("button", { name: "确认启用" }));
-
-    await waitFor(() => {
-      expect(
-        bodyOf(fetchMock, "POST", /\/permissions\/cutover\/activate$/),
-      ).toHaveLength(1);
-    });
-    const body = bodyOf(
-      fetchMock,
-      "POST",
-      /\/permissions\/cutover\/activate$/,
-    )[0] as { readonly expectedVersion: string; readonly confirm: boolean };
-    expect(body).toMatchObject({ expectedVersion: "7", confirm: true });
-  });
-
-  it("分区标签支持方向键切换", async () => {
+  it("分区标签支持方向键与首尾键切换并保持焦点", async () => {
     renderPermissions();
     const tab = await screen.findByRole("tab", { name: "类别与密级" });
     tab.focus();
@@ -1445,6 +1458,19 @@ describe("权限设置页", () => {
     expect(
       await screen.findByRole("tab", { name: "业务条件" }),
     ).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(
+      screen.getByRole("tab", { name: "业务条件" }),
+    );
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, {
+      key: "End",
+    });
+    expect(
+      await screen.findByRole("tab", { name: "普通文档" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(
+      screen.getByRole("tab", { name: "普通文档" }),
+    );
   });
 
   it("关闭面板后焦点回到打开它的按钮", async () => {
@@ -1479,6 +1505,14 @@ describe("权限设置页", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Document categories" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Preparing · original read rules apply"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Contact your administrator or operator to switch or restore access.",
+      ),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "中文" }));
@@ -1541,6 +1575,23 @@ describe("权限设置页", () => {
       true,
     );
   });
+});
+
+it("guides inspection setup to an actual business enterprise instead of a fixed-category supplement", async () => {
+  const state = createState();
+  state.enterprises = [];
+  state.stores = [];
+  renderPermissions({ state });
+  await screen.findByRole("heading", { name: "文档类别" });
+  await openTab("账号授权");
+  const row = await screen.findByRole("row", { name: /张三/ });
+  fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+  const editor = await screen.findByRole("dialog", { name: "编辑账号授权" });
+  fireEvent.click(within(editor).getByRole("button", { name: "巡检权限" }));
+  const policy = await screen.findByRole("dialog", { name: "巡检权限" });
+
+  expect(await within(policy).findByText(/确认业务企业/)).toBeInTheDocument();
+  expect(within(policy).queryByText(/补齐固定类别/)).toBeNull();
 });
 
 it("reopens inspection permissions with the saved template and store access", async () => {
@@ -1614,6 +1665,10 @@ it("reopens inspection permissions with the saved template and store access", as
   }
 
   const policy = await openInspectionPermissions();
+  expect(
+    await policy.findByText(/门店巡检问卷密级尚未配置/),
+  ).toBeInTheDocument();
+  expect(policy.queryByText(/补齐固定类别/)).toBeNull();
   const store = await policy.findByLabelText("一号店 · 巡检权限");
   expect(store).toHaveValue("none");
   fireEvent.change(store, { target: { value: "write" } });
@@ -1802,14 +1857,11 @@ it("confirms the remaining stores before replacing all-store access and sends on
 it("keeps inspection-only and shared inspection grants out of the general editor", async () => {
   const state = createState();
   const expectedVersion = state.version;
-  const inspectionId = "cat-inspection";
-  const category: PermissionCategory = {
-    ...state.categories[0]!,
-    id: inspectionId,
-    key: INSPECTION_CATEGORY_KEY,
-    name: "门店巡检问卷",
-  };
-  state.categories.push(category);
+  const inspectionCategory = state.categories.find(
+    (category) => category.key === INSPECTION_CATEGORY_KEY,
+  );
+  if (inspectionCategory === undefined) throw new Error("missing inspection");
+  const inspectionId = inspectionCategory.id;
   const account = state.accounts[0]!;
   const businessGrant = account.grants[0]!;
   state.accounts[0] = {

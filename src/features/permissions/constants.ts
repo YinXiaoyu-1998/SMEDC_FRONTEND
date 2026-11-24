@@ -41,7 +41,6 @@ export const sectionKeys = [
   "accounts",
   "stores",
   "documents",
-  "readiness",
 ] as const;
 
 export type SectionKey = (typeof sectionKeys)[number];

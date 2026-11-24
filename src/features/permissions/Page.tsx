@@ -7,7 +7,6 @@ import { WebApiError } from "@/api/client";
 import {
   loadPermissionsBundle,
   permissionsQueryKey,
-  readCutover,
   type PermissionsBundle,
 } from "@/api/permissions";
 import { useSession } from "@/api/session";
@@ -26,7 +25,6 @@ import { DimensionsSection } from "./Dimensions";
 import { DocumentsSection } from "./Documents";
 import { permissionsErrorKey } from "./errorKeys";
 import styles from "./Permissions.module.css";
-import { ReadinessSection } from "./Readiness";
 import { PermissionsScopeContext } from "./scope";
 import { StoresSection } from "./Stores";
 import { usePermissionsWrites } from "./writes";
@@ -108,8 +106,6 @@ function PermissionsContent({
     return result.data;
   }, [refetch]);
 
-  const readCutoverValue = useCallback(() => readCutover(orgId), [orgId]);
-
   if (query.isPending) {
     return (
       <>
@@ -150,7 +146,6 @@ function PermissionsContent({
       bundle={query.data}
       writes={writes}
       reload={reload}
-      readCutover={readCutoverValue}
       orgId={orgId}
       readError={query.error}
     />
@@ -167,7 +162,6 @@ function PermissionsReady({
   bundle,
   writes,
   reload,
-  readCutover: readCutoverValue,
   orgId,
   readError,
 }: {
@@ -175,7 +169,6 @@ function PermissionsReady({
   readonly bundle: PermissionsBundle;
   readonly writes: ReturnType<typeof usePermissionsWrites>;
   readonly reload: () => Promise<PermissionsBundle>;
-  readonly readCutover: () => Promise<Awaited<ReturnType<typeof readCutover>>>;
   readonly orgId: string;
 }) {
   const { t } = useText();
@@ -272,7 +265,6 @@ function PermissionsReady({
       hasDrafts,
       writes,
       reload,
-      readCutover: readCutoverValue,
       registerDraft,
       setNotice,
       navigate,
@@ -287,7 +279,6 @@ function PermissionsReady({
       hasDrafts,
       writes,
       reload,
-      readCutoverValue,
       registerDraft,
       navigate,
       draftEpoch,
@@ -317,10 +308,6 @@ function PermissionsReady({
       key: "documents",
       node: <DocumentsSection active={active === "documents"} />,
     },
-    {
-      key: "readiness",
-      node: <ReadinessSection active={active === "readiness"} />,
-    },
   ];
 
   return (
@@ -330,27 +317,20 @@ function PermissionsReady({
           ? {}
           : { action: { label: t(primaryKey), run: requestCreate } })}
       />
-      <section
-        className={styles.banner}
-        aria-label={t("permissions.banner.label")}
-      >
-        <span className={styles.bannerIcon}>
-          <AdminIcon name="status" />
-        </span>
-        <div className={styles.bannerBody}>
-          <strong>{t(`permissions.mode.${bundle.me.mode}`)}</strong>
-          <p>{t(`permissions.banner.${bundle.me.mode}`)}</p>
-        </div>
-        <ActionButton
-          label={t("permissions.viewReadiness")}
-          icon={<AdminIcon name="arrow" />}
-          className={styles.bannerAction}
-          variant="secondary"
-          onRun={() => {
-            navigate("readiness");
-          }}
-        />
-      </section>
+      {bundle.me.mode === "enabled" ? null : (
+        <section
+          className={styles.banner}
+          aria-label={t("permissions.banner.label")}
+        >
+          <span className={styles.bannerIcon}>
+            <AdminIcon name="status" />
+          </span>
+          <div className={styles.bannerBody}>
+            <strong>{t(`permissions.mode.${bundle.me.mode}`)}</strong>
+            <p>{t("permissions.statusHint")}</p>
+          </div>
+        </section>
+      )}
       {readError === null ? null : (
         <p className={styles.error} role="alert">
           {t(permissionsErrorKey(readError))}

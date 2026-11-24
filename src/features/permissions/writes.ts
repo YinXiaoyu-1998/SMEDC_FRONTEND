@@ -17,11 +17,8 @@ import type {
   PermissionsAccountsUpdateResponse,
   PermissionsCategoriesCreateBody,
   PermissionsCategoriesCreateResponse,
-  PermissionsCategoriesInitializeResponse,
   PermissionsCategoriesUpdateBody,
   PermissionsCategoriesUpdateResponse,
-  PermissionsCutoverActivateResponse,
-  PermissionsCutoverSuspendResponse,
   PermissionsDimensionsCreateBody,
   PermissionsDimensionsCreateResponse,
   PermissionsDimensionsUpdateBody,
@@ -106,9 +103,6 @@ export interface PermissionsWrites {
   readonly createCategory: (
     body: PermissionsCategoriesCreateBody,
   ) => Promise<PermissionsCategoriesCreateResponse>;
-  readonly initializeCategories: (
-    expectedVersion: string,
-  ) => Promise<PermissionsCategoriesInitializeResponse>;
   readonly updateDimension: (
     id: string,
     body: PermissionsDimensionsUpdateBody,
@@ -143,13 +137,6 @@ export interface PermissionsWrites {
     readonly document: PermissionDocument;
     readonly authorizationVersion: string;
   }>;
-  /** 启用必须绑定准备检查报告里的 authorizationVersion。 */
-  readonly activate: (
-    expectedVersion: string,
-  ) => Promise<PermissionsCutoverActivateResponse>;
-  readonly suspend: (
-    expectedVersion: string,
-  ) => Promise<PermissionsCutoverSuspendResponse>;
 }
 
 interface UsePermissionsWritesOptions {
@@ -264,23 +251,6 @@ export function usePermissionsWrites({
           ...previous,
           version: result.authorizationVersion,
           categories: replaceById(previous.categories, result.value),
-        }));
-        return result;
-      }),
-    [csrfToken, orgId, run, update],
-  );
-
-  const initializeCategories = useCallback(
-    (expectedVersion: string) =>
-      run(async () => {
-        const result = await permissionsApi.initializeCategories(
-          orgId,
-          expectedVersion,
-          csrfToken,
-        );
-        await update((previous) => ({
-          ...previous,
-          version: result.authorizationVersion,
         }));
         return result;
       }),
@@ -486,42 +456,6 @@ export function usePermissionsWrites({
     [csrfToken, orgId, run, update],
   );
 
-  const activate = useCallback(
-    (expectedVersion: string) =>
-      run(async () => {
-        const result = await permissionsApi.activateCutover(
-          orgId,
-          expectedVersion,
-          csrfToken,
-        );
-        await update((previous) => ({
-          ...previous,
-          version: result.authorizationVersion,
-          me: { ...previous.me, mode: result.value.mode },
-        }));
-        return result;
-      }),
-    [csrfToken, orgId, run, update],
-  );
-
-  const suspend = useCallback(
-    (expectedVersion: string) =>
-      run(async () => {
-        const result = await permissionsApi.suspendCutover(
-          orgId,
-          expectedVersion,
-          csrfToken,
-        );
-        await update((previous) => ({
-          ...previous,
-          version: result.authorizationVersion,
-          me: { ...previous.me, mode: result.value.mode },
-        }));
-        return result;
-      }),
-    [csrfToken, orgId, run, update],
-  );
-
   return {
     busy: pending > 0,
     readAccount,
@@ -529,7 +463,6 @@ export function usePermissionsWrites({
     previewEnterprise,
     updateCategory,
     createCategory,
-    initializeCategories,
     updateDimension,
     createDimension,
     createDimensionValue,
@@ -538,7 +471,5 @@ export function usePermissionsWrites({
     declareEnterprise,
     saveAccount,
     saveDocument,
-    activate,
-    suspend,
   };
 }
