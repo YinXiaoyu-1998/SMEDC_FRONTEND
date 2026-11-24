@@ -8,7 +8,6 @@ import {
   type InspectionsDayResponse,
 } from "@/api/generated/contract";
 import { useSession } from "@/api/session";
-import { PageFrame } from "@/app/PageFrame";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { Field } from "@/ui/Field";
@@ -31,6 +30,7 @@ import {
   type ReusablePhoto,
 } from "./employeeDraft";
 import { errorText, useEmployeeText } from "./employeeText";
+import { InspectionFrame } from "./InspectionFrame";
 import { SheetEditor, Summary } from "./SheetEditor";
 import styles from "./Employee.module.css";
 
@@ -52,7 +52,7 @@ export function InspectionsPage() {
   const { t } = useText();
   const session = useSession().data;
   return (
-    <PageFrame title={t("pages.inspections.title")}>
+    <InspectionFrame title={t("pages.inspections.title")}>
       {session?.canReadInspections && (
         <ScopePicker
           key={JSON.stringify([
@@ -66,7 +66,7 @@ export function InspectionsPage() {
           ])}
         />
       )}
-    </PageFrame>
+    </InspectionFrame>
   );
 }
 

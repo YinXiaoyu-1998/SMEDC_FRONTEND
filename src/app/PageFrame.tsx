@@ -9,6 +9,7 @@ interface PageFrameProps {
   readonly title?: string;
   readonly subtitle?: string;
   readonly actions?: ReactNode;
+  readonly navigation?: ReactNode;
   readonly icon?: "building" | "tasks";
   readonly children?: ReactNode;
 }
@@ -17,6 +18,7 @@ export function PageFrame({
   title,
   subtitle,
   actions,
+  navigation,
   icon,
   children,
 }: PageFrameProps) {
@@ -44,6 +46,7 @@ export function PageFrame({
           )}
         </header>
       )}
+      {navigation}
       <section className={styles.panel} aria-label={t("pages.content")}>
         {children}
       </section>

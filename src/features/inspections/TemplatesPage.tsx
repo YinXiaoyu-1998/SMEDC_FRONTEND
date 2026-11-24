@@ -11,7 +11,6 @@ import {
   templateContext,
 } from "@/api/inspection-templates";
 import { useSession } from "@/api/session";
-import { PageFrame } from "@/app/PageFrame";
 import { useText } from "@/i18n/useText";
 import { ActionButton } from "@/ui/ActionButton";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
@@ -20,6 +19,7 @@ import { InlineError } from "@/ui/InlineError";
 import { useConfirmFlow } from "@/ui/useConfirmFlow";
 
 import { isAccessError } from "./employeeApi";
+import { InspectionFrame } from "./InspectionFrame";
 import { TemplateEditor } from "./TemplateEditor";
 import type { TemplateStore } from "./TemplateBuilder";
 import styles from "./Templates.module.css";
@@ -148,7 +148,7 @@ export function InspectionTemplatesPage() {
   };
 
   return (
-    <PageFrame title={t("pages.inspectionTemplates.title")}>
+    <InspectionFrame title={t("pages.inspectionTemplates.title")}>
       {!canManage ? (
         <p>{labels("unavailable")}</p>
       ) : (
@@ -298,6 +298,6 @@ export function InspectionTemplatesPage() {
         confirmLabel={labels("discardAction")}
         cancelLabel={labels("cancel")}
       />
-    </PageFrame>
+    </InspectionFrame>
   );
 }

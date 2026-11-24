@@ -73,17 +73,20 @@ export function canMaintainInspectionTemplates(session: Session): boolean {
   return session.canManageInspectionTemplates === true;
 }
 
+export function resolveInspectionPath(session: Session): string | null {
+  if (canAccessInspections(session)) {
+    return appPaths.inspections;
+  }
+  return canMaintainInspectionTemplates(session)
+    ? appPaths.inspectionTemplates
+    : null;
+}
+
 export function resolveHomePath(session: Session): string {
   if (session.canManageSettings) {
     return appPaths.permissions(session.identity.orgId);
   }
-  if (canAccessInspections(session)) {
-    return appPaths.inspections;
-  }
-  if (canMaintainInspectionTemplates(session)) {
-    return appPaths.inspectionTemplates;
-  }
-  return appPaths.ledger;
+  return resolveInspectionPath(session) ?? appPaths.ledger;
 }
 
 export function resolveLoginTarget(

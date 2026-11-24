@@ -379,8 +379,15 @@ it("collapses question fields and saves a whole-card drag reorder by identity", 
   );
   const first = await screen.findByRole("button", {
     name: "第一题",
-    expanded: true,
+    expanded: false,
   });
+  expect(
+    screen.getByRole("button", { name: "第二题", expanded: false }),
+  ).toBeInTheDocument();
+  fireEvent.click(first);
+  expect(
+    screen.getByRole("button", { name: "第一题", expanded: true }),
+  ).toBeInTheDocument();
   const firstCard = first.closest("section")!;
   expect(screen.queryByLabelText("题目分类")).not.toBeInTheDocument();
   fireEvent.click(first);
@@ -460,6 +467,9 @@ it("loads every preview page before saving and keeps edits after a revision conf
   const { writes, pageReads, updateElsewhere } = setup(true);
   fireEvent.click(
     await screen.findByRole("button", { name: "服务器草稿 · 未启用" }),
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "第一题", expanded: false }),
   );
   fireEvent.click(
     await screen.findByRole("button", { name: "第二题", expanded: false }),

@@ -15,6 +15,8 @@ export const baseMessages = {
   "nav.directory": ["企业资料", "Enterprise directory"],
   "nav.workflows": ["自动任务", "Automations"],
   "nav.inspections": ["巡检", "Inspections"],
+  "nav.inspectionSections": ["巡检子导航", "Inspection sections"],
+  "nav.inspectionSheets": ["巡检副本", "Inspection sheets"],
   "nav.inspectionTemplates": ["巡检模板", "Inspection templates"],
   "nav.ledger": ["台账下载中心", "Ledger downloads"],
   "nav.logout": ["退出登录", "Sign out"],

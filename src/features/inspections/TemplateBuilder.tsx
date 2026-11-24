@@ -42,10 +42,7 @@ export function TemplateBuilder({
   disabled: boolean;
 }) {
   const t = useTemplateText();
-  const [expanded, setExpanded] = useState(
-    () =>
-      new Set(draft.questions.slice(0, 1).map(({ questionId }) => questionId)),
-  );
+  const [expanded, setExpanded] = useState(() => new Set<string>());
   const [dragged, setDragged] = useState<string | null>(null);
   const [target, setTarget] = useState<DropTarget | null>(null);
   const pointer = useRef<Point | null>(null);
