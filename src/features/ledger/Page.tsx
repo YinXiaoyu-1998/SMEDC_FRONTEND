@@ -150,12 +150,7 @@ function LedgerWorkspaceView({
   return (
     <PageFrame title={t("pages.ledger.title")}>
       <div className={styles.stack}>
-        <p className={styles.intro}>{t("ledger.intro")}</p>
-
-        <PageSection
-          title={t("ledger.filters.title")}
-          description={t("ledger.access")}
-        >
+        <PageSection title={t("ledger.filters.title")}>
           <form className={styles.filters} onSubmit={handleSearch} noValidate>
             <StorePicker
               stores={context.storeNames ?? []}
@@ -379,8 +374,6 @@ function LedgerWorkspaceView({
             </p>
           ) : null}
 
-          <p className={styles.muted}>{t("ledger.selection.hint")}</p>
-
           {workspace.prepareFlow.error === null ||
           workspace.prepareFlow.error === undefined ||
           workspace.prepareFlow.open ? null : (
@@ -411,7 +404,6 @@ function LedgerWorkspaceView({
             <summary>
               {t("ledger.selection.details")} ({workspace.selectedList.length})
             </summary>
-            <p className={styles.muted}>{t("ledger.selection.order")}</p>
             {workspace.selectedList.length === 0 ? (
               <p className={styles.muted}>{t("ledger.selection.empty")}</p>
             ) : (
@@ -479,15 +471,11 @@ function LedgerWorkspaceView({
                   />
                 </div>
               )}
-              <p className={styles.muted}>{t("ledger.preview.hint")}</p>
             </div>
           )}
         </PageSection>
 
-        <PageSection
-          title={t("ledger.tasks.title")}
-          description={t("ledger.tasks.hint")}
-        >
+        <PageSection title={t("ledger.tasks.title")}>
           {workspace.tasks.length === 0 ? (
             <p className={styles.muted}>{t("ledger.tasks.empty")}</p>
           ) : (
@@ -690,9 +678,6 @@ function TaskRow({
           ? t(`ledger.task.${task.status}`)
           : formatMessage(t("ledger.task.unknown"), { status: task.status })}
       </p>
-      {pending ? (
-        <p className={styles.muted}>{t("ledger.task.waiting")}</p>
-      ) : null}
       {task.errorCode === null ? null : (
         <p className={styles.error} role="alert">
           {t(ledgerErrorKey(task.errorCode))}

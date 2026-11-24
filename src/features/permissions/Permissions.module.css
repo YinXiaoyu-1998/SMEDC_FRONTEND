@@ -16,12 +16,6 @@
   line-height: var(--line-height-tight);
 }
 
-.subtitle {
-  margin-top: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
 .banner {
   position: relative;
   isolation: isolate;
@@ -689,7 +683,6 @@
   letter-spacing: -0.045em;
 }
 
-.subtitle,
 .bannerBody p,
 .listDescription,
 .countText {

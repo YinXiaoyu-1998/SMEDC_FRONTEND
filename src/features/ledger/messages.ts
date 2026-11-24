@@ -4,14 +4,6 @@ import type { TextDictionary } from "@/i18n/text";
 // 值顺序固定为 [中文, English]；{name} 占位符由 formatMessage 填充。
 export const ledgerMessages = {
   "ledger.title": ["台账 PDF 下载中心", "Ledger PDF downloads"],
-  "ledger.intro": [
-    "按门店与进货日期查找、核对并下载已生成的台账。",
-    "Find, review and download generated ledgers by store and purchase date.",
-  ],
-  "ledger.access": [
-    "仅显示当前账号有权读取的文件。今日未就绪不影响历史可用文件。",
-    "Only files you can currently read are shown. Today's pending files do not block available history.",
-  ],
   "ledger.loading": [
     "正在读取台账下载信息…",
     "Loading ledger download settings…",
@@ -87,15 +79,7 @@ export const ledgerMessages = {
     "已知大小 {bytes} · 上限 {limit}",
     "Known size {bytes} · Limit {limit}",
   ],
-  "ledger.selection.hint": [
-    "跨批次、跨查询保留勾选，仅保存在本页内存。刷新页面会清空。",
-    "Selections span batches and queries and live only in this page. Reloading clears them.",
-  ],
   "ledger.selection.empty": ["尚未选择任何文件。", "No files selected yet."],
-  "ledger.selection.order": [
-    "已选文件按文件大小从大到小排列。",
-    "Selected files, largest known size first.",
-  ],
   "ledger.selection.remove": ["移除", "Remove"],
   "ledger.selection.clear": ["清空选择", "Clear selection"],
   "ledger.selection.details": ["查看已选文件", "Review selected files"],
@@ -155,30 +139,19 @@ export const ledgerMessages = {
     "选择一份可用台账核对内容。",
     "Choose an available ledger to review.",
   ],
-  "ledger.preview.loading": [
-    "正在加载 PDF…其他文件仍可操作。",
-    "Loading PDF… Other files remain available.",
-  ],
+  "ledger.preview.loading": ["正在加载 PDF…", "Loading PDF…"],
   "ledger.preview.failed": [
     "PDF 无法显示，请重试或直接下载查看。",
     "The PDF could not be displayed. Retry or download it.",
   ],
   "ledger.preview.retry": ["重试", "Retry"],
   "ledger.preview.close": ["关闭", "Close"],
-  "ledger.preview.hint": [
-    "使用浏览器 PDF 工具翻页和缩放。无法显示时，可直接下载查看。",
-    "Use the browser PDF controls to page and zoom. If the viewer is unavailable, download the file.",
-  ],
   "ledger.preview.frameTitle": [
     "PDF 预览 · {store} · {date}",
     "PDF preview · {store} · {date}",
   ],
 
   "ledger.tasks.title": ["任务历史", "Task history"],
-  "ledger.tasks.hint": [
-    "仅记录本会话内的打包任务，刷新后不保留。",
-    "ZIP tasks from this session only. Not retained after reload.",
-  ],
   "ledger.tasks.empty": ["尚未发起打包任务。", "No ZIP tasks yet."],
   "ledger.tasks.item": [
     "{time} · 固定清单 {files} 份",
@@ -214,17 +187,13 @@ export const ledgerMessages = {
     "重新准备当前清单",
     "Prepare the current selection again",
   ],
-  "ledger.task.waiting": [
-    "正在打包，进度会自动更新。",
-    "Preparing the ZIP; progress updates automatically.",
-  ],
   "ledger.task.hint": [
     "任务最长处理 {minutes} 分钟；生成的包保留 {hours} 小时，领取的链接最长 15 分钟有效。",
     "Tasks run for up to {minutes} minutes; packages are retained for {hours} hours and links last up to 15 minutes.",
   ],
   "ledger.task.selection": [
-    "本次固定清单：{count} 份。后续勾选不会改变此任务。",
-    "Fixed selection: {count} files. Later selections do not change this task.",
+    "本次固定清单：{count} 份。",
+    "Fixed selection: {count} files.",
   ],
 
   "ledger.conflict.description": [

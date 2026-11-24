@@ -107,10 +107,6 @@ const messages = {
     "Keeping your draft makes the next save replace the latest draft with your complete local definition.",
   ],
   discard: ["放弃未保存的模板更改？", "Discard unsaved template changes?"],
-  discardHint: [
-    "切换模板后，本次未保存的改动将清除。",
-    "Switching templates discards the unsaved changes.",
-  ],
   discardAction: ["放弃更改", "Discard changes"],
   cancel: ["取消", "Cancel"],
   loading: ["正在读取巡检模板…", "Loading inspection templates…"],

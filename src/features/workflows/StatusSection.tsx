@@ -148,7 +148,7 @@ export function StatusSection({ client, view, revision }: StatusSectionProps) {
   );
 
   return (
-    <PageSection title={w("status")} description={w("statusHelp")}>
+    <PageSection title={w("status")}>
       {statusQuery.isPending ? <p role="status">{w("loading")}</p> : null}
       <ErrorNotice error={statusQuery.error} />
 

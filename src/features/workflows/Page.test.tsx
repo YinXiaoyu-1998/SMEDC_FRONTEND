@@ -178,7 +178,7 @@ describe("自动任务页", () => {
     expect(panel.getByText("失败")).toBeVisible();
   });
 
-  it("没有业务企业时显示创建引导并禁用入口", async () => {
+  it("没有业务企业时只显示登记引导", async () => {
     const api = createWorkflowApi({ enterprises: [] });
     api.install();
     renderApp({
@@ -189,7 +189,17 @@ describe("自动任务页", () => {
     expect(
       await screen.findByText("请先在权限设置登记业务企业，再设置自动任务。"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "自动任务" })).toBeDisabled();
+    expect(
+      within(screen.getByRole("region", { name: "业务企业" })).getByRole(
+        "link",
+        {
+          name: "权限设置",
+        },
+      ),
+    ).toHaveAttribute("href", "/admin/org-1/permissions");
+    expect(
+      screen.queryByRole("combobox", { name: "业务企业" }),
+    ).not.toBeInTheDocument();
   });
 
   it("企业尚未配置时显示 needsConfiguration 与创建引导", async () => {
@@ -339,7 +349,7 @@ describe("自动任务页", () => {
     ).toBeInTheDocument();
   });
 
-  it("只有一个企业时预选，点击按钮后进入深链", async () => {
+  it("只有一个企业时直接进入深链并替换选择页历史", async () => {
     const api = createWorkflowApi();
     api.install();
     const { router } = renderApp({
@@ -347,28 +357,25 @@ describe("自动任务页", () => {
       initialEntries: ["/admin/org-1/workflows"],
     });
 
-    const select = await screen.findByRole("combobox", { name: "业务企业" });
-    expect(select).toHaveValue("enterprise-1");
-    expect(router.state.location.pathname).toBe("/admin/org-1/workflows");
-    fireEvent.click(screen.getByRole("button", { name: "自动任务" }));
-
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe(ENTERPRISE_PATH),
-    );
     expect(
       await screen.findByRole("heading", { name: "任务业务设置" }),
     ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(ENTERPRISE_PATH);
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(
+      screen.queryByRole("combobox", { name: "业务企业" }),
+    ).not.toBeInTheDocument();
 
-    const listCalls = api.calls.filter((call) =>
-      call.url.endsWith("/workflows/list_enterprise_workflows"),
-    );
-    expect(listCalls.length).toBeGreaterThanOrEqual(2);
-    const first = listCalls[0];
-    if (first === undefined) return;
-    expect(bodyOf<{ limit: number }>(first)).toMatchObject({ limit: 1 });
+    expect(
+      api.calls
+        .filter((call) =>
+          call.url.endsWith("/workflows/list_enterprise_workflows"),
+        )
+        .map((call) => call.body),
+    ).toEqual([{ enterpriseKey: "enterprise-1", limit: 100 }]);
   });
 
-  it("有多个企业时等待手动选择", async () => {
+  it("有多个企业时选择后直接进入对应设置", async () => {
     const api = createWorkflowApi({
       enterprises: [
         { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
@@ -383,14 +390,16 @@ describe("自动任务页", () => {
 
     const select = await screen.findByRole("combobox", { name: "业务企业" });
     expect(select).toHaveValue("");
-    fireEvent.click(screen.getByRole("button", { name: "自动任务" }));
-    expect(await screen.findByText("请选择业务企业。")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "自动任务" }),
+    ).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/admin/org-1/workflows");
     fireEvent.change(select, { target: { value: "enterprise-1" } });
-    fireEvent.click(screen.getByRole("button", { name: "自动任务" }));
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe(ENTERPRISE_PATH),
-    );
+    expect(
+      await screen.findByRole("heading", { name: "任务业务设置" }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(ENTERPRISE_PATH);
+    expect(router.state.historyAction).toBe("PUSH");
   });
 
   it("来源账号在弹窗内直接新增，收起后显示完整字段", async () => {

@@ -119,7 +119,7 @@ export function WorkflowsPage() {
 
   if (!enabled) {
     content = null;
-  } else if (enterprisesQuery.isPending || storesQuery.isPending) {
+  } else if (enterprisesQuery.isPending) {
     content = <p role="status">{w("loading")}</p>;
   } else if (enterprisesQuery.isError) {
     content = (
@@ -128,17 +128,10 @@ export function WorkflowsPage() {
         onRetry={() => void enterprisesQuery.refetch()}
       />
     );
-  } else if (storesQuery.isError) {
-    content = (
-      <LoadFailure
-        error={storesQuery.error}
-        onRetry={() => void storesQuery.refetch()}
-      />
-    );
   } else if (enterpriseKey === undefined) {
     content = (
       <EnterprisePicker
-        client={client}
+        orgId={orgId}
         enterprises={enterprisesQuery.data?.enterprises ?? []}
       />
     );
@@ -150,6 +143,15 @@ export function WorkflowsPage() {
         </p>
         <Link to={appPaths.permissions(orgId)}>{w("permissionsLink")}</Link>
       </div>
+    );
+  } else if (storesQuery.isPending) {
+    content = <p role="status">{w("loading")}</p>;
+  } else if (storesQuery.isError) {
+    content = (
+      <LoadFailure
+        error={storesQuery.error}
+        onRetry={() => void storesQuery.refetch()}
+      />
     );
   } else if (bundleQuery.isPending) {
     content = <p role="status">{w("loading")}</p>;

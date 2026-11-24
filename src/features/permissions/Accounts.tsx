@@ -149,10 +149,7 @@ export function AccountsSection() {
   return (
     <>
       <section className={styles.catalogCard}>
-        <ListHeader
-          title={t("permissions.tabs.accounts")}
-          description={t("permissions.accountListHint")}
-        />
+        <ListHeader title={t("permissions.tabs.accounts")} />
         <div className={styles.toolbar}>
           <SearchInput
             label={t("permissions.searchAccount")}
@@ -285,7 +282,6 @@ function AccountPanel({
     confirmation: (draft, base) => ({
       subject: account.displayName,
       diff: accountDiff(t, data, draft, base),
-      impact: t("permissions.accountSaveImpact"),
       fullBefore: accountSummary(t, data, {
         displayName: account.displayName,
         clearance: base.clearance ?? 0,

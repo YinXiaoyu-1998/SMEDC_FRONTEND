@@ -70,10 +70,7 @@ export function DimensionsSection({ active }: { readonly active: boolean }) {
   return (
     <>
       <section className={styles.catalogCard}>
-        <ListHeader
-          title={t("permissions.tabs.dimensions")}
-          description={t("permissions.conditionHint")}
-        />
+        <ListHeader title={t("permissions.tabs.dimensions")} />
         <div className={styles.toolbar}>
           <SearchInput
             label={t("permissions.searchCondition")}

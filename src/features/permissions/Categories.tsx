@@ -269,11 +269,6 @@ export function CategoriesSection({ active }: { readonly active: boolean }) {
               ? "permissions.segmented.fixed"
               : "permissions.segmented.document",
           )}
-          description={t(
-            segment === "fixed"
-              ? "permissions.fixedListHint"
-              : "permissions.docCategoryHint",
-          )}
           action={
             <div
               className={styles.segmented}

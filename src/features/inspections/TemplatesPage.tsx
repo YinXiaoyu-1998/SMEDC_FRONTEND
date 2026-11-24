@@ -294,7 +294,6 @@ export function InspectionTemplatesPage() {
       <ConfirmDialog
         flow={discard}
         title={labels("discard")}
-        description={labels("discardHint")}
         confirmLabel={labels("discardAction")}
         cancelLabel={labels("cancel")}
       />
