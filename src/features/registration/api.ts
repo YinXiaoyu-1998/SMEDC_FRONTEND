@@ -14,7 +14,7 @@ export function readRegistration(signal?: AbortSignal) {
     {
       ...webApiRoutes["registration.session"],
       method: "GET",
-      signal,
+      ...(signal ? { signal } : {}),
       handleForbiddenLocally: true,
     },
     registrationSessionResponseSchema,
