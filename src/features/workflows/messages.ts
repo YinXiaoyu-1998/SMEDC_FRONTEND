@@ -428,14 +428,6 @@ export const workflowMessages = {
   // 页面补充：加载、选择、校验与状态提示
   loadingFailed: ["读取失败，请重试。", "Could not load. Try again."],
   retry: ["重试", "Try again"],
-  selectEnterpriseRequired: [
-    "请选择业务企业。",
-    "Choose a business enterprise.",
-  ],
-  enterpriseHint: [
-    "选择业务企业后打开自动任务设置。",
-    "Choose a business enterprise to open task settings.",
-  ],
   createGuide: [
     "请先在权限设置登记业务企业与标准门店，再回到本页配置自动任务。",
     "Register the business enterprise and standard stores in Permissions, then return to configure tasks.",
