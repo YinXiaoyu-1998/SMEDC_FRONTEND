@@ -146,27 +146,66 @@ describe("主导航", () => {
     );
   });
 
-  it("退出登录后回到登录页", async () => {
-    const fetchMock = vi.fn<FetchFunction>(async (_input, init) => {
-      if ((init?.method ?? "GET") === "DELETE") {
+  it("退出组织管理页后在根地址登录，下一个账号进入自己的组织", async () => {
+    const nextAdmin = {
+      ...adminSession,
+      identity: {
+        ...adminSession.identity,
+        orgId: "org-2",
+        userAccountId: "another-admin",
+        email: "owner+01@example.com",
+      },
+    };
+    let activeSession: typeof adminSession | null = adminSession;
+    const fetchMock = vi.fn<FetchFunction>(async (input, init) => {
+      if (!String(input).startsWith("/api/web/v1/session")) {
+        return jsonResponse({}, 404);
+      }
+      if (init?.method === "DELETE") {
+        activeSession = null;
         return jsonResponse({ signedOut: true });
       }
-      return jsonResponse(
-        { error: { code: "BROWSER_SIGN_IN_REQUIRED", message: "请先登录" } },
-        401,
-      );
+      if (init?.method === "POST") activeSession = nextAdmin;
+      return activeSession
+        ? jsonResponse(activeSession)
+        : jsonResponse(
+            {
+              error: { code: "BROWSER_SIGN_IN_REQUIRED", message: "请先登录" },
+            },
+            401,
+          );
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const { router } = renderApp({
       session: adminSession,
-      initialEntries: ["/ledger"],
+      initialEntries: ["/admin/org-1/permissions?tab=accounts"],
     });
-
+    const searches: string[] = [];
+    const unsubscribe = router.subscribe((state) => {
+      searches.push(state.location.search);
+    });
     fireEvent.click(screen.getByRole("button", { name: "退出登录" }));
-
+    try {
+      await screen.findByRole("heading", { name: "登录企业智脑" });
+      expect(router.state.location).toMatchObject({
+        pathname: "/",
+        search: "",
+        hash: "",
+      });
+      expect(searches.some((search) => search.includes("next="))).toBe(false);
+      fireEvent.change(screen.getByLabelText("邮箱"), {
+        target: { value: nextAdmin.identity.email },
+      });
+      fireEvent.change(screen.getByLabelText("密码"), {
+        target: { value: "synthetic-password" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "登录" }));
+    } finally {
+      unsubscribe();
+    }
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/login");
+      expect(router.state.location.pathname).toBe("/admin/org-2/permissions");
     });
   });
 });
