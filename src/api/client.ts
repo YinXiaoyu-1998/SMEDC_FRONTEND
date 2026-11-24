@@ -37,12 +37,14 @@ export interface WebApiErrorInit {
   readonly code: string;
   readonly message: string;
   readonly cause?: unknown;
+  readonly details?: unknown;
 }
 
 /**
  * 统一的接口错误：上层只需要判断 status / code，不必关心 fetch 与响应解析细节。
  */
 export class WebApiError extends Error {
+  readonly details?: unknown;
   readonly status: number;
   readonly code: string;
 
@@ -51,6 +53,7 @@ export class WebApiError extends Error {
     this.name = "WebApiError";
     this.status = init.status;
     this.code = init.code;
+    this.details = init.details;
     if (init.cause !== undefined) {
       this.cause = init.cause;
     }
@@ -194,6 +197,7 @@ export async function requestWebApi<T>(
     throw new WebApiError({
       status: response.status,
       code: envelope?.code ?? INTERNAL_ERROR_CODE,
+      details: envelope?.details,
       message: envelope?.message ?? `请求失败（HTTP ${response.status}）`,
     });
   }
@@ -237,6 +241,7 @@ async function readJsonBody(response: Response): Promise<unknown> {
 }
 
 interface ErrorEnvelope {
+  readonly details?: unknown;
   readonly code: string;
   readonly message: string;
 }
@@ -251,6 +256,7 @@ function extractErrorEnvelope(payload: unknown): ErrorEnvelope | null {
 
   return {
     code,
+    details: error.details,
     message:
       typeof message === "string" && message !== "" ? message : "请求失败",
   };

@@ -19,7 +19,6 @@ const activeVersion = "580dbc92-9e76-44c4-b944-f69edeec86ab";
 const bothQuestions = ["第一题", "第二题"].map((title) => ({
   questionId: crypto.randomUUID(),
   title,
-  category: "",
   components: [],
 }));
 const capabilities = {
@@ -121,6 +120,7 @@ function setup(existing = false, otherEnterprise = false) {
         pageReads.push(cursor);
         const questions = definition.questions.map((question) => ({
           ...question,
+          category: "原表章节",
           questionRevision: 1,
         }));
         const page = existing
@@ -147,6 +147,29 @@ function setup(existing = false, otherEnterprise = false) {
         csrf: new Headers(init?.headers).get("x-csrf-token"),
         body,
       });
+      if (
+        pathname.endsWith("/templates/active") &&
+        !body.definition?.storeIds.length
+      ) {
+        return jsonResponse(
+          {
+            error: {
+              code: "INSPECTION_INVALID",
+              message: "Invalid inspection request.",
+              details: {
+                field: "storeIds",
+                issues: [
+                  {
+                    field: "storeIds",
+                    message: "Choose at least one applicable store.",
+                  },
+                ],
+              },
+            },
+          },
+          400,
+        );
+      }
       if (body.templateId) templateId = body.templateId;
       if (
         body.expectedDraftRevision !== undefined &&
@@ -158,7 +181,11 @@ function setup(existing = false, otherEnterprise = false) {
         );
       if (body.definition) definition = body.definition;
       draftRevision += 1;
-      if (pathname.endsWith("/activate")) activeRevision = draftRevision;
+      if (
+        pathname.endsWith("/activate") ||
+        pathname.endsWith("/templates/active")
+      )
+        activeRevision = draftRevision;
       if (pathname.endsWith("/deactivate")) activeRevision = null;
       return jsonResponse(status());
     }),
@@ -188,6 +215,54 @@ function setup(existing = false, otherEnterprise = false) {
     },
   };
 }
+
+it("reports missing fields and creates a usable template in one request when corrected", async () => {
+  const { writes } = setup();
+  fireEvent.click(await screen.findByRole("button", { name: "新建模板" }));
+  fireEvent.change(screen.getByLabelText("模板名称"), {
+    target: { value: "闭店巡检" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "创建并启用" }));
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("适用门店");
+  expect(
+    screen.queryByRole("button", { name: /闭店巡检 ·/ }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByLabelText("模板名称")).toHaveValue("闭店巡检");
+
+  fireEvent.change(screen.getByLabelText("同店同日份数"), {
+    target: { value: "single" },
+  });
+  fireEvent.click(screen.getByRole("checkbox", { name: "体验门店" }));
+  fireEvent.click(screen.getByRole("button", { name: "添加题目" }));
+  fireEvent.change(screen.getByLabelText("题目名称"), {
+    target: { value: "台面" },
+  });
+  fireEvent.change(screen.getByLabelText("标准说明"), {
+    target: { value: "干燥整洁" },
+  });
+  fireEvent.change(screen.getByLabelText("组件类型"), {
+    target: { value: "comment" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "添加组件" }));
+  screen.getAllByLabelText("组件标签").forEach((field, index) =>
+    fireEvent.change(field, {
+      target: { value: index ? "观察结果" : "标准" },
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "创建并启用" }));
+  expect(
+    await screen.findByRole("button", { name: "闭店巡检 · 已启用" }),
+  ).toBeInTheDocument();
+  expect(writes).toHaveLength(2);
+  expect(
+    writes.every(
+      ({ method, path }) =>
+        method === "POST" && path.endsWith("/templates/active"),
+    ),
+  ).toBe(true);
+  expect(screen.getByRole("button", { name: "停用模板" })).toBeEnabled();
+});
 
 it("saves all five component kinds with stable identities and activates only the saved revision", async () => {
   const { writes } = setup();
@@ -229,7 +304,9 @@ it("saves all five component kinds with stable identities and activates only the
   fireEvent.change(screen.getByLabelText("选项名称"), {
     target: { value: "正常" },
   });
-  expect(screen.getByRole("button", { name: "启用模板" })).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "启用模板" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "启用模板" })).toBeEnabled(),
@@ -292,10 +369,97 @@ it("saves all five component kinds with stable identities and activates only the
   );
 }, 10_000);
 
+it("collapses question fields and saves a whole-card drag reorder by identity", async () => {
+  const { writes } = setup(true);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "服务器草稿 · 未启用" }),
+  );
+  const first = await screen.findByRole("button", {
+    name: "第一题",
+    expanded: true,
+  });
+  const firstCard = first.closest("section")!;
+  expect(screen.queryByLabelText("题目分类")).not.toBeInTheDocument();
+  fireEvent.click(first);
+  expect(
+    within(firstCard).getByRole("button", { name: "第一题", expanded: false }),
+  ).toBeInTheDocument();
+  expect(
+    within(firstCard).queryByLabelText("题目名称"),
+  ).not.toBeInTheDocument();
+  expect(
+    within(firstCard).getByRole("button", { name: "复制题目" }),
+  ).toBeEnabled();
+  expect(
+    within(firstCard).getByRole("button", { name: "移除题目" }),
+  ).toBeEnabled();
+  expect(
+    within(firstCard).queryByRole("button", { name: "上移" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(firstCard).queryByRole("button", { name: "下移" }),
+  ).not.toBeInTheDocument();
+
+  const grip = within(firstCard).getByRole("button", {
+    name: "拖动题目排序 · 第一题",
+  });
+  const secondCard = screen
+    .getByRole("button", { name: "第二题", expanded: false })
+    .closest("section")!;
+  // JSDOM does not provide layout, pointer capture, or hit testing.
+  const fromPoint = vi.fn(() => secondCard);
+  const original = Object.getOwnPropertyDescriptor(
+    document,
+    "elementFromPoint",
+  );
+  Object.defineProperty(document, "elementFromPoint", {
+    configurable: true,
+    value: fromPoint,
+  });
+  Object.defineProperties(grip, {
+    setPointerCapture: { value: vi.fn() },
+    hasPointerCapture: { value: () => true },
+  });
+  const point = (type: string) => {
+    const event = new MouseEvent(type, {
+      bubbles: true,
+      button: 0,
+      clientY: 100,
+    });
+    Object.defineProperties(event, {
+      isPrimary: { value: true },
+      pointerId: { value: 1 },
+    });
+    return event;
+  };
+  try {
+    fireEvent(grip, point("pointerdown"));
+    fireEvent(grip, point("pointermove"));
+    expect(secondCard).toHaveAttribute("data-drop", "after");
+    fireEvent(grip, point("pointerup"));
+  } finally {
+    if (original) Object.defineProperty(document, "elementFromPoint", original);
+    else Reflect.deleteProperty(document, "elementFromPoint");
+  }
+
+  fireEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() =>
+    expect(writes[0]?.body).toMatchObject({
+      definition: { questions: [bothQuestions[1], bothQuestions[0]] },
+    }),
+  );
+  const submitted = writes[0]!.body as { definition: TemplateDefinition };
+  for (const question of submitted.definition.questions)
+    expect(question).not.toHaveProperty("category");
+});
+
 it("loads every preview page before saving and keeps edits after a revision conflict", async () => {
   const { writes, pageReads, updateElsewhere } = setup(true);
   fireEvent.click(
     await screen.findByRole("button", { name: "服务器草稿 · 未启用" }),
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "第二题", expanded: false }),
   );
   await waitFor(() =>
     expect(screen.getAllByLabelText("题目名称")).toHaveLength(2),

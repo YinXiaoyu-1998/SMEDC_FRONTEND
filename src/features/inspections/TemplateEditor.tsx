@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { WebApiError } from "@/api/client";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -24,6 +26,29 @@ import {
 import { TemplateBuilder, type TemplateStore } from "./TemplateBuilder";
 import styles from "./Templates.module.css";
 import { useTemplateText } from "./templatesText";
+
+const validationDetails = z.object({
+  issues: z
+    .array(z.object({ field: z.string(), message: z.string() }))
+    .min(1)
+    .max(20),
+});
+
+function validationField(field: string, t: ReturnType<typeof useTemplateText>) {
+  const labels = {
+    title: "title",
+    storeIds: "stores",
+    copyMode: "mode",
+    questions: "questions",
+  } as const;
+  const key = field.split(".")[0] as keyof typeof labels;
+  if (key === "questions" && field.includes(".")) {
+    const index = Number(field.split(".")[1]);
+    if (Number.isInteger(index))
+      return t("questions") + " " + String(index + 1);
+  }
+  return Object.hasOwn(labels, key) ? t(labels[key]) : field;
+}
 
 export function TemplateEditor({
   initial,
@@ -55,7 +80,7 @@ export function TemplateEditor({
   const [preview, setPreview] = useState(initial);
   const [conflict, setConflict] = useState(false);
   const [latest, setLatest] = useState<TemplatePreview | null>(null);
-  const [busy, setBusy] = useState<"save" | "read" | null>(null);
+  const [busy, setBusy] = useState<"save" | "create" | "read" | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [saved, setSaved] = useState(false);
   const action = useRef(true);
@@ -103,9 +128,9 @@ export function TemplateEditor({
     adopt(current, keepDraft);
   }
 
-  async function save() {
+  async function save(activateOnCreate = false) {
     if (!definition || !validSize || !dirty || blocked) return;
-    setBusy("save");
+    setBusy(activateOnCreate ? "create" : "save");
     setError(null);
     setSaved(false);
     try {
@@ -115,6 +140,7 @@ export function TemplateEditor({
         definition,
         revision,
         csrfToken,
+        activateOnCreate,
       );
       setServerStatus(committed);
       setPreview(null);
@@ -164,6 +190,11 @@ export function TemplateEditor({
     preview.issues.length === 0 &&
     (!active || serverStatus.activeRevision !== revision);
   const canDeactivate = !dirty && !blocked && active;
+  const validation =
+    error instanceof WebApiError && error.code === "INSPECTION_INVALID"
+      ? validationDetails.safeParse(error.details)
+      : undefined;
+  const issues = validation?.success ? validation.data.issues : undefined;
   const openActivation = (activate: boolean) => {
     action.current = activate;
     void activation.request();
@@ -202,26 +233,52 @@ export function TemplateEditor({
         </p>
       ) : null}
       <div className={styles.toolbar}>
+        {revision === null ? (
+          <ActionButton
+            label={t("createActive")}
+            busy={busy === "create"}
+            disabled={!dirty || !validSize || blocked}
+            onRun={() => void save(true)}
+          />
+        ) : null}
         <ActionButton
           label={t("save")}
+          variant={revision === null ? "secondary" : "primary"}
           busy={busy === "save"}
           disabled={!dirty || !validSize || blocked || activation.isSubmitting}
           onRun={() => void save()}
         />
-        <ActionButton
-          label={t("activate")}
-          variant="secondary"
-          disabled={!canActivate || activation.isSubmitting}
-          onRun={() => openActivation(true)}
-        />
-        <ActionButton
-          label={t("deactivate")}
-          variant="secondary"
-          disabled={!canDeactivate || activation.isSubmitting}
-          onRun={() => openActivation(false)}
-        />
+        {revision !== null ? (
+          <>
+            <ActionButton
+              label={t("activate")}
+              variant="secondary"
+              disabled={!canActivate || activation.isSubmitting}
+              onRun={() => openActivation(true)}
+            />
+            <ActionButton
+              label={t("deactivate")}
+              variant="secondary"
+              disabled={!canDeactivate || activation.isSubmitting}
+              onRun={() => openActivation(false)}
+            />
+          </>
+        ) : null}
       </div>
-      <InlineError error={error} />
+      {issues ? (
+        <div className={styles.error} role="alert">
+          <p>{t("createMissing")}</p>
+          <ul>
+            {issues.map(({ field, message }, index) => (
+              <li key={index}>
+                {validationField(field, t)} · {message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <InlineError error={error} />
+      )}
       {saved ? <p role="status">{t("saved")}</p> : null}
       {revision !== null ? (
         <section aria-label={t("checks")} className={styles.review}>
@@ -370,8 +427,7 @@ function DraftSummary({
       {draft.questions.map((question, index) => (
         <details key={question.questionId}>
           <summary>
-            {index + 1}. {question.title || t("questionTitle")} ·{" "}
-            {question.category}
+            {index + 1}. {question.title || t("questionTitle")}
           </summary>
           <ul>
             {question.components.map((component) => (

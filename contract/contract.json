@@ -1935,10 +1935,15 @@
                             "type": "object",
                             "properties": {
                               "field": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 255,
-                                "pattern": "^[A-Za-z0-9_.[\\]-]+$"
+                                "$ref": "#/$defs/r_inspections_patches___schema4"
+                              },
+                              "issues": {
+                                "minItems": 1,
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/$defs/r_inspections_patches___schema5"
+                                }
                               }
                             },
                             "required": ["field"],
@@ -1996,6 +2001,27 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "r_inspections_patches___schema4": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^[A-Za-z0-9_.[\\]-]+$"
+          },
+          "r_inspections_patches___schema5": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "$ref": "#/$defs/r_inspections_patches___schema4"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": ["field", "message"],
+            "additionalProperties": false
           }
         }
       },
@@ -3371,10 +3397,6 @@
                 "title": {
                   "$ref": "#/$defs/b_inspections_templates_create___schema3"
                 },
-                "category": {
-                  "type": "string",
-                  "maxLength": 120
-                },
                 "components": {
                   "maxItems": 12,
                   "type": "array",
@@ -3383,7 +3405,7 @@
                   }
                 }
               },
-              "required": ["questionId", "title", "category", "components"],
+              "required": ["questionId", "title", "components"],
               "additionalProperties": false
             },
             "b_inspections_templates_create___schema8": {
@@ -3601,6 +3623,351 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           },
           "r_inspections_templates_create___schema1": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INSPECTION_CONFLICT",
+        "INSPECTION_FORBIDDEN",
+        "INSPECTION_INVALID",
+        "INSPECTION_LIMIT_EXCEEDED",
+        "INSPECTION_NOT_FOUND",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 524288
+        }
+      }
+    },
+    {
+      "id": "inspections.templates.createActive",
+      "method": "POST",
+      "path": "/api/web/v1/inspections/templates/active",
+      "auth": "session-write",
+      "summary": "校验完整定义并在同一事务创建、启用巡检模板",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+            },
+            "enterpriseKey": {
+              "$ref": "#/$defs/b_inspections_templates_createActive___schema1"
+            },
+            "definition": {
+              "$ref": "#/$defs/b_inspections_templates_createActive___schema2"
+            }
+          },
+          "required": ["templateId", "enterpriseKey", "definition"],
+          "additionalProperties": false,
+          "$defs": {
+            "b_inspections_templates_createActive___schema0": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "b_inspections_templates_createActive___schema1": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "b_inspections_templates_createActive___schema2": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema3"
+                },
+                "copyMode": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema4"
+                },
+                "storeIds": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema5"
+                },
+                "questions": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema6"
+                }
+              },
+              "required": ["title", "storeIds", "questions"],
+              "additionalProperties": false
+            },
+            "b_inspections_templates_createActive___schema3": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "b_inspections_templates_createActive___schema4": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["single", "multiple"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_createActive___schema5": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+              }
+            },
+            "b_inspections_templates_createActive___schema6": {
+              "maxItems": 200,
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/b_inspections_templates_createActive___schema7"
+              }
+            },
+            "b_inspections_templates_createActive___schema7": {
+              "type": "object",
+              "properties": {
+                "questionId": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+                },
+                "title": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema3"
+                },
+                "components": {
+                  "maxItems": 12,
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/b_inspections_templates_createActive___schema8"
+                  }
+                }
+              },
+              "required": ["questionId", "title", "components"],
+              "additionalProperties": false
+            },
+            "b_inspections_templates_createActive___schema8": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema9"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "sop"
+                    },
+                    "text": {
+                      "type": "string",
+                      "maxLength": 4000
+                    }
+                  },
+                  "required": ["componentId", "label", "kind", "text"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema10"
+                    },
+                    "kind": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema11"
+                    },
+                    "minTenths": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema12"
+                    },
+                    "maxTenths": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema14"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema10"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "comment"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema10"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "photo"
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "componentId": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema0"
+                    },
+                    "label": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema9"
+                    },
+                    "required": {
+                      "$ref": "#/$defs/b_inspections_templates_createActive___schema10"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "status"
+                    },
+                    "options": {
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/b_inspections_templates_createActive___schema15"
+                      }
+                    }
+                  },
+                  "required": ["componentId", "label", "required", "kind"],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "b_inspections_templates_createActive___schema9": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "b_inspections_templates_createActive___schema10": {
+              "type": "boolean"
+            },
+            "b_inspections_templates_createActive___schema11": {
+              "type": "string",
+              "const": "score"
+            },
+            "b_inspections_templates_createActive___schema12": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema13"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_createActive___schema13": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000000
+            },
+            "b_inspections_templates_createActive___schema14": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema13"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "b_inspections_templates_createActive___schema15": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "label": {
+                  "$ref": "#/$defs/b_inspections_templates_createActive___schema9"
+                }
+              },
+              "required": ["id", "label"],
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "$ref": "#/$defs/r_inspections_templates_createActive___schema0"
+          },
+          "draftRevision": {
+            "$ref": "#/$defs/r_inspections_templates_createActive___schema1"
+          },
+          "activeTemplateVersionId": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_createActive___schema0"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activeRevision": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/r_inspections_templates_createActive___schema1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "templateId",
+          "draftRevision",
+          "activeTemplateVersionId",
+          "activeRevision"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "r_inspections_templates_createActive___schema0": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "r_inspections_templates_createActive___schema1": {
             "type": "integer",
             "minimum": 1,
             "maximum": 9007199254740991
@@ -4366,10 +4733,6 @@
                 "title": {
                   "$ref": "#/$defs/b_inspections_templates_save___schema0"
                 },
-                "category": {
-                  "type": "string",
-                  "maxLength": 120
-                },
                 "components": {
                   "maxItems": 12,
                   "type": "array",
@@ -4378,7 +4741,7 @@
                   }
                 }
               },
-              "required": ["questionId", "title", "category", "components"],
+              "required": ["questionId", "title", "components"],
               "additionalProperties": false
             },
             "b_inspections_templates_save___schema6": {

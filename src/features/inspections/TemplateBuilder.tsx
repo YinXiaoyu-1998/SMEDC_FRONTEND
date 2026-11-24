@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { ContextItem } from "@/api/inspection-templates";
 import { ActionButton } from "@/ui/ActionButton";
@@ -18,7 +18,18 @@ import styles from "./Templates.module.css";
 import { useTemplateText } from "./templatesText";
 
 export type TemplateStore = Extract<ContextItem, { kind: "store" }>;
-const PAGE_SIZE = 20;
+type DropTarget = { id: string; before: boolean };
+type Point = Pick<PointerEvent, "clientX" | "clientY">;
+
+function dropTarget(event: Point): DropTarget | null {
+  const row = document
+    .elementFromPoint(event.clientX, event.clientY)
+    ?.closest<HTMLElement>("[data-question-id]");
+  const id = row?.dataset.questionId;
+  if (!row || !id) return null;
+  const { top, height } = row.getBoundingClientRect();
+  return { id, before: event.clientY < top + height / 2 };
+}
 
 export function TemplateBuilder({
   draft,
@@ -32,12 +43,44 @@ export function TemplateBuilder({
   disabled: boolean;
 }) {
   const t = useTemplateText();
-  const [pageInput, setPage] = useState(0);
-  const lastPage = Math.max(
-    0,
-    Math.ceil(draft.questions.length / PAGE_SIZE) - 1,
+  const [expanded, setExpanded] = useState(
+    () =>
+      new Set(draft.questions.slice(0, 1).map(({ questionId }) => questionId)),
   );
-  const page = Math.min(pageInput, lastPage);
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [target, setTarget] = useState<DropTarget | null>(null);
+  const pointer = useRef<Point | null>(null);
+  // A held card can travel beyond the visible part of a long template.
+  useEffect(() => {
+    if (!dragged) return;
+    let frame = 0;
+    const scrollWhileHeld = () => {
+      const point = pointer.current;
+      if (point) {
+        const edge = 56;
+        const step =
+          point.clientY < edge
+            ? -12
+            : point.clientY > window.innerHeight - edge
+              ? 12
+              : 0;
+        if (step) {
+          window.scrollBy(0, step);
+          const over = dropTarget(point);
+          const next = over?.id === dragged ? null : over;
+          setTarget((current) =>
+            current?.id === next?.id && current?.before === next?.before
+              ? current
+              : next,
+          );
+        }
+      }
+      frame = requestAnimationFrame(scrollWhileHeld);
+    };
+    frame = requestAnimationFrame(scrollWhileHeld);
+    return () => cancelAnimationFrame(frame);
+  }, [dragged]);
+
   const patched = (patch: Partial<TemplateDraft>) =>
     onChange({ ...draft, ...patch });
   const choices = [
@@ -51,7 +94,42 @@ export function TemplateBuilder({
 
   function append(question: QuestionInput) {
     patched({ questions: [...draft.questions, question] });
-    setPage(Math.floor(draft.questions.length / PAGE_SIZE));
+    setExpanded((old) => new Set(old).add(question.questionId));
+  }
+
+  function move(id: string, to: number) {
+    const from = draft.questions.findIndex(
+      ({ questionId }) => questionId === id,
+    );
+    if (from < 0 || to < 0 || to >= draft.questions.length || from === to)
+      return;
+    const questions = [...draft.questions];
+    const [question] = questions.splice(from, 1);
+    questions.splice(to, 0, question!);
+    patched({ questions });
+  }
+
+  function endDrag() {
+    pointer.current = null;
+    setDragged(null);
+    setTarget(null);
+  }
+
+  function drop(id: string, event: PointerEvent) {
+    const point = dropTarget(event);
+    if (point && point.id !== id) {
+      const destination = draft.questions.findIndex(
+        ({ questionId }) => questionId === point.id,
+      );
+      const from = draft.questions.findIndex(
+        ({ questionId }) => questionId === id,
+      );
+      if (destination >= 0) {
+        const insertion = destination + (point.before ? 0 : 1);
+        move(id, insertion - (from < insertion ? 1 : 0));
+      }
+    }
+    endDrag();
   }
 
   return (
@@ -114,59 +192,61 @@ export function TemplateBuilder({
         />
       </div>
       <p className={styles.note}>{t("manual")}</p>
-      {draft.questions
-        .slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-        .map((question, offset) => {
-          const index = page * PAGE_SIZE + offset;
-          return (
-            <QuestionEditor
-              key={question.questionId}
-              question={question}
-              index={index}
-              count={draft.questions.length}
-              onChange={(next) =>
-                patched({
-                  questions: draft.questions.map((item, i) =>
-                    i === index ? next : item,
-                  ),
-                })
-              }
-              onMove={(shift) => {
-                patched({
-                  questions: rearrange(draft.questions, index, shift),
-                });
-                setPage(Math.floor((index + shift) / PAGE_SIZE));
-              }}
-              onCopy={() => append(copyQuestion(question))}
-              onRemove={() =>
-                patched({
-                  questions: draft.questions.filter(
-                    (item) => item.questionId !== question.questionId,
-                  ),
-                })
-              }
-            />
-          );
-        })}
-      {lastPage > 0 ? (
-        <div className={styles.toolbar}>
-          <ActionButton
-            label={t("prev")}
-            variant="secondary"
-            disabled={page === 0}
-            onRun={() => setPage(page - 1)}
+      {draft.questions.map((question, index) => {
+        const id = question.questionId;
+        return (
+          <QuestionEditor
+            key={id}
+            question={question}
+            index={index}
+            count={draft.questions.length}
+            expanded={expanded.has(id)}
+            dragging={dragged === id}
+            dropBefore={target?.id === id && target.before}
+            dropAfter={target?.id === id && !target.before}
+            onToggle={() =>
+              setExpanded((old) => {
+                const next = new Set(old);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              })
+            }
+            onDragStart={() => setDragged(id)}
+            onDragMove={(event) => {
+              pointer.current = {
+                clientX: event.clientX,
+                clientY: event.clientY,
+              };
+              const over = dropTarget(event);
+              setTarget(over?.id === id ? null : over);
+            }}
+            onDrop={(event) => drop(id, event)}
+            onCancelDrag={endDrag}
+            onMove={(shift) => move(id, index + shift)}
+            onChange={(next) =>
+              patched({
+                questions: draft.questions.map((item) =>
+                  item.questionId === id ? next : item,
+                ),
+              })
+            }
+            onCopy={() => append(copyQuestion(question))}
+            onRemove={() => {
+              setExpanded((old) => {
+                const next = new Set(old);
+                next.delete(id);
+                return next;
+              });
+              patched({
+                questions: draft.questions.filter(
+                  (item) => item.questionId !== id,
+                ),
+              });
+            }}
           />
-          <span>
-            {page + 1} / {lastPage + 1}
-          </span>
-          <ActionButton
-            label={t("next")}
-            variant="secondary"
-            disabled={page === lastPage}
-            onRun={() => setPage(page + 1)}
-          />
-        </div>
-      ) : null}
+        );
+      })}
     </fieldset>
   );
 }
@@ -175,6 +255,15 @@ function QuestionEditor({
   question,
   index,
   count,
+  expanded,
+  dragging,
+  dropBefore,
+  dropAfter,
+  onToggle,
+  onDragStart,
+  onDragMove,
+  onDrop,
+  onCancelDrag,
   onChange,
   onCopy,
   onMove,
@@ -183,6 +272,15 @@ function QuestionEditor({
   question: QuestionInput;
   index: number;
   count: number;
+  expanded: boolean;
+  dragging: boolean;
+  dropBefore: boolean;
+  dropAfter: boolean;
+  onToggle: () => void;
+  onDragStart: () => void;
+  onDragMove: (event: PointerEvent<HTMLButtonElement>) => void;
+  onDrop: (event: PointerEvent<HTMLButtonElement>) => void;
+  onCancelDrag: () => void;
   onChange: (next: QuestionInput) => void;
   onCopy: () => void;
   onMove: (shift: -1 | 1) => void;
@@ -193,24 +291,54 @@ function QuestionEditor({
   const components = (next: ComponentInput[]) =>
     onChange({ ...question, components: next });
   return (
-    <fieldset className={styles.question}>
-      <legend>
-        {t("questions")} {index + 1}
-        {question.title ? ` · ${question.title}` : ""}
-      </legend>
-      <div className={styles.toolbar}>
-        <ActionButton
-          variant="ghost"
-          label={t("up")}
-          disabled={index === 0}
-          onRun={() => onMove(-1)}
-        />
-        <ActionButton
-          variant="ghost"
-          label={t("down")}
-          disabled={index + 1 >= count}
-          onRun={() => onMove(1)}
-        />
+    <section
+      className={styles.question}
+      data-question-id={question.questionId}
+      data-dragging={dragging || undefined}
+      data-drop={dropBefore ? "before" : dropAfter ? "after" : undefined}
+    >
+      <div className={styles.questionHeader}>
+        {count > 1 ? (
+          <button
+            type="button"
+            className={styles.dragHandle}
+            aria-label={
+              t("dragQuestion") + " · " + (question.title || String(index + 1))
+            }
+            title={t("dragHint")}
+            onPointerDown={(event) => {
+              if (!event.isPrimary || event.button !== 0) return;
+              event.currentTarget.setPointerCapture(event.pointerId);
+              onDragStart();
+            }}
+            onPointerMove={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId))
+                onDragMove(event);
+            }}
+            onPointerUp={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId))
+                onDrop(event);
+            }}
+            onLostPointerCapture={onCancelDrag}
+            onPointerCancel={onCancelDrag}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+              event.preventDefault();
+              onMove(event.key === "ArrowUp" ? -1 : 1);
+            }}
+          >
+            <span aria-hidden="true">⠿</span>
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={styles.questionToggle}
+          aria-expanded={expanded}
+          onClick={onToggle}
+        >
+          <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+          {question.title || t("questionTitle") + " " + String(index + 1)}
+        </button>
         <ActionButton
           variant="ghost"
           label={t("copy")}
@@ -223,85 +351,84 @@ function QuestionEditor({
           onRun={onRemove}
         />
       </div>
-      <div className={styles.row}>
-        <Field label={t("questionTitle")}>
-          <input
-            maxLength={120}
-            value={question.title}
-            onChange={(e) =>
-              onChange({ ...question, title: e.currentTarget.value })
-            }
-          />
-        </Field>
-        <Field label={t("category")}>
-          <input
-            maxLength={120}
-            value={question.category}
-            onChange={(e) =>
-              onChange({ ...question, category: e.currentTarget.value })
-            }
-          />
-        </Field>
-      </div>
-      {question.components.map((component, i) => (
-        <fieldset key={component.componentId} className={styles.component}>
-          <legend>
-            {t(component.kind)} {i + 1}
-          </legend>
-          <ComponentEditor
-            component={component}
-            onChange={(next) =>
-              components(
-                question.components.map((item, j) => (j === i ? next : item)),
-              )
-            }
-          />
+      {expanded ? (
+        <div className={styles.stack}>
+          <Field label={t("questionTitle")}>
+            <input
+              maxLength={120}
+              value={question.title}
+              onChange={(event) =>
+                onChange({ ...question, title: event.currentTarget.value })
+              }
+            />
+          </Field>
+          {question.components.map((component, i) => (
+            <fieldset key={component.componentId} className={styles.component}>
+              <legend>
+                {t(component.kind)} {i + 1}
+              </legend>
+              <ComponentEditor
+                component={component}
+                onChange={(next) =>
+                  components(
+                    question.components.map((item, j) =>
+                      j === i ? next : item,
+                    ),
+                  )
+                }
+              />
+              <div className={styles.toolbar}>
+                <ActionButton
+                  variant="ghost"
+                  label={t("up")}
+                  disabled={i === 0}
+                  onRun={() =>
+                    components(rearrange(question.components, i, -1))
+                  }
+                />
+                <ActionButton
+                  variant="ghost"
+                  label={t("down")}
+                  disabled={i === question.components.length - 1}
+                  onRun={() => components(rearrange(question.components, i, 1))}
+                />
+                <ActionButton
+                  variant="ghost"
+                  label={t("remove")}
+                  onRun={() =>
+                    components(question.components.filter((_, j) => i !== j))
+                  }
+                />
+              </div>
+            </fieldset>
+          ))}
           <div className={styles.toolbar}>
+            <Field label={t("kind")}>
+              <select
+                value={kind}
+                onChange={(e) =>
+                  setKind(e.currentTarget.value as ComponentInput["kind"])
+                }
+              >
+                {componentKinds.map((value) => (
+                  <option key={value} value={value}>
+                    {t(value)}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <ActionButton
-              variant="ghost"
-              label={t("up")}
-              disabled={i === 0}
-              onRun={() => components(rearrange(question.components, i, -1))}
-            />
-            <ActionButton
-              variant="ghost"
-              label={t("down")}
-              disabled={i === question.components.length - 1}
-              onRun={() => components(rearrange(question.components, i, 1))}
-            />
-            <ActionButton
-              variant="ghost"
-              label={t("remove")}
+              label={t("add")}
+              variant="secondary"
+              disabled={question.components.length >= 12}
               onRun={() =>
-                components(question.components.filter((_, j) => i !== j))
+                components([...question.components, newComponent(kind)])
               }
             />
           </div>
-        </fieldset>
-      ))}
-      <div className={styles.toolbar}>
-        <Field label={t("kind")}>
-          <select
-            value={kind}
-            onChange={(e) =>
-              setKind(e.currentTarget.value as ComponentInput["kind"])
-            }
-          >
-            {componentKinds.map((value) => (
-              <option key={value} value={value}>
-                {t(value)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <ActionButton
-          label={t("add")}
-          variant="secondary"
-          disabled={question.components.length >= 12}
-          onRun={() => components([...question.components, newComponent(kind)])}
-        />
-      </div>
-    </fieldset>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
