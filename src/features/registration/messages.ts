@@ -16,7 +16,7 @@ export const registrationMessages = {
   "registration.code": ["邮箱验证码", "Email verification code"],
   "registration.change": ["更改邮箱", "Change email"],
   "registration.resume": ["继续注册", "Continue registration"],
-  "registration.org": ["企业名称", "Organization name"],
+  "registration.org": ["组织名称", "Organization name"],
   "registration.name": ["本人显示名", "Your display name"],
   "registration.owner": [
     "你将成为这家新企业的首位管理员，以下邮箱用于登录。",
