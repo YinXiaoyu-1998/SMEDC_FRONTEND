@@ -4,12 +4,8 @@ import {
   permissionsAccountsReadResponseSchema,
   permissionsAccountsUpdateResponseSchema,
   permissionsCategoriesCreateResponseSchema,
-  permissionsCategoriesInitializeResponseSchema,
   permissionsCategoriesListResponseSchema,
   permissionsCategoriesUpdateResponseSchema,
-  permissionsCutoverActivateResponseSchema,
-  permissionsCutoverReadResponseSchema,
-  permissionsCutoverSuspendResponseSchema,
   permissionsDimensionsCreateResponseSchema,
   permissionsDimensionsListResponseSchema,
   permissionsDimensionsUpdateResponseSchema,
@@ -30,13 +26,9 @@ import {
   type PermissionsAccountsUpdateResponse,
   type PermissionsCategoriesCreateBody,
   type PermissionsCategoriesCreateResponse,
-  type PermissionsCategoriesInitializeResponse,
   type PermissionsCategoriesListResponse,
   type PermissionsCategoriesUpdateBody,
   type PermissionsCategoriesUpdateResponse,
-  type PermissionsCutoverActivateResponse,
-  type PermissionsCutoverReadResponse,
-  type PermissionsCutoverSuspendResponse,
   type PermissionsDimensionsCreateBody,
   type PermissionsDimensionsCreateResponse,
   type PermissionsDimensionsListResponse,
@@ -66,13 +58,9 @@ export type {
   PermissionsAccountsUpdateResponse,
   PermissionsCategoriesCreateBody,
   PermissionsCategoriesCreateResponse,
-  PermissionsCategoriesInitializeResponse,
   PermissionsCategoriesListResponse,
   PermissionsCategoriesUpdateBody,
   PermissionsCategoriesUpdateResponse,
-  PermissionsCutoverActivateResponse,
-  PermissionsCutoverReadResponse,
-  PermissionsCutoverSuspendResponse,
   PermissionsDimensionsCreateBody,
   PermissionsDimensionsCreateResponse,
   PermissionsDimensionsListResponse,
@@ -234,16 +222,6 @@ export function listDocuments(
   );
 }
 
-export function readCutover(
-  orgId: string,
-): Promise<PermissionsCutoverReadResponse> {
-  const { method, path } = webApiRoutes["permissions.cutover.read"];
-  return requestWebApi(
-    { method, path, params: { orgId } },
-    permissionsCutoverReadResponseSchema,
-  );
-}
-
 export function createCategory(
   orgId: string,
   body: PermissionsCategoriesCreateBody,
@@ -253,18 +231,6 @@ export function createCategory(
   return requestWebApi(
     { method, path, params: { orgId }, body, csrfToken },
     permissionsCategoriesCreateResponseSchema,
-  );
-}
-
-export function initializeCategories(
-  orgId: string,
-  expectedVersion: string,
-  csrfToken: string,
-): Promise<PermissionsCategoriesInitializeResponse> {
-  const { method, path } = webApiRoutes["permissions.categories.initialize"];
-  return requestWebApi(
-    { method, path, params: { orgId }, body: { expectedVersion }, csrfToken },
-    permissionsCategoriesInitializeResponseSchema,
   );
 }
 
@@ -399,42 +365,6 @@ export function updateDocument(
   return requestWebApi(
     { method, path, params: { orgId, documentId }, body, csrfToken },
     permissionsDocumentsUpdateResponseSchema,
-  );
-}
-
-export function activateCutover(
-  orgId: string,
-  expectedVersion: string,
-  csrfToken: string,
-): Promise<PermissionsCutoverActivateResponse> {
-  const { method, path } = webApiRoutes["permissions.cutover.activate"];
-  return requestWebApi(
-    {
-      method,
-      path,
-      params: { orgId },
-      body: { expectedVersion, confirm: true },
-      csrfToken,
-    },
-    permissionsCutoverActivateResponseSchema,
-  );
-}
-
-export function suspendCutover(
-  orgId: string,
-  expectedVersion: string,
-  csrfToken: string,
-): Promise<PermissionsCutoverSuspendResponse> {
-  const { method, path } = webApiRoutes["permissions.cutover.suspend"];
-  return requestWebApi(
-    {
-      method,
-      path,
-      params: { orgId },
-      body: { expectedVersion, confirm: true },
-      csrfToken,
-    },
-    permissionsCutoverSuspendResponseSchema,
   );
 }
 

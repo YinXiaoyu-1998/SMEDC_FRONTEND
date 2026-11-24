@@ -24,10 +24,7 @@ import {
   SearchInput,
   type ChecklistOption,
 } from "./components";
-import {
-  FIXED_BUSINESS_CATEGORY_KEYS,
-  INTERNAL_CATEGORY_KEY,
-} from "./constants";
+import { INTERNAL_CATEGORY_KEY } from "./constants";
 import { diffField, diffSetField, type Confirmation } from "./diff";
 import { createId } from "./ids";
 import {
@@ -211,9 +208,6 @@ export function CategoriesSection({ active }: { readonly active: boolean }) {
   );
   const retired = evidence.filter((category) => category.retired);
   const archive = useRetiredDisclosure(retired.length, archiveDisclosure);
-  const missingFixed = FIXED_BUSINESS_CATEGORY_KEYS.filter(
-    (key) => !scope.bundle.categories.some((category) => category.key === key),
-  );
 
   const openEditor = useCallback((next: Editor) => {
     const activeElement = document.activeElement;
@@ -325,9 +319,6 @@ export function CategoriesSection({ active }: { readonly active: boolean }) {
             value={search}
             onChange={setSearch}
           />
-          {segment === "fixed" && missingFixed.length > 0 ? (
-            <InitializeCategories missingKeys={missingFixed} />
-          ) : null}
         </div>
 
         {segment === "fixed" ? (
@@ -583,82 +574,6 @@ export function CategoriesSection({ active }: { readonly active: boolean }) {
           returnFocusRef={opener}
         />
       )}
-    </>
-  );
-}
-
-function InitializeCategories({
-  missingKeys,
-}: {
-  readonly missingKeys: readonly string[];
-}) {
-  const { t } = useText();
-  const scope = usePermissionsScope();
-  const [running, setRunning] = useState(false);
-  const [needsRead, setNeedsRead] = useState(false);
-  const [readError, setReadError] = useState<unknown>(null);
-  const reload = async () => {
-    setRunning(true);
-    setReadError(null);
-    try {
-      await scope.reload();
-      setNeedsRead(false);
-    } catch (caught) {
-      setReadError(caught);
-    } finally {
-      setRunning(false);
-    }
-  };
-  const flow = useConfirmFlow<
-    { confirmation: Confirmation; version: string },
-    void
-  >({
-    prepare: () => ({
-      version: scope.bundle.version,
-      confirmation: {
-        subject: t("permissions.initializeCategories"),
-        diff: missingKeys.map((key) => ({
-          kind: "added",
-          label: t("permissions.panel.fixedCategories"),
-          after: t("permissions.category." + key),
-        })),
-        impact: t("permissions.initializeCategoriesHelp"),
-      },
-    }),
-    submit: async ({ version }) => {
-      await scope.writes.initializeCategories(version);
-      setNeedsRead(true);
-      await reload();
-    },
-  });
-
-  return (
-    <>
-      {needsRead ? (
-        <ActionButton
-          label={t("permissions.reload")}
-          variant="secondary"
-          busy={running}
-          onRun={() => void reload()}
-        />
-      ) : (
-        <ActionButton
-          label={t("permissions.addFixedMissing")}
-          variant="secondary"
-          disabled={scope.busy || scope.hasDrafts}
-          {...(scope.hasDrafts
-            ? { disabledReason: t("permissions.initializeDrafts") }
-            : {})}
-          onRun={() => void flow.request()}
-        />
-      )}
-      <InlineError error={readError} />
-      <PermissionConfirmDialog
-        flow={flow}
-        title={t("permissions.initializeCategories")}
-        confirmLabel={t("permissions.confirm.action")}
-        cancelLabel={t("permissions.cancel")}
-      />
     </>
   );
 }

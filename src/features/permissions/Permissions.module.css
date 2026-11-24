@@ -22,22 +22,6 @@
   font-size: var(--font-size-sm);
 }
 
-.mode {
-  display: inline-block;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
-  padding: var(--space-1) var(--space-3);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-}
-
-.version {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  overflow-wrap: anywhere;
-}
-
 .banner {
   position: relative;
   isolation: isolate;
@@ -68,11 +52,6 @@
   margin-top: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-}
-
-.intro {
-  margin: 0 0 var(--space-4);
-  color: var(--color-text-muted);
 }
 
 .notice {
@@ -422,29 +401,11 @@
   margin: var(--space-3) 0;
 }
 
-.card {
-  padding: var(--space-4);
-  margin: var(--space-3) 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
 .subcard {
   padding: var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-muted);
-}
-
-.cardTitle {
-  margin: 0 0 var(--space-3);
-  font-size: var(--font-size-lg);
-}
-
-.subheading {
-  margin: var(--space-4) 0 var(--space-2);
-  font-size: var(--font-size-md);
 }
 
 .hint {
@@ -659,10 +620,6 @@
 }
 
 @media (max-width: 640px) {
-  .card {
-    padding: var(--space-3);
-  }
-
   .panelDrawer {
     width: 100%;
     border-radius: 0;
@@ -791,17 +748,10 @@
 }
 
 .primaryAction,
-.bannerAction,
 .panelFooter button {
   min-height: 37px;
   padding-inline: 13px;
   font-size: 0.8125rem;
-}
-
-.bannerAction {
-  border-color: #ded7f7;
-  background: #ffffffc9;
-  color: var(--color-accent-strong);
 }
 
 .catalogCard,

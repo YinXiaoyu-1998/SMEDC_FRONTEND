@@ -1,7 +1,6 @@
 import { createContext, useContext } from "react";
 
 import type { PermissionsBundle } from "@/api/permissions";
-import type { PermissionsCutoverReadResponse } from "@/api/generated/contract";
 
 import type { SectionKey } from "./constants";
 import type { PermissionsWrites } from "./writes";
@@ -13,7 +12,6 @@ export interface PermissionsScopeValue {
   readonly hasDrafts: boolean;
   readonly writes: PermissionsWrites;
   readonly reload: () => Promise<PermissionsBundle>;
-  readonly readCutover: () => Promise<PermissionsCutoverReadResponse>;
   readonly registerDraft: (id: string, dirty: boolean) => void;
   readonly setNotice: (key: string | null) => void;
   readonly navigate: (section: SectionKey) => void;
