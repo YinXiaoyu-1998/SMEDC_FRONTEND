@@ -11,7 +11,6 @@ const permissionErrorKeys: Readonly<Record<string, string>> = {
   AUTHORIZATION_ADMIN_REQUIRED: "errors.forbidden.description",
   BROWSER_SECURITY_CHECK_FAILED: "errors.action.security",
   BROWSER_INVALID_CREDENTIALS: "errors.action.invalidCredentials",
-  AUTHORIZATION_CUTOVER_NOT_READY: "permissions.error.notReady",
   AUTHORIZATION_SUSPENDED: "permissions.error.suspended",
   AUTHORIZATION_NOT_ENABLED: "permissions.error.notEnabled",
   INVALID_PERMISSION_CONFIGURATION: "permissions.error.invalid",

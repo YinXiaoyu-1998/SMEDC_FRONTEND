@@ -1343,6 +1343,12 @@ export const rPermissionsMeReadSchema3Schema = z.strictObject({
 
 export const bPermissionsStoresUpsertSchema0Schema = z.string().min(1).max(255);
 
+export const rRegistrationSessionSchema0Schema = z.string().min(1);
+
+export const rRegistrationSessionSchema1Schema = z.string().min(1).max(320);
+
+export const rRegistrationSessionSchema2Schema = z.string().min(1);
+
 export const rWorkflowsGetEnterpriseWorkflowSchema0Schema = z
   .number()
   .int()
@@ -7192,7 +7198,7 @@ export const permissionsAccountsListResponseSchema = z.strictObject({
       role: z.enum(["admin", "employee"]),
       disabled: z.boolean(),
       clearance: z.number().int().min(-9007199254740991).max(9007199254740991),
-      mode: z.enum(["legacy", "preparing", "enabled", "suspended"]),
+      mode: z.enum(["enabled", "suspended"]),
       authorizationVersion: z.string(),
       categories: z.array(
         z.strictObject({
@@ -7278,7 +7284,7 @@ export const permissionsAccountsReadResponseSchema = z.strictObject({
   role: z.enum(["admin", "employee"]),
   disabled: z.boolean(),
   clearance: z.number().int().min(-9007199254740991).max(9007199254740991),
-  mode: z.enum(["legacy", "preparing", "enabled", "suspended"]),
+  mode: z.enum(["enabled", "suspended"]),
   authorizationVersion: z.string(),
   categories: z.array(
     z.strictObject({
@@ -7607,77 +7613,6 @@ export type PermissionsCategoriesUpdateResponse = z.infer<
   typeof permissionsCategoriesUpdateResponseSchema
 >;
 
-export const permissionsCutoverActivateBodySchema = z.strictObject({
-  expectedVersion: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
-  confirm: z.literal(true),
-});
-
-export type PermissionsCutoverActivateBody = z.infer<
-  typeof permissionsCutoverActivateBodySchema
->;
-
-export const permissionsCutoverActivateParamsSchema = z.strictObject({
-  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
-});
-
-export type PermissionsCutoverActivateParams = z.infer<
-  typeof permissionsCutoverActivateParamsSchema
->;
-
-export const permissionsCutoverActivateQuerySchema = z.strictObject({});
-
-export type PermissionsCutoverActivateQuery = z.infer<
-  typeof permissionsCutoverActivateQuerySchema
->;
-
-export const permissionsCutoverActivateResponseSchema = z.strictObject({
-  authorizationVersion: z.string(),
-  value: z.strictObject({
-    mode: z.enum(["legacy", "preparing", "enabled", "suspended"]),
-  }),
-});
-
-export type PermissionsCutoverActivateResponse = z.infer<
-  typeof permissionsCutoverActivateResponseSchema
->;
-
-export const permissionsCutoverReadBodySchema = z.strictObject({});
-
-export type PermissionsCutoverReadBody = z.infer<
-  typeof permissionsCutoverReadBodySchema
->;
-
-export const permissionsCutoverReadParamsSchema = z.strictObject({
-  orgId: z.string().regex(new RegExp("^[A-Za-z0-9_-]{1,64}$")),
-});
-
-export type PermissionsCutoverReadParams = z.infer<
-  typeof permissionsCutoverReadParamsSchema
->;
-
-export const permissionsCutoverReadQuerySchema = z.strictObject({});
-
-export type PermissionsCutoverReadQuery = z.infer<
-  typeof permissionsCutoverReadQuerySchema
->;
-
-export const permissionsCutoverReadResponseSchema = z.strictObject({
-  authorizationVersion: z.string(),
-  mode: z.enum(["legacy", "preparing", "enabled", "suspended"]),
-  ready: z.boolean(),
-  missing: z.array(
-    z.strictObject({
-      code: z.string(),
-      targetId: z.string(),
-    }),
-  ),
-  accountsWithoutGrants: z.array(z.string()),
-});
-
-export type PermissionsCutoverReadResponse = z.infer<
-  typeof permissionsCutoverReadResponseSchema
->;
-
 export const permissionsCutoverSuspendBodySchema = z.strictObject({
   expectedVersion: z.string().regex(new RegExp("^(0|[1-9]\\d*)$")),
   confirm: z.literal(true),
@@ -7704,7 +7639,7 @@ export type PermissionsCutoverSuspendQuery = z.infer<
 export const permissionsCutoverSuspendResponseSchema = z.strictObject({
   authorizationVersion: z.string(),
   value: z.strictObject({
-    mode: z.enum(["legacy", "preparing", "enabled", "suspended"]),
+    mode: z.literal("suspended"),
   }),
 });
 
@@ -8184,7 +8119,7 @@ export const permissionsMeReadResponseSchema = z.strictObject({
   role: z.enum(["admin", "employee"]),
   disabled: z.boolean(),
   clearance: z.number().int().min(-9007199254740991).max(9007199254740991),
-  mode: z.enum(["legacy", "preparing", "enabled", "suspended"]),
+  mode: z.enum(["enabled", "suspended"]),
   authorizationVersion: z.string(),
   categories: z.array(
     z.strictObject({
@@ -8318,6 +8253,181 @@ export const permissionsStoresUpsertResponseSchema = z.strictObject({
 
 export type PermissionsStoresUpsertResponse = z.infer<
   typeof permissionsStoresUpsertResponseSchema
+>;
+
+export const registrationCompleteBodySchema = z.strictObject({
+  organizationName: z.string().min(1).max(191),
+  displayName: z.string().min(1).max(191),
+  password: z.string().min(1).max(1024),
+});
+
+export type RegistrationCompleteBody = z.infer<
+  typeof registrationCompleteBodySchema
+>;
+
+export const registrationCompleteParamsSchema = z.strictObject({});
+
+export type RegistrationCompleteParams = z.infer<
+  typeof registrationCompleteParamsSchema
+>;
+
+export const registrationCompleteQuerySchema = z.strictObject({});
+
+export type RegistrationCompleteQuery = z.infer<
+  typeof registrationCompleteQuerySchema
+>;
+
+export const registrationCompleteResponseSchema = z.strictObject({
+  identity: z.strictObject({
+    userAccountId: z.string().min(1),
+    displayName: z.string().min(1),
+    email: z.string().min(1),
+    orgId: z.string().min(1),
+    organizationName: z.string().min(1),
+    role: z.enum(["admin", "employee"]),
+    clearance: z.number().int().min(0).max(3),
+  }),
+  csrfToken: z.string().min(1),
+  canManageSettings: z.boolean(),
+  canReadInspections: z.boolean().optional(),
+  canFillInspections: z.boolean().optional(),
+  canManageInspectionTemplates: z.boolean().optional(),
+});
+
+export type RegistrationCompleteResponse = z.infer<
+  typeof registrationCompleteResponseSchema
+>;
+
+export const registrationSendCodeBodySchema = z.strictObject({
+  email: z.string().min(1).max(320),
+  humanChallengeToken: z.string().min(1).max(2048).optional(),
+});
+
+export type RegistrationSendCodeBody = z.infer<
+  typeof registrationSendCodeBodySchema
+>;
+
+export const registrationSendCodeParamsSchema = z.strictObject({});
+
+export type RegistrationSendCodeParams = z.infer<
+  typeof registrationSendCodeParamsSchema
+>;
+
+export const registrationSendCodeQuerySchema = z.strictObject({});
+
+export type RegistrationSendCodeQuery = z.infer<
+  typeof registrationSendCodeQuerySchema
+>;
+
+export const registrationSendCodeResponseSchema = z.strictObject({
+  csrfToken: z.string().min(1),
+  expiresAt: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+      ),
+    ),
+  resendAvailableAt: z
+    .string()
+    .regex(
+      new RegExp(
+        "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+      ),
+    ),
+});
+
+export type RegistrationSendCodeResponse = z.infer<
+  typeof registrationSendCodeResponseSchema
+>;
+
+export const registrationSessionBodySchema = z.strictObject({});
+
+export type RegistrationSessionBody = z.infer<
+  typeof registrationSessionBodySchema
+>;
+
+export const registrationSessionParamsSchema = z.strictObject({});
+
+export type RegistrationSessionParams = z.infer<
+  typeof registrationSessionParamsSchema
+>;
+
+export const registrationSessionQuerySchema = z.strictObject({});
+
+export type RegistrationSessionQuery = z.infer<
+  typeof registrationSessionQuerySchema
+>;
+
+export const registrationSessionResponseSchema = z.union([
+  z.strictObject({
+    status: z.literal("start"),
+    siteKey: rRegistrationSessionSchema0Schema,
+  }),
+  z.strictObject({
+    status: z.literal("sent"),
+    siteKey: rRegistrationSessionSchema0Schema,
+    email: rRegistrationSessionSchema1Schema,
+    csrfToken: rRegistrationSessionSchema2Schema,
+    expiresAt: z
+      .string()
+      .regex(
+        new RegExp(
+          "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+        ),
+      ),
+    resendAvailableAt: z
+      .string()
+      .regex(
+        new RegExp(
+          "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+        ),
+      ),
+  }),
+  z.strictObject({
+    status: z.literal("verified"),
+    siteKey: rRegistrationSessionSchema0Schema,
+    email: rRegistrationSessionSchema1Schema,
+    csrfToken: rRegistrationSessionSchema2Schema,
+  }),
+  z.strictObject({
+    status: z.literal("email_in_use"),
+    siteKey: rRegistrationSessionSchema0Schema,
+    email: rRegistrationSessionSchema1Schema,
+    csrfToken: rRegistrationSessionSchema2Schema,
+  }),
+]);
+
+export type RegistrationSessionResponse = z.infer<
+  typeof registrationSessionResponseSchema
+>;
+
+export const registrationVerifyCodeBodySchema = z.strictObject({
+  code: z.string().regex(new RegExp("^[0-9]{6}$")),
+});
+
+export type RegistrationVerifyCodeBody = z.infer<
+  typeof registrationVerifyCodeBodySchema
+>;
+
+export const registrationVerifyCodeParamsSchema = z.strictObject({});
+
+export type RegistrationVerifyCodeParams = z.infer<
+  typeof registrationVerifyCodeParamsSchema
+>;
+
+export const registrationVerifyCodeQuerySchema = z.strictObject({});
+
+export type RegistrationVerifyCodeQuery = z.infer<
+  typeof registrationVerifyCodeQuerySchema
+>;
+
+export const registrationVerifyCodeResponseSchema = z.strictObject({
+  status: z.enum(["verified", "email_in_use"]),
+});
+
+export type RegistrationVerifyCodeResponse = z.infer<
+  typeof registrationVerifyCodeResponseSchema
 >;
 
 export const sessionLoginBodySchema = z.strictObject({
@@ -10625,37 +10735,6 @@ export const webApiRoutes = {
     ],
     summary: "更新固定类别密级或证据类别配置",
   },
-  "permissions.cutover.activate": {
-    method: "POST",
-    path: "/api/web/v1/orgs/:orgId/permissions/cutover/activate",
-    auth: "session-write",
-    errors: [
-      "AUTHORIZATION_ADMIN_REQUIRED",
-      "AUTHORIZATION_CUTOVER_NOT_READY",
-      "AUTHORIZATION_SUSPENDED",
-      "AUTHORIZATION_VERSION_CONFLICT",
-      "BROWSER_ACCESS_DENIED",
-      "BROWSER_SECURITY_CHECK_FAILED",
-      "BROWSER_SIGN_IN_REQUIRED",
-      "INTERNAL_ERROR",
-      "INVALID_PERMISSION_CONFIGURATION",
-      "WEB_API_INVALID_REQUEST",
-    ],
-    summary: "按期望版本并显式确认后启用业务授权",
-  },
-  "permissions.cutover.read": {
-    method: "GET",
-    path: "/api/web/v1/orgs/:orgId/permissions/cutover",
-    auth: "session",
-    errors: [
-      "AUTHORIZATION_ADMIN_REQUIRED",
-      "BROWSER_ACCESS_DENIED",
-      "BROWSER_SIGN_IN_REQUIRED",
-      "INTERNAL_ERROR",
-      "WEB_API_INVALID_REQUEST",
-    ],
-    summary: "检查业务授权启用前的准备项",
-  },
   "permissions.cutover.suspend": {
     method: "POST",
     path: "/api/web/v1/orgs/:orgId/permissions/cutover/suspend",
@@ -10871,6 +10950,68 @@ export const webApiRoutes = {
       "WEB_API_INVALID_REQUEST",
     ],
     summary: "按期望版本新增或更新门店",
+  },
+  "registration.complete": {
+    method: "POST",
+    path: "/api/web/v1/registration/complete",
+    auth: "anonymous-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "REGISTRATION_CODE_EXPIRED",
+      "REGISTRATION_EMAIL_IN_USE",
+      "REGISTRATION_PASSWORD_REJECTED",
+      "REGISTRATION_RATE_LIMITED",
+      "REGISTRATION_UNAVAILABLE",
+      "REGISTRATION_VERIFICATION_REQUIRED",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "创建已验证邮箱的新企业和首位管理员并登录，需要注册 CSRF 令牌",
+  },
+  "registration.sendCode": {
+    method: "POST",
+    path: "/api/web/v1/registration/send-code",
+    auth: "anonymous-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "REGISTRATION_DELIVERY_FAILED",
+      "REGISTRATION_HUMAN_CHECK_FAILED",
+      "REGISTRATION_RATE_LIMITED",
+      "REGISTRATION_UNAVAILABLE",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "发出或重发注册邮箱验证码，已有注册会话时需要 CSRF 令牌",
+  },
+  "registration.session": {
+    method: "GET",
+    path: "/api/web/v1/registration/session",
+    auth: "anonymous",
+    errors: [
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "REGISTRATION_UNAVAILABLE",
+    ],
+    summary: "读取当前浏览器的注册进度和人机验证配置",
+  },
+  "registration.verifyCode": {
+    method: "POST",
+    path: "/api/web/v1/registration/verify-code",
+    auth: "anonymous-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "REGISTRATION_ATTEMPTS_EXHAUSTED",
+      "REGISTRATION_CODE_EXPIRED",
+      "REGISTRATION_CODE_INVALID",
+      "REGISTRATION_UNAVAILABLE",
+      "REGISTRATION_VERIFICATION_REQUIRED",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "验证当前注册会话的邮箱验证码，需要注册 CSRF 令牌",
   },
   "session.login": {
     method: "POST",

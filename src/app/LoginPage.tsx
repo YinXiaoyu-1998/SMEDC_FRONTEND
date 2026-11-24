@@ -179,6 +179,8 @@ export function LoginPage() {
             {t("login.submit")}
           </Button>
         </form>
+        <a href="/register">{t("registration.title")}</a>
+        <p>{t("registration.employee")}</p>
       </section>
     </main>
   );
