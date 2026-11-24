@@ -52,7 +52,7 @@ it("已验证邮箱的本人创建首管后进入新组织权限页", async () =
   });
   expect(await screen.findByText(email)).toBeInTheDocument();
   for (const [label, value] of [
-    ["企业名称", "晨光餐饮"],
+    ["组织名称", "晨光餐饮"],
     ["本人显示名", "林经理"],
     ["密码", "testonly-strong-one"],
   ]) {
@@ -86,7 +86,7 @@ it("邮箱在运维并发开户后引导登录，不能再提交首管开户", a
   renderApp({ session: null, initialEntries: ["/register/verify"] });
   await screen.findByText("owner@example.com");
   for (const [label, value] of [
-    ["企业名称", "新企业"],
+    ["组织名称", "新企业"],
     ["本人显示名", "负责人"],
     ["密码", "testonly-strong-one"],
   ] as const) {
