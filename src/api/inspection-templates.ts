@@ -3,6 +3,7 @@ import {
   inspectionsContextResponseSchema,
   inspectionsTemplatesActivateResponseSchema,
   inspectionsTemplatesCreateBodySchema,
+  inspectionsTemplatesCreateActiveResponseSchema,
   inspectionsTemplatesCreateResponseSchema,
   inspectionsTemplatesDeactivateResponseSchema,
   inspectionsTemplatesListResponseSchema,
@@ -118,11 +119,16 @@ export function writeTemplate(
   definition: TemplateDefinition,
   expectedDraftRevision: number | null,
   csrfToken: string,
+  activateOnCreate = false,
 ) {
   if (expectedDraftRevision === null) {
     return requestWebApi(
       {
-        ...webApiRoutes["inspections.templates.create"],
+        ...webApiRoutes[
+          activateOnCreate
+            ? "inspections.templates.createActive"
+            : "inspections.templates.create"
+        ],
         handleForbiddenLocally: true,
         body: inspectionsTemplatesCreateBodySchema.parse({
           enterpriseKey,
@@ -131,7 +137,9 @@ export function writeTemplate(
         }),
         csrfToken,
       },
-      inspectionsTemplatesCreateResponseSchema,
+      activateOnCreate
+        ? inspectionsTemplatesCreateActiveResponseSchema
+        : inspectionsTemplatesCreateResponseSchema,
     );
   }
   return requestWebApi(

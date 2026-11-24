@@ -12,6 +12,11 @@ const messages = {
     "This account has no template maintenance access.",
   ],
   create: ["新建模板", "New template"],
+  createActive: ["创建并启用", "Create and activate"],
+  createMissing: [
+    "请补齐或修正以下项目后再提交。",
+    "Complete or correct these fields and try again.",
+  ],
   unnamed: ["未命名模板", "Untitled template"],
   templates: ["模板列表", "Templates"],
   active: ["已启用", "Active"],
