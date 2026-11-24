@@ -41,8 +41,6 @@ const messages = {
   removeQuestion: ["移除题目", "Remove question"],
   add: ["添加组件", "Add component"],
   remove: ["移除组件", "Remove component"],
-  up: ["上移", "Move up"],
-  down: ["下移", "Move down"],
   kind: ["组件类型", "Component type"],
   sop: ["标准定义（SOP）", "Standard (SOP)"],
   score: ["评分", "Score"],
