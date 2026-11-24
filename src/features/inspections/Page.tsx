@@ -189,13 +189,15 @@ function ScopePicker({
             />
           )}
         </div>
-        <Field label={t("date")}>
-          <input
-            type="date"
-            value={inspectionDate}
-            onChange={(event) => setDate(event.target.value)}
-          />
-        </Field>
+        <div>
+          <Field label={t("date")}>
+            <input
+              type="date"
+              value={inspectionDate}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          </Field>
+        </div>
       </div>
       {listError && (
         <div className={styles.row}>
