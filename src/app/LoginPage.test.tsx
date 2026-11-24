@@ -44,6 +44,26 @@ describe("登录表单", () => {
     expect(screen.getByText("密码长度不能超过 128 个字符")).toBeInTheDocument();
   });
 
+  it("已注册的首位管理员可使用 128 个 Unicode 码点的密码登录", async () => {
+    const password = "𠀋".repeat(128);
+    const fetchMock = vi.fn<FetchFunction>(async () =>
+      jsonResponse(adminSession),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { router } = renderApp({ session: null, initialEntries: ["/login"] });
+    fillCredentials("owner@example.com", password);
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/admin/org-1/permissions");
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/api\/web\/v1\/session(?:\?|$)/),
+        expect.objectContaining({
+          body: JSON.stringify({ email: "owner@example.com", password }),
+        }),
+      );
+    });
+  });
+
   it("请求中按钮禁用并保留文案，失败时显示统一错误", async () => {
     let resolveRequest: ((response: Response) => void) | null = null;
     const fetchMock = vi.fn<FetchFunction>(

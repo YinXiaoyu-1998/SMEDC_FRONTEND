@@ -69,29 +69,43 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
     return () => controller.abort();
   }, []);
 
+  const recipient =
+    verifyPage && session?.status === "sent" ? session.email : email.trim();
+  const sameRecipient =
+    !!session &&
+    session.status !== "start" &&
+    recipient.normalize("NFC").toLowerCase() === session.email;
   const deadline =
     session?.status === "sent" ? Date.parse(session.resendAvailableAt) : 0;
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
   useEffect(() => {
-    if (!deadline || !verifyPage) return;
+    if (!deadline) return;
     const timer = window.setInterval(() => {
       const time = Date.now();
       setNow(time);
       if (time >= deadline) window.clearInterval(timer);
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [deadline, verifyPage]);
+  }, [deadline]);
 
   async function send(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
-    if (!session || busy) return;
+    if (
+      !session ||
+      busy ||
+      !recipient ||
+      deadline > Date.now() ||
+      (!sameRecipient && !token)
+    )
+      return;
     setError("");
     setBusy("send");
     try {
-      const recipient =
-        verifyPage && session.status === "sent" ? session.email : email.trim();
       const sent = await sendCode(
-        { email: recipient, ...(token ? { humanChallengeToken: token } : {}) },
+        {
+          email: recipient,
+          ...(!sameRecipient && token ? { humanChallengeToken: token } : {}),
+        },
         session.status === "start" ? undefined : session.csrfToken,
       );
       if (verifyPage) {
@@ -112,6 +126,15 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
       if (!verifyPage) {
         setToken("");
         setChallengeAttempt((value) => value + 1);
+      }
+      // The response can fail after the browser has accepted the registration cookie.
+      // Recover its write token and cooldown before allowing another send.
+      try {
+        const current = await readRegistration();
+        setNow(Date.now());
+        setSession(current);
+      } catch {
+        // Preserve the original send error when the session check also fails.
       }
     } finally {
       setBusy(null);
@@ -178,6 +201,14 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
     }
   }
 
+  const cooldown =
+    seconds > 0 ? (
+      <span>
+        {" "}
+        · {seconds} {t("registration.wait")}
+      </span>
+    ) : null;
+
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="registration-title">
@@ -219,17 +250,25 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
-              <Challenge
-                key={challengeAttempt}
-                siteKey={session.siteKey}
-                onToken={setToken}
-              />
+              {!sameRecipient && (
+                <Challenge
+                  key={challengeAttempt}
+                  siteKey={session.siteKey}
+                  onToken={setToken}
+                />
+              )}
               <Button
                 type="submit"
                 busy={busy === "send"}
-                disabled={!email.trim() || !token}
+                disabled={
+                  !!busy ||
+                  !recipient ||
+                  seconds > 0 ||
+                  (!sameRecipient && !token)
+                }
               >
                 {t("registration.send")}
+                {cooldown}
               </Button>
             </form>
             <p>{t("registration.employee")}</p>
@@ -278,12 +317,7 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
                 disabled={!!busy || seconds > 0}
               >
                 {t("registration.resend")}
-                {seconds > 0 && (
-                  <span>
-                    {" "}
-                    · {seconds} {t("registration.wait")}
-                  </span>
-                )}
+                {cooldown}
               </Button>
             </form>
             <a href="/register">{t("registration.change")}</a>

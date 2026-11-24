@@ -1,11 +1,14 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { adminSession } from "@/test/fixtures";
 import { jsonResponse } from "@/test/http";
 import { renderApp } from "@/test/renderApp";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 it("登录页为新企业提供官方网页入口，并给已有企业员工开户指引", () => {
   renderApp({ session: null, initialEntries: ["/login"] });
@@ -93,4 +96,85 @@ it("邮箱在运维并发开户后引导登录，不能再提交首管开户", a
   await screen.findByText("该邮箱已有账号。请登录或联系运维。");
   expect(screen.queryByRole("button", { name: "创建企业" })).toBeNull();
   expect(screen.getByRole("link", { name: "返回登录" })).toBeVisible();
+});
+
+it("发信失败后恢复浏览器绑定，等待冷却后在当前页重试", async () => {
+  const email = "owner@example.com";
+  const baseTime = Date.now();
+  let bound = false;
+  const sendHeaders: Headers[] = [];
+  vi.stubGlobal("turnstile", {
+    ready: (callback: () => void) => callback(),
+    render: (
+      _: HTMLElement,
+      options: { callback: (token: string) => void },
+    ) => {
+      options.callback("human-proof");
+      return "widget";
+    },
+    remove: () => {},
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path.endsWith("/registration/session"))
+        return jsonResponse(
+          bound
+            ? {
+                status: "sent",
+                email,
+                siteKey: "site-key",
+                csrfToken: "recovered-csrf",
+                expiresAt: new Date(baseTime + 600_000).toISOString(),
+                resendAvailableAt: new Date(baseTime + 60_000).toISOString(),
+              }
+            : { status: "start", siteKey: "site-key" },
+        );
+      if (path.endsWith("/registration/send-code")) {
+        sendHeaders.push(new Headers(init?.headers));
+        bound = true;
+        return jsonResponse(
+          {
+            error: {
+              code: "REGISTRATION_DELIVERY_FAILED",
+              message: "try again",
+            },
+          },
+          503,
+        );
+      }
+      return jsonResponse(null);
+    }),
+  );
+  const { router } = renderApp({
+    session: null,
+    initialEntries: ["/register"],
+  });
+  const input = await screen.findByRole("textbox", { name: "邮箱" });
+  fireEvent.change(input, { target: { value: email } });
+  const send = screen.getByRole("button", { name: "发送验证码" });
+  await waitFor(() => expect(send).toBeEnabled());
+  vi.useFakeTimers({ now: baseTime });
+  fireEvent.click(send);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(sendHeaders).toHaveLength(1);
+  expect(sendHeaders[0]!.get("x-csrf-token")).toBeNull();
+  expect(screen.getByRole("alert")).toHaveTextContent("邮件发送失败");
+  expect(send).toBeDisabled();
+  expect(send).toHaveTextContent("60 秒后可重发");
+  expect(input).toHaveValue(email);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(send).toBeEnabled();
+  fireEvent.click(send);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(sendHeaders).toHaveLength(2);
+  expect(sendHeaders[1]!.get("x-csrf-token")).toBe("recovered-csrf");
+  expect(router.state.location.pathname).toBe("/register");
 });

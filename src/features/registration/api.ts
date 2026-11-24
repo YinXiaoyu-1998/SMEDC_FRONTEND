@@ -9,7 +9,7 @@ import {
   type RegistrationCompleteBody,
 } from "@/api/generated/contract";
 
-export function readRegistration(signal: AbortSignal) {
+export function readRegistration(signal?: AbortSignal) {
   return requestWebApi(
     {
       ...webApiRoutes["registration.session"],
