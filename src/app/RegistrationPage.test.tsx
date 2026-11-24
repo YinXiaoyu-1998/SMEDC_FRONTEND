@@ -106,11 +106,19 @@ it("发信失败后恢复浏览器绑定，等待冷却后在当前页重试", a
   vi.stubGlobal(
     "initAliyunCaptcha",
     (options: {
-      success: (token: string) => void;
+      button: string;
+      captchaVerifyCallback: (
+        token: string,
+      ) => Promise<{ captchaResult: boolean; bizResult: boolean }>;
+      onBizResultCallback: (success: boolean) => void;
       getInstance: (instance: object) => void;
     }) => {
+      document.querySelector(options.button)?.addEventListener("click", () => {
+        void options.captchaVerifyCallback("human-proof").then((result) => {
+          options.onBizResultCallback(result.bizResult);
+        });
+      });
       options.getInstance({});
-      options.success("human-proof");
     },
   );
   vi.stubGlobal(
@@ -165,14 +173,15 @@ it("发信失败后恢复浏览器绑定，等待冷却后在当前页重试", a
   expect(sendHeaders).toHaveLength(1);
   expect(sendHeaders[0]!.get("x-csrf-token")).toBeNull();
   expect(screen.getByRole("alert")).toHaveTextContent("邮件发送失败");
-  expect(send).toBeDisabled();
-  expect(send).toHaveTextContent("60 秒后可重发");
+  const resend = screen.getByRole("button", { name: /发送验证码/ });
+  expect(resend).toBeDisabled();
+  expect(resend).toHaveTextContent("60 秒后可重发");
   expect(input).toHaveValue(email);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(60_000);
   });
-  expect(send).toBeEnabled();
-  fireEvent.click(send);
+  expect(resend).toBeEnabled();
+  fireEvent.click(resend);
   await act(async () => {
     await vi.advanceTimersByTimeAsync(0);
   });

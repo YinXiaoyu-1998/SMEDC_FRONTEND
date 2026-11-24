@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useEffectEvent, useId, useState } from "react";
 
 import { useText } from "@/i18n/useText";
 import { Button } from "@/ui/Button";
@@ -6,14 +6,16 @@ import { Button } from "@/ui/Button";
 const sdkUrl =
   "https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js";
 
+export type CaptchaResult = { captchaResult: boolean; bizResult: boolean };
+
 type CaptchaOptions = {
   SceneId: string;
   mode: "popup";
   element: string;
   button: string;
   language: "cn" | "en";
-  success: (parameter: string) => void;
-  fail: () => void;
+  captchaVerifyCallback: (parameter: string) => Promise<CaptchaResult>;
+  onBizResultCallback: (success: boolean) => void;
   getInstance: (instance: { destroy?: () => void }) => void;
   onError: () => void;
 };
@@ -49,26 +51,32 @@ function loadCaptchaSdk(prefix: string): Promise<void> {
 export function Challenge({
   prefix,
   sceneId,
-  onToken,
+  disabled,
+  busy,
+  onVerify,
+  onSuccess,
 }: {
   prefix: string;
   sceneId: string;
-  onToken: (token: string) => void;
+  disabled: boolean;
+  busy: boolean;
+  onVerify: (parameter: string) => Promise<CaptchaResult>;
+  onSuccess: () => void;
 }) {
   const id = useId().replace(/[^\w-]/g, "");
   const { t, locale } = useText();
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [verified, setVerified] = useState(false);
+  const verifyLatest = useEffectEvent(onVerify);
+  const completeLatest = useEffectEvent(onSuccess);
 
   useEffect(() => {
     let active = true;
+    let pending = false;
+    let sent = false;
     let instance: { destroy?: () => void } | undefined;
     const failure = () => {
-      if (!active) return;
-      setFailed(true);
-      setVerified(false);
-      onToken("");
+      if (active) setFailed(true);
     };
     void loadCaptchaSdk(prefix)
       .then(() => {
@@ -80,16 +88,20 @@ export function Challenge({
           element: `#registration-captcha-${id}`,
           button: `#registration-captcha-button-${id}`,
           language: locale === "zh" ? "cn" : "en",
-          success(parameter) {
-            if (!active) return;
-            setFailed(false);
-            setVerified(true);
-            onToken(parameter);
+          async captchaVerifyCallback(parameter) {
+            if (!active || pending || sent || !parameter)
+              return { captchaResult: false, bizResult: false };
+            pending = true;
+            try {
+              const result = await verifyLatest(parameter);
+              sent = result.captchaResult && result.bizResult;
+              return result;
+            } finally {
+              pending = false;
+            }
           },
-          fail() {
-            if (!active) return;
-            setVerified(false);
-            onToken("");
+          onBizResultCallback(success) {
+            if (active && sent && success) completeLatest();
           },
           getInstance(nextInstance) {
             if (!active) {
@@ -106,19 +118,18 @@ export function Challenge({
     return () => {
       active = false;
       instance?.destroy?.();
-      onToken("");
     };
-  }, [id, locale, onToken, prefix, sceneId]);
+  }, [id, locale, prefix, sceneId]);
 
   return (
     <>
       <div id={`registration-captcha-${id}`} />
       <Button
         id={`registration-captcha-button-${id}`}
-        variant="secondary"
-        disabled={!ready || verified}
+        disabled={!ready || disabled}
+        busy={busy}
       >
-        {t(verified ? "registration.humanVerified" : "registration.humanCheck")}
+        {t("registration.send")}
       </Button>
       {failed && <p role="alert">{t("registration.challengeError")}</p>}
     </>

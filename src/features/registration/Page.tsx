@@ -10,7 +10,7 @@ import { appPaths } from "@/app/paths";
 import { useText } from "@/i18n/useText";
 import { Button } from "@/ui/Button";
 import styles from "@/app/LoginPage.module.css";
-import { Challenge } from "./Challenge";
+import { Challenge, type CaptchaResult } from "./Challenge";
 import {
   readRegistration,
   sendCode,
@@ -38,6 +38,11 @@ function errorMessage(error: unknown) {
   );
 }
 
+function openVerificationPage() {
+  // Drop the external SDK before the visitor enters a verification code or password.
+  window.location.replace("/register/verify");
+}
+
 export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
   const { t, locale } = useText();
   const navigate = useNavigate();
@@ -49,8 +54,6 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [completeValid, setCompleteValid] = useState(false);
-  const [token, setToken] = useState("");
-  const [challengeAttempt, setChallengeAttempt] = useState(0);
   const [busy, setBusy] = useState<"send" | "verify" | "create" | null>(null);
   const [now, setNow] = useState(Date.now);
 
@@ -88,23 +91,24 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
     return () => window.clearInterval(timer);
   }, [deadline]);
 
-  async function send(event?: FormEvent<HTMLFormElement>) {
-    event?.preventDefault();
+  async function send(humanChallengeToken?: string): Promise<CaptchaResult> {
     if (
       !session ||
       busy ||
       !recipient ||
       deadline > Date.now() ||
-      (!sameRecipient && !token)
+      (!sameRecipient && !humanChallengeToken)
     )
-      return;
+      return { captchaResult: false, bizResult: false };
     setError("");
     setBusy("send");
     try {
       const sent = await sendCode(
         {
           email: recipient,
-          ...(!sameRecipient && token ? { humanChallengeToken: token } : {}),
+          ...(!sameRecipient && humanChallengeToken
+            ? { humanChallengeToken }
+            : {}),
         },
         session.status === "start" ? undefined : session.csrfToken,
       );
@@ -117,16 +121,12 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
         });
         setCode("");
         setNow(Date.now());
-      } else {
-        // Full navigation drops the third-party challenge script before entering any code or password.
-        window.location.replace("/register/verify");
+      } else if (!humanChallengeToken) {
+        openVerificationPage();
       }
+      return { captchaResult: true, bizResult: true };
     } catch (failure) {
       setError(errorMessage(failure));
-      if (!verifyPage) {
-        setToken("");
-        setChallengeAttempt((value) => value + 1);
-      }
       // The response can fail after the browser has accepted the registration cookie.
       // Recover its write token and cooldown before allowing another send.
       try {
@@ -136,6 +136,12 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
       } catch {
         // Preserve the original send error when the session check also fails.
       }
+      return {
+        captchaResult:
+          failure instanceof WebApiError &&
+          failure.code === "REGISTRATION_DELIVERY_FAILED",
+        bizResult: false,
+      };
     } finally {
       setBusy(null);
     }
@@ -236,7 +242,13 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
             {session.status !== "start" && (
               <a href="/register/verify">{t("registration.resume")}</a>
             )}
-            <form onSubmit={send} className={styles.form}>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (sameRecipient) void send();
+              }}
+              className={styles.form}
+            >
               <label className={styles.field}>
                 {t("login.email")}
                 <input
@@ -250,27 +262,30 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
-              {!sameRecipient && (
+              {sameRecipient ? (
+                <Button
+                  type="submit"
+                  busy={busy === "send"}
+                  disabled={!!busy || seconds > 0}
+                >
+                  {t("registration.send")}
+                  {cooldown}
+                </Button>
+              ) : (
                 <Challenge
-                  key={`${challengeAttempt}-${locale}`}
+                  key={locale}
                   prefix={session.captcha.prefix}
                   sceneId={session.captcha.sceneId}
-                  onToken={setToken}
+                  disabled={
+                    !!busy ||
+                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) ||
+                    seconds > 0
+                  }
+                  busy={busy === "send"}
+                  onVerify={send}
+                  onSuccess={openVerificationPage}
                 />
               )}
-              <Button
-                type="submit"
-                busy={busy === "send"}
-                disabled={
-                  !!busy ||
-                  !recipient ||
-                  seconds > 0 ||
-                  (!sameRecipient && !token)
-                }
-              >
-                {t("registration.send")}
-                {cooldown}
-              </Button>
             </form>
             <p>{t("registration.employee")}</p>
           </>
