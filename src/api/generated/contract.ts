@@ -10962,7 +10962,6 @@ export const webApiRoutes = {
       "REGISTRATION_CODE_EXPIRED",
       "REGISTRATION_EMAIL_IN_USE",
       "REGISTRATION_PASSWORD_REJECTED",
-      "REGISTRATION_RATE_LIMITED",
       "REGISTRATION_UNAVAILABLE",
       "REGISTRATION_VERIFICATION_REQUIRED",
       "WEB_API_INVALID_REQUEST",
@@ -10990,6 +10989,7 @@ export const webApiRoutes = {
     path: "/api/web/v1/registration/session",
     auth: "anonymous",
     errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
       "BROWSER_SIGN_IN_REQUIRED",
       "INTERNAL_ERROR",
       "REGISTRATION_UNAVAILABLE",

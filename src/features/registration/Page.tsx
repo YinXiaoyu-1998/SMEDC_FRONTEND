@@ -214,7 +214,7 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
                   name="email"
                   autoComplete="email"
                   required
-                  maxLength={320}
+                  maxLength={254}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
@@ -308,7 +308,7 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
                   name="organizationName"
                   required
                   pattern=".*\S.*"
-                  maxLength={255}
+                  maxLength={191}
                   autoComplete="organization"
                 />
               </label>
@@ -319,7 +319,7 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
                   name="displayName"
                   required
                   pattern=".*\S.*"
-                  maxLength={255}
+                  maxLength={191}
                   autoComplete="name"
                 />
               </label>
