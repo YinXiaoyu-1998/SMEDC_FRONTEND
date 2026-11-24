@@ -417,6 +417,24 @@ it("collapses question fields and saves a whole-card drag reorder by identity", 
     .getByRole("button", { name: "第二题", expanded: false })
     .closest("section")!;
   // JSDOM does not provide layout, pointer capture, or hit testing.
+  const firstSlot = firstCard.closest<HTMLElement>("[data-question-id]")!;
+  const secondSlot = secondCard.closest<HTMLElement>("[data-question-id]")!;
+  const firstBounds = vi.spyOn(firstCard, "getBoundingClientRect");
+  firstBounds.mockImplementation(() =>
+    firstCard.style.transform === "translate3d(90px, 212px, 0)"
+      ? new DOMRect(90, 212, 500, 60)
+      : new DOMRect(
+          40,
+          firstSlot.previousElementSibling === secondSlot ? 176 : 100,
+          500,
+          60,
+        ),
+  );
+  const secondBounds = vi
+    .spyOn(secondSlot, "getBoundingClientRect")
+    .mockReturnValue(new DOMRect(40, 176, 500, 60));
+  const animate = vi.fn();
+  Object.defineProperty(firstCard, "animate", { value: animate });
   const fromPoint = vi.fn(() => secondCard);
   const original = Object.getOwnPropertyDescriptor(
     document,
@@ -428,13 +446,13 @@ it("collapses question fields and saves a whole-card drag reorder by identity", 
   });
   Object.defineProperties(grip, {
     setPointerCapture: { value: vi.fn() },
-    hasPointerCapture: { value: () => true },
   });
-  const point = (type: string) => {
+  const point = (type: string, clientX = 60, clientY = 130) => {
     const event = new MouseEvent(type, {
       bubbles: true,
       button: 0,
-      clientY: 100,
+      clientX,
+      clientY,
     });
     Object.defineProperties(event, {
       isPrimary: { value: true },
@@ -444,10 +462,43 @@ it("collapses question fields and saves a whole-card drag reorder by identity", 
   };
   try {
     fireEvent(grip, point("pointerdown"));
-    fireEvent(grip, point("pointermove"));
-    expect(secondCard).toHaveAttribute("data-drop", "after");
-    fireEvent(grip, point("pointerup"));
+    expect(firstSlot).toHaveAttribute("data-dragging");
+    expect(firstSlot.style.minBlockSize).toBe("60px");
+    expect(firstCard.style.transform).toBe("translate3d(40px, 100px, 0)");
+    fireEvent(grip, point("pointermove", 110, 242));
+    expect(firstCard.style.transform).toBe("translate3d(90px, 212px, 0)");
+    expect(secondSlot).toHaveAttribute("data-drop", "after");
+
+    fireEvent(grip, point("pointercancel", 110, 242));
+    expect(firstSlot).not.toHaveAttribute("data-dragging");
+    expect(firstSlot.style.minBlockSize).toBe("");
+    expect(firstCard.style.transform).toBe("");
+    expect(secondSlot).not.toHaveAttribute("data-drop");
+    expect(firstSlot.nextElementSibling).toBe(secondSlot);
+    expect(animate).toHaveBeenCalledWith(
+      [
+        { transform: "translate3d(50px, 112px, 0)", zIndex: 1 },
+        { transform: "translate3d(0, 0, 0)", zIndex: 1 },
+      ],
+      expect.objectContaining({ duration: 220 }),
+    );
+
+    animate.mockClear();
+    fireEvent(grip, point("pointerdown"));
+    fireEvent(grip, point("pointermove", 110, 242));
+    fireEvent(grip, point("pointerup", 110, 242));
+    expect(firstSlot.previousElementSibling).toBe(secondSlot);
+    expect(firstCard.style.transform).toBe("");
+    expect(animate).toHaveBeenCalledWith(
+      [
+        { transform: "translate3d(50px, 36px, 0)", zIndex: 1 },
+        { transform: "translate3d(0, 0, 0)", zIndex: 1 },
+      ],
+      expect.objectContaining({ duration: 220 }),
+    );
   } finally {
+    firstBounds.mockRestore();
+    secondBounds.mockRestore();
     if (original) Object.defineProperty(document, "elementFromPoint", original);
     else Reflect.deleteProperty(document, "elementFromPoint");
   }

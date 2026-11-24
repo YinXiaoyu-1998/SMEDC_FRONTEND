@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useState, type PointerEvent } from "react";
 
 import type { ContextItem } from "@/api/inspection-templates";
 import { ActionButton } from "@/ui/ActionButton";
@@ -15,20 +15,9 @@ import {
 } from "./templateDraft";
 import styles from "./Templates.module.css";
 import { useTemplateText } from "./templatesText";
+import { useQuestionDrag } from "./useQuestionDrag";
 
 export type TemplateStore = Extract<ContextItem, { kind: "store" }>;
-type DropTarget = { id: string; before: boolean };
-type Point = Pick<PointerEvent, "clientX" | "clientY">;
-
-function dropTarget(event: Point): DropTarget | null {
-  const row = document
-    .elementFromPoint(event.clientX, event.clientY)
-    ?.closest<HTMLElement>("[data-question-id]");
-  const id = row?.dataset.questionId;
-  if (!row || !id) return null;
-  const { top, height } = row.getBoundingClientRect();
-  return { id, before: event.clientY < top + height / 2 };
-}
 
 export function TemplateBuilder({
   draft,
@@ -43,39 +32,17 @@ export function TemplateBuilder({
 }) {
   const t = useTemplateText();
   const [expanded, setExpanded] = useState(() => new Set<string>());
-  const [dragged, setDragged] = useState<string | null>(null);
-  const [target, setTarget] = useState<DropTarget | null>(null);
-  const pointer = useRef<Point | null>(null);
-  // A held card can travel beyond the visible part of a long template.
-  useEffect(() => {
-    if (!dragged) return;
-    let frame = 0;
-    const scrollWhileHeld = () => {
-      const point = pointer.current;
-      if (point) {
-        const edge = 56;
-        const step =
-          point.clientY < edge
-            ? -12
-            : point.clientY > window.innerHeight - edge
-              ? 12
-              : 0;
-        if (step) {
-          window.scrollBy(0, step);
-          const over = dropTarget(point);
-          const next = over?.id === dragged ? null : over;
-          setTarget((current) =>
-            current?.id === next?.id && current?.before === next?.before
-              ? current
-              : next,
-          );
-        }
-      }
-      frame = requestAnimationFrame(scrollWhileHeld);
-    };
-    frame = requestAnimationFrame(scrollWhileHeld);
-    return () => cancelAnimationFrame(frame);
-  }, [dragged]);
+  const drag = useQuestionDrag((id, target) => {
+    const destination = draft.questions.findIndex(
+      ({ questionId }) => questionId === target.id,
+    );
+    if (destination < 0) return;
+    const from = draft.questions.findIndex(
+      ({ questionId }) => questionId === id,
+    );
+    const insertion = destination + (target.before ? 0 : 1);
+    move(id, insertion - (from < insertion ? 1 : 0));
+  });
 
   const patched = (patch: Partial<TemplateDraft>) =>
     onChange({ ...draft, ...patch });
@@ -105,31 +72,8 @@ export function TemplateBuilder({
     patched({ questions });
   }
 
-  function endDrag() {
-    pointer.current = null;
-    setDragged(null);
-    setTarget(null);
-  }
-
-  function drop(id: string, event: PointerEvent) {
-    const point = dropTarget(event);
-    if (point && point.id !== id) {
-      const destination = draft.questions.findIndex(
-        ({ questionId }) => questionId === point.id,
-      );
-      const from = draft.questions.findIndex(
-        ({ questionId }) => questionId === id,
-      );
-      if (destination >= 0) {
-        const insertion = destination + (point.before ? 0 : 1);
-        move(id, insertion - (from < insertion ? 1 : 0));
-      }
-    }
-    endDrag();
-  }
-
   return (
-    <fieldset className={styles.builder} disabled={disabled}>
+    <fieldset ref={drag.builder} className={styles.builder} disabled={disabled}>
       <div className={styles.row}>
         <Field label={t("title")}>
           <input
@@ -191,56 +135,59 @@ export function TemplateBuilder({
       {draft.questions.map((question, index) => {
         const id = question.questionId;
         return (
-          <QuestionEditor
+          <div
             key={id}
-            question={question}
-            index={index}
-            count={draft.questions.length}
-            expanded={expanded.has(id)}
-            dragging={dragged === id}
-            dropBefore={target?.id === id && target.before}
-            dropAfter={target?.id === id && !target.before}
-            onToggle={() =>
-              setExpanded((old) => {
-                const next = new Set(old);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
-                return next;
-              })
+            className={styles.questionSlot}
+            data-question-id={id}
+            data-dragging={drag.dragged === id || undefined}
+            data-drop={
+              drag.target?.id === id
+                ? drag.target.before
+                  ? "before"
+                  : "after"
+                : undefined
             }
-            onDragStart={() => setDragged(id)}
-            onDragMove={(event) => {
-              pointer.current = {
-                clientX: event.clientX,
-                clientY: event.clientY,
-              };
-              const over = dropTarget(event);
-              setTarget(over?.id === id ? null : over);
-            }}
-            onDrop={(event) => drop(id, event)}
-            onCancelDrag={endDrag}
-            onMove={(shift) => move(id, index + shift)}
-            onChange={(next) =>
-              patched({
-                questions: draft.questions.map((item) =>
-                  item.questionId === id ? next : item,
-                ),
-              })
-            }
-            onCopy={() => append(copyQuestion(question))}
-            onRemove={() => {
-              setExpanded((old) => {
-                const next = new Set(old);
-                next.delete(id);
-                return next;
-              });
-              patched({
-                questions: draft.questions.filter(
-                  (item) => item.questionId !== id,
-                ),
-              });
-            }}
-          />
+          >
+            <QuestionEditor
+              question={question}
+              index={index}
+              count={draft.questions.length}
+              expanded={expanded.has(id)}
+              onToggle={() =>
+                setExpanded((old) => {
+                  const next = new Set(old);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
+              onDragStart={(event) => drag.start(id, event)}
+              onDragMove={drag.move}
+              onDrop={(event) => drag.finish(event, true)}
+              onCancelDrag={(event) => drag.finish(event, false)}
+              onMove={(shift) => move(id, index + shift)}
+              onChange={(next) =>
+                patched({
+                  questions: draft.questions.map((item) =>
+                    item.questionId === id ? next : item,
+                  ),
+                })
+              }
+              onCopy={() => append(copyQuestion(question))}
+              onRemove={() => {
+                setExpanded((old) => {
+                  const next = new Set(old);
+                  next.delete(id);
+                  return next;
+                });
+                patched({
+                  questions: draft.questions.filter(
+                    (item) => item.questionId !== id,
+                  ),
+                });
+              }}
+            />
+          </div>
         );
       })}
     </fieldset>
@@ -252,9 +199,6 @@ function QuestionEditor({
   index,
   count,
   expanded,
-  dragging,
-  dropBefore,
-  dropAfter,
   onToggle,
   onDragStart,
   onDragMove,
@@ -269,14 +213,11 @@ function QuestionEditor({
   index: number;
   count: number;
   expanded: boolean;
-  dragging: boolean;
-  dropBefore: boolean;
-  dropAfter: boolean;
   onToggle: () => void;
-  onDragStart: () => void;
+  onDragStart: (event: PointerEvent<HTMLButtonElement>) => void;
   onDragMove: (event: PointerEvent<HTMLButtonElement>) => void;
   onDrop: (event: PointerEvent<HTMLButtonElement>) => void;
-  onCancelDrag: () => void;
+  onCancelDrag: (event: PointerEvent<HTMLButtonElement>) => void;
   onChange: (next: QuestionInput) => void;
   onCopy: () => void;
   onMove: (shift: -1 | 1) => void;
@@ -287,12 +228,7 @@ function QuestionEditor({
   const components = (next: ComponentInput[]) =>
     onChange({ ...question, components: next });
   return (
-    <section
-      className={styles.question}
-      data-question-id={question.questionId}
-      data-dragging={dragging || undefined}
-      data-drop={dropBefore ? "before" : dropAfter ? "after" : undefined}
-    >
+    <section className={styles.question} data-question-card>
       <div className={styles.questionHeader}>
         {count > 1 ? (
           <button
@@ -302,19 +238,9 @@ function QuestionEditor({
               t("dragQuestion") + " · " + (question.title || String(index + 1))
             }
             title={t("dragHint")}
-            onPointerDown={(event) => {
-              if (!event.isPrimary || event.button !== 0) return;
-              event.currentTarget.setPointerCapture(event.pointerId);
-              onDragStart();
-            }}
-            onPointerMove={(event) => {
-              if (event.currentTarget.hasPointerCapture(event.pointerId))
-                onDragMove(event);
-            }}
-            onPointerUp={(event) => {
-              if (event.currentTarget.hasPointerCapture(event.pointerId))
-                onDrop(event);
-            }}
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDrop}
             onLostPointerCapture={onCancelDrag}
             onPointerCancel={onCancelDrag}
             onKeyDown={(event) => {
