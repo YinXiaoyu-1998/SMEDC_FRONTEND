@@ -258,9 +258,9 @@ export function DirectoryPage() {
     setCreatedUid("");
     try {
       const result = await action();
-      setSuccess(L(["操作已完成", "Operation completed"]));
       after?.(result);
       await reload();
+      setSuccess(L(["操作已完成", "Operation completed"]));
     } catch (e) {
       if (
         departmentNameSubmission &&
@@ -971,6 +971,9 @@ export function DirectoryPage() {
                         <Button
                           variant="ghost"
                           className={styles.rowAction}
+                          disabled={
+                            busy || employees.isFetching || employees.isError
+                          }
                           onClick={() => startEdit(e)}
                         >
                           <AdminIcon name="edit" />
@@ -1102,7 +1105,9 @@ export function DirectoryPage() {
                         <td className={styles.catalogActions}>
                           <button
                             type="button"
-                            disabled={busy}
+                            disabled={
+                              busy || directory.isFetching || directory.isError
+                            }
                             onClick={() => {
                               setConflict(false);
                               setRename({
@@ -1257,7 +1262,9 @@ export function DirectoryPage() {
                       <td className={styles.catalogActions}>
                         <button
                           type="button"
-                          disabled={busy}
+                          disabled={
+                            busy || directory.isFetching || directory.isError
+                          }
                           onClick={() => {
                             setConflict(false);
                             setDuplicateNameError(null);

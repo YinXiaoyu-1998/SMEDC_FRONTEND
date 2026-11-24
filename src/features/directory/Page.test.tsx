@@ -301,6 +301,89 @@ it("creates an employee without list access using the selected group scope", asy
   );
 });
 
+it("waits for the saved employee before allowing the record to reopen", async () => {
+  const record = {
+    employeeUid: "22222222-2222-4222-8222-222222222222",
+    name: "原名",
+    departmentId: "11111111-1111-4111-8111-111111111111",
+    departmentName: "前厅",
+    scope: { ownership: "group", storeId: null, storeName: null },
+    status: "active",
+    version: "1",
+  };
+  let resumeList: (() => void) | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => {
+      if (url.includes("/enterprises"))
+        return jsonResponse({
+          authorizationVersion: "1",
+          enterprises: [
+            { enterpriseKey: "enterprise-1", enterpriseName: "示例企业" },
+          ],
+        });
+      if (url.includes("/list_directory"))
+        return jsonResponse({
+          enterpriseKey: "enterprise-1",
+          enterpriseName: "示例企业",
+          stores: [],
+          departments: [
+            {
+              departmentId: record.departmentId,
+              name: "前厅",
+              status: "active",
+              version: "1",
+            },
+          ],
+        });
+      if (url.includes("/update_employee")) {
+        record.name = "新名字";
+        record.version = "2";
+        return jsonResponse({
+          employeeUid: record.employeeUid,
+          version: record.version,
+        });
+      }
+      if (url.includes("/list_employees")) {
+        if (record.version === "2") {
+          await new Promise<void>((resolve) => {
+            resumeList = resolve;
+          });
+        }
+        return jsonResponse({
+          employees: [record],
+          access: "all",
+          nextCursor: null,
+        });
+      }
+      return jsonResponse({});
+    }),
+  );
+  renderApp({
+    session: adminSession,
+    initialEntries: ["/admin/org-1/directory"],
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
+  const form = screen
+    .getByRole("heading", { name: "编辑员工" })
+    .closest("section")!;
+  fireEvent.change(within(form).getByLabelText("姓名"), {
+    target: { value: "新名字" },
+  });
+  fireEvent.click(within(form).getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(resumeList).toBeDefined());
+  expect(screen.getByRole("button", { name: "编辑" })).toBeDisabled();
+  resumeList?.();
+  const updated = await screen.findByRole("row", { name: /新名字/ });
+  const edit = within(updated).getByRole("button", { name: "编辑" });
+  await waitFor(() => expect(edit).toBeEnabled());
+  fireEvent.click(edit);
+  const reopened = screen
+    .getByRole("heading", { name: "编辑员工" })
+    .closest("section")!;
+  expect(within(reopened).getByLabelText("姓名")).toHaveValue("新名字");
+});
+
 it("retains an employee draft after a version conflict and requires comparison", async () => {
   const departmentId = "11111111-1111-4111-8111-111111111111";
   const uid = "22222222-2222-4222-8222-222222222222";

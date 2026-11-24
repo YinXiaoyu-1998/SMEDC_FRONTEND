@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
+  PermissionsAccountsUpdateBody,
   PermissionAccount,
   PermissionCategory,
   PermissionDimension,
@@ -1540,6 +1541,103 @@ describe("权限设置页", () => {
       true,
     );
   });
+});
+
+it("reopens inspection permissions with the saved template and store access", async () => {
+  const state = createState();
+  const storeId = "7f31ac52-b329-4647-8e7e-c103ac448a03";
+  state.stores = [
+    {
+      ...state.stores[0]!,
+      storeId,
+      confirmation: "confirmed",
+    },
+  ];
+  const account = state.accounts[0]!;
+  let saved: NonNullable<
+    PermissionsAccountsUpdateBody["inspectionPermissions"]
+  > = [];
+  let resumeRead: (() => void) | undefined;
+  let delayRead = false;
+  renderPermissions({
+    state,
+    overrides: {
+      "accounts.read": async (_state, request) => {
+        const card = {
+          orgId: ORG,
+          userAccountId: account.id,
+          role: account.role,
+          disabled: account.disabled,
+          clearance: account.clearance,
+          mode: state.mode,
+          categories: account.categories,
+          grants: account.grants,
+        };
+        const includeInspection =
+          request.searchParams.get("includeInspection") === "true";
+        if (includeInspection && delayRead) {
+          await new Promise<void>((resolve) => {
+            resumeRead = resolve;
+          });
+        }
+        return jsonResponse({
+          ...card,
+          authorizationVersion: state.version,
+          ...(includeInspection ? { inspectionPermissions: saved } : {}),
+        });
+      },
+      "accounts.update": (_state, request) => {
+        const body = request.body as PermissionsAccountsUpdateBody;
+        expect(body.expectedVersion).toBe(state.version);
+        saved = body.inspectionPermissions ?? [];
+        state.version = nextVersion(state.version);
+        return jsonResponse({
+          authorizationVersion: state.version,
+          value: {
+            clearance: account.clearance,
+            grants: account.grants,
+            inspectionPermissions: saved,
+          },
+        });
+      },
+    },
+  });
+
+  await screen.findByRole("heading", { name: "文档类别" });
+  await openTab("账号授权");
+  async function openInspectionPermissions() {
+    const row = await screen.findByRole("row", { name: /张三/ });
+    fireEvent.click(within(row).getByRole("button", { name: "编辑" }));
+    const editor = await screen.findByRole("dialog", { name: "编辑账号授权" });
+    fireEvent.click(within(editor).getByRole("button", { name: "巡检权限" }));
+    return within(await screen.findByRole("dialog", { name: "巡检权限" }));
+  }
+
+  const policy = await openInspectionPermissions();
+  const store = await policy.findByLabelText("一号店 · 巡检权限");
+  expect(store).toHaveValue("none");
+  fireEvent.change(store, { target: { value: "write" } });
+  fireEvent.click(policy.getByRole("checkbox", { name: "可维护模板" }));
+  fireEvent.click(policy.getByRole("button", { name: "保存巡检权限" }));
+  const confirm = await screen.findByRole("dialog", { name: "保存巡检权限" });
+  fireEvent.click(within(confirm).getByRole("button", { name: "确认变更" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "巡检权限" }),
+    ).not.toBeInTheDocument(),
+  );
+
+  delayRead = true;
+  const reopened = await openInspectionPermissions();
+  await waitFor(() => expect(resumeRead).toBeDefined());
+  expect(
+    reopened.queryByLabelText("一号店 · 巡检权限"),
+  ).not.toBeInTheDocument();
+  resumeRead?.();
+  await waitFor(() =>
+    expect(reopened.getByLabelText("一号店 · 巡检权限")).toHaveValue("write"),
+  );
+  expect(reopened.getByRole("checkbox", { name: "可维护模板" })).toBeChecked();
 });
 
 it("confirms the remaining stores before replacing all-store access and sends only inspection changes", async () => {
