@@ -93,7 +93,15 @@ export function resolveLoginTarget(
   session: Session,
   requestedNext: string | null,
 ): string {
-  return sanitizeNextPath(requestedNext) ?? resolveHomePath(session);
+  const next = sanitizeNextPath(requestedNext);
+  if (
+    next?.startsWith("/admin/") &&
+    (!session.canManageSettings ||
+      !next.startsWith(`/admin/${encodeURIComponent(session.identity.orgId)}/`))
+  ) {
+    return resolveHomePath(session);
+  }
+  return next ?? resolveHomePath(session);
 }
 
 export function buildLoginPath(currentPath: string): string {

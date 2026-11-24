@@ -2,7 +2,7 @@ import { RegistrationPage } from "@/features/registration/Page";
 import type { RouteObject } from "react-router";
 import { createBrowserRouter } from "react-router";
 
-import { HomeRedirect } from "@/app/HomeRedirect";
+import { HomePage } from "@/app/HomePage";
 import { LoginPage } from "@/app/LoginPage";
 import { NotFoundPage } from "@/app/NotFoundPage";
 import { RouteErrorPage } from "@/app/RouteErrorPage";
@@ -16,6 +16,7 @@ import { WorkflowsPage } from "@/features/workflows/Page";
 
 // 路由表独立导出：浏览器用 createBrowserRouter，测试用 createMemoryRouter 复用同一份定义
 export const routes: RouteObject[] = [
+  { path: "/", element: <HomePage />, errorElement: <RouteErrorPage /> },
   {
     path: "/register",
     element: <RegistrationPage verifyPage={false} />,
@@ -30,7 +31,6 @@ export const routes: RouteObject[] = [
     element: <SessionGate />,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <HomeRedirect /> },
       { path: "admin/:orgId/directory", element: <DirectoryPage /> },
       { path: "admin/:orgId/permissions", element: <PermissionsPage /> },
       { path: "admin/:orgId/workflows", element: <WorkflowsPage /> },

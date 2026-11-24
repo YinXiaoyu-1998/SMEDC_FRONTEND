@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import {
-  Link,
-  NavLink,
-  useLocation,
-  useMatch,
-  useNavigate,
-} from "react-router";
+import { Link, NavLink, useLocation, useMatch } from "react-router";
 
 import type { Session } from "@/api/session";
-import { useLogout } from "@/api/session";
 import { AdminSectionNav } from "@/app/AdminSectionNav";
 import { LanguageSwitch } from "@/app/LanguageSwitch";
 import { appPaths, resolveInspectionPath } from "@/app/paths";
@@ -24,17 +17,23 @@ import styles from "./AppShell.module.css";
 interface AppShellProps {
   readonly session: Session;
   readonly children: ReactNode;
+  readonly onLogout: () => void;
+  readonly logoutPending: boolean;
+  readonly logoutFailed: boolean;
 }
 
-export function AppShell({ session, children }: AppShellProps) {
+export function AppShell({
+  session,
+  children,
+  onLogout,
+  logoutPending,
+  logoutFailed,
+}: AppShellProps) {
   const { t } = useText();
   const location = useLocation();
-  const navigate = useNavigate();
-  const logout = useLogout();
   // 用 location.key 派生展开状态：导航后 key 变化，菜单自动收起，无需在 effect 里同步
   const [openKey, setOpenKey] = useState<string | null>(null);
   const menuOpen = openKey === location.key;
-  const [logoutFailed, setLogoutFailed] = useState(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -60,18 +59,6 @@ export function AppShell({ session, children }: AppShellProps) {
         : "nav.permissions";
   const managementPath = appPaths.permissions(session.identity.orgId);
   const inspectionPath = resolveInspectionPath(session);
-
-  const handleLogout = () => {
-    setLogoutFailed(false);
-    logout.mutate(session.csrfToken, {
-      onSuccess: () => {
-        navigate(appPaths.login, { replace: true });
-      },
-      onError: () => {
-        setLogoutFailed(true);
-      },
-    });
-  };
 
   return (
     <div
@@ -195,8 +182,8 @@ export function AppShell({ session, children }: AppShellProps) {
           </span>
           <Button
             variant="secondary"
-            onClick={handleLogout}
-            disabled={logout.isPending}
+            onClick={onLogout}
+            disabled={logoutPending}
           >
             {t("nav.logout")}
           </Button>

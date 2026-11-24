@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { adminSession } from "@/test/fixtures";
+import { adminSession, employeeSession } from "@/test/fixtures";
 import { jsonResponse } from "@/test/http";
 import { renderApp } from "@/test/renderApp";
 
@@ -130,6 +130,42 @@ describe("登录表单", () => {
       expect(router.state.location.pathname).toBe("/admin/org-1/workflows");
     });
   });
+
+  it.each([
+    {
+      scenario: "换组织管理员登录",
+      session: adminSession,
+      previousPath: "/admin/org-previous/permissions",
+      homePath: "/admin/org-1/permissions",
+    },
+    {
+      scenario: "普通员工登录",
+      session: employeeSession,
+      previousPath: "/admin/org-1/permissions",
+      homePath: "/ledger",
+    },
+  ])(
+    "$scenario后跳过旧管理页，进入当前账号首页",
+    async ({ session, previousPath, homePath }) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn<FetchFunction>(async () => jsonResponse(session)),
+      );
+      const { router } = renderApp({
+        session: null,
+        initialEntries: [previousPath],
+      });
+      await screen.findByRole("heading", { name: "登录企业智脑" });
+      expect(
+        new URLSearchParams(router.state.location.search).get("next"),
+      ).toBe(previousPath);
+      fillCredentials(session.identity.email, "secret-123");
+      fireEvent.click(screen.getByRole("button", { name: "登录" }));
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(homePath);
+      });
+    },
+  );
 
   it("登录成功后忽略站外 next，按角色跳转", async () => {
     const fetchMock = vi.fn<FetchFunction>(async () =>
