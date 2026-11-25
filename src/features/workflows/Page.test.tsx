@@ -85,6 +85,11 @@ describe("自动任务页", () => {
       await screen.findByRole("heading", { name: "任务业务设置" }),
     ).toBeInTheDocument();
     expect(
+      screen.getByText(
+        "保存业务设置后，请在执行电脑上的智能体中安装任务并完成准备检查。",
+      ),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("button", { name: "每日数据采集入库" }),
     ).toHaveAttribute("aria-current", "page");
     expect(
