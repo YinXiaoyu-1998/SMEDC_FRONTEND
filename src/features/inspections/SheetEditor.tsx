@@ -35,6 +35,7 @@ import {
 } from "./employeeText";
 import { DraftDisplay, QuestionEditor, ValueDisplay } from "./QuestionEditor";
 import { SheetActions } from "./SheetActions";
+import { SheetTarget } from "./SheetTarget";
 import styles from "./Employee.module.css";
 
 const QUESTIONS_PER_SECTION = 20;
@@ -359,8 +360,8 @@ export function SheetEditor({
         <>
           <header className={styles.sheetHeader}>
             <div>
-              <h2>{sheet.name ?? sheet.templateTitle}</h2>
-              {sheet.name !== null && <p>{sheet.templateTitle}</p>}
+              <h2>{sheet.templateTitle}</h2>
+              <SheetTarget sheet={sheet} />
               <Summary data={sheet} />
               {sheet.missingRequiredCount > 0 && (
                 <p className={styles.missing}>
@@ -544,7 +545,11 @@ export function SheetEditor({
                         markPhoto({
                           photoId,
                           sheetId: sheet.sheetId,
-                          label: `${sheet.name ?? sheet.templateTitle} · ${label}`,
+                          label: `${
+                            sheet.targetType === "store"
+                              ? sheet.templateTitle
+                              : sheet.targetName
+                          } · ${label}`,
                         })
                     : undefined
                 }

@@ -32,11 +32,11 @@ export function draftFromPreview(
   preview: TemplatePreview | null,
 ): TemplateDraft {
   if (!preview)
-    return { title: "", copyMode: null, storeIds: [], questions: [] };
-  const { title, copyMode, storeIds, questions } = preview.draft;
+    return { title: "", targetType: null, storeIds: [], questions: [] };
+  const { title, targetType, storeIds, questions } = preview.draft;
   return {
     title,
-    copyMode: copyMode ?? null,
+    targetType: targetType ?? null,
     storeIds,
     questions: questions.map(({ questionId, title, components }) => ({
       questionId,

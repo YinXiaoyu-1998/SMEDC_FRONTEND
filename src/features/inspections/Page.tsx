@@ -2,11 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router";
 
-import {
-  inspectionsDayQuerySchema,
-  type InspectionsSheetsCreateBody,
-  type InspectionsDayResponse,
-} from "@/api/generated/contract";
+import { inspectionsDayQuerySchema } from "@/api/generated/contract";
 import { useSession } from "@/api/session";
 import { singleEnterpriseKey } from "@/features/singleEnterpriseKey";
 import { useText } from "@/i18n/useText";
@@ -14,14 +10,9 @@ import { ActionButton } from "@/ui/ActionButton";
 import { Field } from "@/ui/Field";
 
 import {
-  beginWrite,
-  canReplay,
   context,
-  create,
   day,
   isAccessError,
-  isConflict,
-  isUncertain,
   type Scope,
   type Sheet,
 } from "./employeeApi";
@@ -33,12 +24,9 @@ import {
 import { errorText, useEmployeeText } from "./employeeText";
 import { InspectionFrame } from "./InspectionFrame";
 import { SheetEditor, Summary } from "./SheetEditor";
+import { SheetTarget } from "./SheetTarget";
+import { TemplateEntry } from "./TemplateEntry";
 import styles from "./Employee.module.css";
-
-type Template = Extract<
-  InspectionsDayResponse["items"][number],
-  { kind: "template" }
->;
 
 function today() {
   const date = new Date();
@@ -60,6 +48,7 @@ export function InspectionsPage() {
             session.identity.orgId,
             session.identity.userAccountId,
           ])}
+          orgId={session.identity.orgId}
           csrfToken={session.csrfToken}
           identityKey={JSON.stringify([
             session.identity.orgId,
@@ -90,9 +79,11 @@ function useContextPages(identityKey: string, enterpriseKey?: string) {
 }
 
 function ScopePicker({
+  orgId,
   csrfToken,
   identityKey,
 }: {
+  orgId: string;
   csrfToken: string;
   identityKey: string;
 }) {
@@ -231,6 +222,7 @@ function ScopePicker({
         <InspectionDay
           key={JSON.stringify(scope.data)}
           scope={scope.data}
+          orgId={orgId}
           csrfToken={csrfToken}
           identityKey={identityKey}
         />
@@ -248,15 +240,19 @@ function ScopePicker({
 
 function InspectionDay({
   scope,
+  orgId,
   csrfToken,
   identityKey,
 }: {
   scope: Scope;
+  orgId: string;
   csrfToken: string;
   identityKey: string;
 }) {
   const t = useEmployeeText();
   const [selected, select] = useState<string>();
+  const [selection, setSelection] = useState<{ key: string; id: string }>();
+  const [creating, setCreating] = useState<string>();
   const [photoScope, setPhotoScope] = useState<{
     allowed: boolean;
     photos: ReusablePhoto[];
@@ -360,7 +356,10 @@ function InspectionDay({
         forgetPhotos={forgetPhotos}
         canFill={allowWrite}
         csrfToken={csrfToken}
-        onClose={() => select(undefined)}
+        onClose={() => {
+          setSelection(undefined);
+          select(undefined);
+        }}
         onChange={refresh}
         onVoid={() => {
           forgetPhotos();
@@ -394,32 +393,53 @@ function InspectionDay({
               <p>{t("noTemplates")}</p>
             )}
             <ul className={styles.cards}>
-              {templates.map((template) => (
-                <TemplateEntry
-                  key={template.templateId}
-                  template={template}
-                  scope={scope}
-                  allowWrite={allowWrite}
-                  uncreated={
-                    !dayList.hasNextPage &&
-                    !sheets.some(
-                      (sheet) => sheet.templateId === template.templateId,
-                    )
-                  }
-                  singleAlreadyExists={
-                    template.copyMode === "single" &&
-                    sheets.some(
-                      (sheet) => sheet.templateId === template.templateId,
-                    )
-                  }
-                  csrfToken={csrfToken}
-                  onCreate={(sheetId) => {
-                    select(sheetId);
-                    refresh();
-                  }}
-                  onRefresh={refresh}
-                />
-              ))}
+              {templates.map((template) => {
+                const key = JSON.stringify([
+                  template.templateId,
+                  template.activeRevision,
+                  template.targetType,
+                  allowWrite,
+                ]);
+                const existingStoreSheet = sheets.find(
+                  (sheet) =>
+                    template.targetType === "store" &&
+                    sheet.templateId === template.templateId &&
+                    sheet.targetType === "store" &&
+                    sheet.targetId === scope.storeId,
+                );
+                return (
+                  <TemplateEntry
+                    key={key}
+                    template={template}
+                    scope={scope}
+                    client={{ orgId, csrfToken }}
+                    identityKey={identityKey}
+                    allowWrite={allowWrite}
+                    uncreated={
+                      !dayList.hasNextPage &&
+                      !sheets.some(
+                        (sheet) => sheet.templateId === template.templateId,
+                      )
+                    }
+                    existingStoreSheetId={existingStoreSheet?.sheetId}
+                    selectedId={selection?.key === key ? selection.id : ""}
+                    onSelect={(id) => setSelection({ key, id })}
+                    busy={creating === key}
+                    disabled={creating !== undefined && creating !== key}
+                    onBusy={(busy) =>
+                      setCreating((current) =>
+                        busy ? key : current === key ? undefined : current,
+                      )
+                    }
+                    onOpen={select}
+                    onCreate={(sheetId) => {
+                      select(sheetId);
+                      refresh();
+                    }}
+                    onRefresh={refresh}
+                  />
+                );
+              })}
             </ul>
           </section>
           <section>
@@ -428,24 +448,27 @@ function InspectionDay({
               <p>{t("noSheets")}</p>
             )}
             <ul className={styles.cards}>
-              {sheets.map((sheet) => {
-                const title = sheet.name ?? sheet.templateTitle;
-                return (
-                  <li className={styles.card} key={sheet.sheetId}>
-                    <h3>{title}</h3>
-                    {sheet.name !== null && <p>{sheet.templateTitle}</p>}
-                    <Summary data={sheet} />
-                    <p className={styles.identifier}>
-                      {t("sheetId")} <code>{sheet.sheetId}</code>
-                    </p>
-                    <ActionButton
-                      label={`${t("view")} ${title}`}
-                      variant="secondary"
-                      onRun={() => select(sheet.sheetId)}
-                    />
-                  </li>
-                );
-              })}
+              {sheets.map((sheet) => (
+                <li className={styles.card} key={sheet.sheetId}>
+                  <h3>{sheet.templateTitle}</h3>
+                  <SheetTarget sheet={sheet} />
+                  <Summary data={sheet} />
+                  <p className={styles.identifier}>
+                    {t("sheetId")} <code>{sheet.sheetId}</code>
+                  </p>
+                  <ActionButton
+                    label={`${t("view")} ${sheet.templateTitle}`}
+                    aria-label={
+                      sheet.targetType === "store"
+                        ? undefined
+                        : `${t("view")} ${sheet.templateTitle} · ${sheet.targetName} · ${sheet.targetId}`
+                    }
+                    variant="secondary"
+                    disabled={creating !== undefined}
+                    onRun={() => select(sheet.sheetId)}
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         </div>
@@ -459,109 +482,5 @@ function InspectionDay({
         />
       )}
     </>
-  );
-}
-
-function TemplateEntry({
-  template,
-  scope,
-  allowWrite,
-  uncreated,
-  singleAlreadyExists,
-  csrfToken,
-  onCreate,
-  onRefresh,
-}: {
-  template: Template;
-  scope: Scope;
-  allowWrite: boolean;
-  uncreated: boolean;
-  singleAlreadyExists: boolean;
-  csrfToken: string;
-  onCreate: (sheetId: string) => void;
-  onRefresh: () => void;
-}) {
-  const t = useEmployeeText();
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<unknown>();
-  const [attempt, setAttempt] = useState<{
-    body: InspectionsSheetsCreateBody;
-    startedAt: number;
-  }>();
-  const multiple = template.copyMode === "multiple";
-  const uncertain = Boolean(attempt) && isUncertain(error);
-
-  async function createSheet() {
-    const { requestId, startedAt } = beginWrite();
-    const request = attempt ?? {
-      body: {
-        ...scope,
-        templateId: template.templateId,
-        requestId,
-        ...(multiple ? { name: name.trim() } : {}),
-      },
-      startedAt,
-    };
-    if (!canReplay(request.startedAt)) {
-      setError(new Error("Expired create receipt"));
-      setAttempt(undefined);
-      onRefresh();
-      return;
-    }
-    setAttempt(request);
-    setBusy(true);
-    setError(undefined);
-    try {
-      const receipt = await create(request.body, csrfToken);
-      onCreate(receipt.sheetId);
-    } catch (caught) {
-      setError(caught);
-      if (!isUncertain(caught)) setAttempt(undefined);
-      if (isAccessError(caught) || isConflict(caught)) onRefresh();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <li className={styles.card}>
-      <h3>{template.title}</h3>
-      <p className={styles.muted}>
-        {t(template.copyMode)}
-        {uncreated && <> · {t("uncreated")}</>}
-      </p>
-      {allowWrite && (!singleAlreadyExists || uncertain) && (
-        <>
-          {multiple && (
-            <Field label={t("name")}>
-              <input
-                value={name}
-                maxLength={120}
-                disabled={busy || uncertain}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </Field>
-          )}
-          <ActionButton
-            label={t("create")}
-            busy={busy}
-            disabled={multiple && !name.trim()}
-            onRun={() => void createSheet()}
-          />
-        </>
-      )}
-      {error != null && (
-        <p role="alert">
-          {t(
-            uncertain
-              ? "uncertainCreate"
-              : isConflict(error)
-                ? "existing"
-                : errorText(error),
-          )}
-        </p>
-      )}
-    </li>
   );
 }

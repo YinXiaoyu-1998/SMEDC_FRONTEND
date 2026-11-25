@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import type {
@@ -22,7 +22,9 @@ const sheet = {
   templateId: id(3),
   templateVersionId: id(4),
   templateTitle: "卫生巡检",
-  name: null,
+  targetType: "store",
+  targetId: scope.storeId,
+  targetName: "东门店",
   sheetRevision: 1,
   progress: "unfilled",
 } as const;
@@ -48,12 +50,15 @@ const template = {
   templateVersionId: sheet.templateVersionId,
   activeRevision: 1,
   title: sheet.templateTitle,
-  copyMode: "single",
+  targetType: "store",
 } as const;
 
 function mockInspectionApi(
   canFill: boolean,
-  overrides?: (url: URL, init?: RequestInit) => Response | undefined,
+  overrides?: (
+    url: URL,
+    init?: RequestInit,
+  ) => Response | Promise<Response> | undefined,
 ) {
   const permissions = {
     canReadInspections: true,
@@ -115,7 +120,9 @@ function readResponse(
     templateVersionId: sheet.templateVersionId,
     templateId: sheet.templateId,
     templateTitle: sheet.templateTitle,
-    name: sheet.name,
+    targetType: sheet.targetType,
+    targetId: sheet.targetId,
+    targetName: sheet.targetName,
     progress:
       missingRequired.length === 0
         ? "complete"
@@ -226,6 +233,342 @@ it("shows the fixed SOP and missing photo without offering writes to a read-only
   expect(screen.queryByLabelText("原图")).not.toBeInTheDocument();
 });
 
+it("selects a same-name employee from a later page and opens the returned sheet", async () => {
+  const firstUid = id(30);
+  const secondUid = id(31);
+  const employeeTarget = {
+    targetType: "employee",
+    targetId: secondUid,
+    targetName: "张晨",
+  } as const;
+  const attempts: unknown[] = [];
+  let created = false;
+  const fetchMock = mockInspectionApi(true, (url, init) => {
+    if (url.pathname.endsWith("/day"))
+      return jsonResponse({
+        items: [
+          { ...template, targetType: "employee" },
+          ...(created
+            ? [
+                { ...sheet, ...employeeTarget },
+                {
+                  ...sheet,
+                  ...employeeTarget,
+                  targetId: firstUid,
+                  sheetId: id(33),
+                },
+              ]
+            : []),
+        ],
+        nextCursor: null,
+      });
+    if (url.pathname.endsWith("/directory/list_employees")) {
+      const body = JSON.parse(String(init?.body));
+      expect(body).toMatchObject({
+        enterpriseKey: scope.enterpriseKey,
+        storeId: scope.storeId,
+        status: "active",
+      });
+      return jsonResponse({
+        access: "partial",
+        employees: [
+          {
+            employeeUid: body.cursor ? secondUid : firstUid,
+            name: "张晨",
+            departmentId: id(32),
+            departmentName: "前厅",
+            scope: {
+              ownership: "store",
+              storeId: scope.storeId,
+              storeName: "东门店",
+            },
+            status: "active",
+            version: "1",
+          },
+        ],
+        nextCursor: body.cursor ? null : firstUid,
+      });
+    }
+    if (url.pathname.endsWith("/sheets") && init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      attempts.push(body);
+      if (attempts.length === 1) throw new Error("Receipt delivery failed");
+      created = true;
+      return jsonResponse({
+        sheetId: sheet.sheetId,
+        templateVersionId: sheet.templateVersionId,
+        sheetRevision: 1,
+        status: "active",
+      });
+    }
+    if (url.pathname.endsWith(`/sheets/${sheet.sheetId}`))
+      return jsonResponse({ ...readResponse(), ...employeeTarget });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await selectScope();
+  const picker = await screen.findByLabelText("选择员工");
+  const create = screen.getByRole("button", { name: "建卷" });
+  expect(create).toBeDisabled();
+  expect(
+    await screen.findByRole("option", { name: `张晨 · 前厅 · ${firstUid}` }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "加载更多员工" }));
+  expect(
+    await screen.findByRole("option", { name: `张晨 · 前厅 · ${secondUid}` }),
+  ).toBeInTheDocument();
+  fireEvent.change(picker, { target: { value: secondUid } });
+  fireEvent.click(create);
+  await screen.findByText("建卷结果待确认，请重试同一次操作。");
+  expect(picker).toBeDisabled();
+  fireEvent.click(create);
+  expect(await screen.findByText(secondUid)).toBeInTheDocument();
+  expect(attempts[0]).toEqual({
+    ...scope,
+    templateId: template.templateId,
+    requestId: expect.any(String),
+    employeeUid: secondUid,
+  });
+  expect(attempts[1]).toEqual(attempts[0]);
+  fireEvent.click(screen.getByRole("button", { name: "返回列表" }));
+  expect(
+    await screen.findByRole("button", {
+      name: `查看 卫生巡检 · 张晨 · ${firstUid}`,
+    }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: `查看 卫生巡检 · 张晨 · ${secondUid}` }),
+  ).toBeInTheDocument();
+});
+
+it("refreshes a stale department selection and rereads the returned sheet", async () => {
+  const oldId = id(40);
+  const newId = id(41);
+  let dayReads = 0;
+  const submitted: { departmentId: string; requestId: string }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    mockInspectionApi(true, (url, init) => {
+      if (url.pathname.endsWith("/day")) {
+        dayReads += 1;
+        return jsonResponse({
+          items: [{ ...template, targetType: "department" }],
+          nextCursor: null,
+        });
+      }
+      if (url.pathname.endsWith("/directory/list_directory")) {
+        expect(JSON.parse(String(init?.body))).toEqual({
+          enterpriseKey: scope.enterpriseKey,
+        });
+        return jsonResponse({
+          enterpriseKey: scope.enterpriseKey,
+          enterpriseName: "样例企业",
+          stores: [],
+          departments: [
+            ...(!submitted.length
+              ? [
+                  {
+                    departmentId: oldId,
+                    name: "前厅",
+                    status: "active",
+                    version: "1",
+                  },
+                ]
+              : []),
+            {
+              departmentId: newId,
+              name: "后厨",
+              status: "active",
+              version: "1",
+            },
+          ],
+        });
+      }
+      if (url.pathname.endsWith("/sheets") && init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+        expect(body).not.toHaveProperty("employeeUid");
+        submitted.push(body);
+        if (body.departmentId === oldId)
+          return jsonResponse(
+            { error: { code: "INSPECTION_NOT_FOUND", message: "Unavailable" } },
+            404,
+          );
+        return jsonResponse({
+          sheetId: sheet.sheetId,
+          templateVersionId: sheet.templateVersionId,
+          sheetRevision: 1,
+          status: "active",
+        });
+      }
+      if (url.pathname.endsWith(`/sheets/${sheet.sheetId}`))
+        return jsonResponse({
+          ...readResponse(),
+          targetType: "department",
+          targetId: newId,
+          targetName: "后厨",
+        });
+    }),
+  );
+
+  await selectScope();
+  const picker = await screen.findByLabelText("选择部门");
+  await screen.findByRole("option", { name: "前厅" });
+  const create = screen.getByRole("button", { name: "建卷" });
+  fireEvent.change(picker, { target: { value: oldId } });
+  fireEvent.click(create);
+  await screen.findByText(
+    "无法完成建卷。模板、巡检对象或先前的卷可能已变更或不可用，请核对刷新后的列表再试。",
+  );
+  await waitFor(() => expect(dayReads).toBeGreaterThan(1));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("option", { name: "前厅" }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(picker).toHaveValue("");
+  expect(create).toBeDisabled();
+  expect(screen.getByLabelText("门店")).toHaveValue(scope.storeId);
+  fireEvent.change(picker, { target: { value: newId } });
+  fireEvent.click(create);
+  expect(await screen.findByText("部门 · 后厨")).toBeInTheDocument();
+  expect(submitted.map(({ departmentId }) => departmentId)).toEqual([
+    oldId,
+    newId,
+  ]);
+  expect(submitted[0]?.requestId).not.toBe(submitted[1]?.requestId);
+});
+
+it.each([
+  ["none", "当前账号无法读取此门店的员工名单。"],
+  ["partial", "此门店暂无你可查看的在职员工。"],
+  ["all", "此门店暂无在职员工。"],
+] as const)(
+  "explains why an employee target is unavailable (%s)",
+  async (access, message) => {
+    vi.stubGlobal(
+      "fetch",
+      mockInspectionApi(true, (url) => {
+        if (url.pathname.endsWith("/day"))
+          return jsonResponse({
+            items: [{ ...template, targetType: "employee" }],
+            nextCursor: null,
+          });
+        if (url.pathname.endsWith("/directory/list_employees"))
+          return jsonResponse({ access, employees: [], nextCursor: null });
+      }),
+    );
+
+    await selectScope();
+    expect(
+      await screen.findByText(message, { exact: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "建卷" })).toBeDisabled();
+    expect(screen.getByLabelText("选择员工")).toBeDisabled();
+  },
+);
+
+it("clears an employee selection on store change and ignores the previous store's pending receipt", async () => {
+  const otherStoreId = id(45);
+  const employeeUid = id(46);
+  const otherEmployeeUid = id(47);
+  let resolveReceipt!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => {
+    resolveReceipt = resolve;
+  });
+  const permissions = {
+    canReadInspections: true,
+    canFillInspections: true,
+    canManageInspectionTemplates: false,
+  };
+  const fetchMock = mockInspectionApi(true, (url, init) => {
+    if (
+      url.pathname.endsWith("/context") &&
+      url.searchParams.has("enterpriseKey")
+    ) {
+      const storeId = url.searchParams.get("storeId");
+      if (storeId)
+        return jsonResponse({
+          items: [],
+          nextCursor: null,
+          preflight: { ...scope, storeId, ...permissions },
+        });
+      return jsonResponse({
+        items: [scope.storeId, otherStoreId].map((storeId) => ({
+          kind: "store",
+          storeId,
+          enterpriseKey: scope.enterpriseKey,
+          enterpriseName: "样例企业",
+          officialName: storeId === scope.storeId ? "东门店" : "西门店",
+          retired: false,
+          ...permissions,
+        })),
+        nextCursor: null,
+      });
+    }
+    if (url.pathname.endsWith("/day"))
+      return jsonResponse({
+        items: [{ ...template, targetType: "employee" }],
+        nextCursor: null,
+      });
+    if (url.pathname.endsWith("/directory/list_employees")) {
+      const { storeId } = JSON.parse(String(init?.body));
+      const original = storeId === scope.storeId;
+      return jsonResponse({
+        access: "all",
+        employees: [
+          {
+            employeeUid: original ? employeeUid : otherEmployeeUid,
+            name: original ? "东门员工" : "西门员工",
+            departmentId: id(48),
+            departmentName: "前厅",
+            scope: {
+              ownership: "store",
+              storeId,
+              storeName: original ? "东门店" : "西门店",
+            },
+            status: "active",
+            version: "1",
+          },
+        ],
+        nextCursor: null,
+      });
+    }
+    if (url.pathname.endsWith("/sheets") && init?.method === "POST")
+      return pending;
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await selectScope();
+  await screen.findByRole("option", { name: /东门员工/ });
+  fireEvent.change(screen.getByLabelText("选择员工"), {
+    target: { value: employeeUid },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "建卷" }));
+  fireEvent.change(screen.getByLabelText("门店"), {
+    target: { value: otherStoreId },
+  });
+  await screen.findByRole("option", { name: /西门员工/ });
+  await act(async () => {
+    resolveReceipt(
+      jsonResponse({
+        sheetId: sheet.sheetId,
+        templateVersionId: sheet.templateVersionId,
+        sheetRevision: 1,
+        status: "active",
+      }),
+    );
+  });
+
+  expect(screen.getByLabelText("选择员工")).toHaveValue("");
+  expect(screen.getByRole("button", { name: "建卷" })).toBeDisabled();
+  expect(
+    screen.queryByRole("option", { name: /东门员工/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "返回列表" }),
+  ).not.toBeInTheDocument();
+});
+
 it("creates a sheet and recovers a lost staged photo without losing the other answers", async () => {
   let created = false;
   let attached = false;
@@ -245,9 +588,11 @@ it("creates a sheet and recovers a lost staged photo without losing the other an
       });
     }
     if (url.pathname.endsWith("/sheets") && init?.method === "POST") {
-      expect(JSON.parse(String(init.body))).toMatchObject({
+      const body = JSON.parse(String(init.body));
+      expect(body).toEqual({
         ...scope,
         templateId: template.templateId,
+        requestId: expect.any(String),
       });
       created = true;
       return jsonResponse({
@@ -511,7 +856,13 @@ it("selects and reuses the 41st authorized photo across sheets without uploading
       },
     ],
   };
-  const other = { ...sheet, sheetId: id(32), name: "晚班" };
+  const other = {
+    ...sheet,
+    sheetId: id(32),
+    templateTitle: "晚班",
+    templateId: id(33),
+    templateVersionId: id(34),
+  };
   let patch: InspectionsPatchesBody | undefined;
   vi.stubGlobal(
     "fetch",
@@ -524,7 +875,9 @@ it("selects and reuses the 41st authorized photo across sheets without uploading
         return jsonResponse({
           ...readResponse(question.answers, 2),
           sheetId: other.sheetId,
-          name: other.name,
+          templateTitle: other.templateTitle,
+          templateId: other.templateId,
+          templateVersionId: other.templateVersionId,
         });
       if (url.pathname.endsWith("/photos") && init?.method === "POST")
         throw new Error("Reusing a photo must not upload it again");

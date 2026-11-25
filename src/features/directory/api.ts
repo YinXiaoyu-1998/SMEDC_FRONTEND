@@ -52,19 +52,29 @@ export const directoryApi = {
       directoryCheckDepartmentNameResponseSchema,
       signal,
     ),
-  directory: (c: DirectoryApiClient, b: DirectoryListDirectoryBody) =>
+  directory: (
+    c: DirectoryApiClient,
+    b: DirectoryListDirectoryBody,
+    signal?: AbortSignal,
+  ) =>
     post(
       c,
       webApiRoutes["directory.listDirectory"],
       b,
       directoryListDirectoryResponseSchema,
+      signal,
     ),
-  employees: (c: DirectoryApiClient, b: DirectoryListEmployeesBody) =>
+  employees: (
+    c: DirectoryApiClient,
+    b: DirectoryListEmployeesBody,
+    signal?: AbortSignal,
+  ) =>
     post(
       c,
       webApiRoutes["directory.listEmployees"],
       b,
       directoryListEmployeesResponseSchema,
+      signal,
     ),
   create: (c: DirectoryApiClient, b: DirectoryCreateEmployeeBody) =>
     post(

@@ -44,7 +44,8 @@
   min-width: 0;
 }
 
-.filters :is(select, input[type="date"]) {
+.filters :is(select, input[type="date"]),
+.targetPicker select {
   width: 100%;
   min-width: 0;
   height: 2.5rem;
@@ -54,7 +55,8 @@
   background: var(--color-surface);
 }
 
-.filters select:disabled {
+.filters select:disabled,
+.targetPicker select:disabled {
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
 }
@@ -224,4 +226,9 @@
   .sheetHeader {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.targetPicker {
+  width: 100%;
+  min-width: 0;
 }

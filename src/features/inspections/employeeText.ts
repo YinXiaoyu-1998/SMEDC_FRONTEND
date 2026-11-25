@@ -30,15 +30,61 @@ const messages = {
     "历史日期可按当前启用模板补建。",
     "Sheets for past dates use the template currently active.",
   ],
-  single: ["单份", "Single sheet"],
-  multiple: ["多份", "Multiple sheets"],
+  targetType: ["巡检对象", "Inspection target"],
+  targetId: ["对象标识", "Target ID"],
+  employee: ["员工", "Employee"],
+  department: ["部门", "Department"],
+  chooseEmployee: ["选择员工", "Select employee"],
+  chooseDepartment: ["选择部门", "Select department"],
+  chooseTarget: [
+    "请选择巡检对象后建卷。",
+    "Select an inspection target to create a sheet.",
+  ],
+  employeeDenied: [
+    "当前账号无法读取此门店的员工名单。请联系管理员确认目录读取权限。",
+    "Your account cannot read this store's employee list. Ask an administrator to check your directory access.",
+  ],
+  departmentDenied: [
+    "当前账号无法读取此企业的部门名单。请联系管理员确认目录读取权限。",
+    "Your account cannot read this enterprise's department list. Ask an administrator to check your directory access.",
+  ],
+  partialEmployees: [
+    "仅显示你有权限查看的在职员工。",
+    "Shows active employees you have permission to view.",
+  ],
+  noEmployees: ["此门店暂无在职员工。", "This store has no active employees."],
+  noVisibleEmployees: [
+    "此门店暂无你可查看的在职员工。请联系管理员确认可见范围。",
+    "You have no visible active employees in this store. Ask an administrator to check your access.",
+  ],
+  noDepartments: [
+    "此企业暂无有效部门。",
+    "This enterprise has no active departments.",
+  ],
+  moreEmployees: ["加载更多员工", "Load more employees"],
+  targetLoadError: [
+    "无法读取巡检对象名单。请重试。",
+    "Could not load inspection targets. Try again.",
+  ],
+  targetRefresh: [
+    "所选对象无法建卷，请从最新名单重新选择。",
+    "The selected target is unavailable. Choose again from the refreshed list.",
+  ],
+  openExisting: ["打开已有卷", "Open existing sheet"],
   create: ["建卷", "Create sheet"],
-  name: ["卷名称", "Sheet name"],
   view: ["查看", "View"],
   close: ["返回列表", "Back to list"],
-  existing: [
-    "已有多份有效卷，请按名称与编号选择。",
-    "Multiple sheets already exist. Choose one by name and ID.",
+  createConflict: [
+    "建卷设置已更新，请核对当前模板后重试。",
+    "The inspection settings changed. Check the current template and try again.",
+  ],
+  expiredCreate: [
+    "建卷请求已过期。请核对有效巡检卷后重试。",
+    "The creation request expired. Check active sheets before trying again.",
+  ],
+  createUnavailable: [
+    "无法完成建卷。模板、巡检对象或先前的卷可能已变更或不可用，请核对刷新后的列表再试。",
+    "Could not create the sheet. The template, target, or previous sheet may have changed or become unavailable. Check the refreshed list and try again.",
   ],
   uncertainCreate: [
     "建卷结果待确认，请重试同一次操作。",

@@ -45,7 +45,7 @@ function setup(existing = false, otherEnterprise = false) {
   let definition: TemplateDefinition = {
     title: "服务器草稿",
     storeIds: [storeId],
-    copyMode: "single",
+    targetType: "store",
     questions: existing ? bothQuestions : [],
   };
   let draftRevision = existing ? 1 : 0;
@@ -230,8 +230,8 @@ it("reports missing fields and creates a usable template in one request when cor
   ).not.toBeInTheDocument();
   expect(screen.getByLabelText("模板名称")).toHaveValue("闭店巡检");
 
-  fireEvent.change(screen.getByLabelText("同店同日份数"), {
-    target: { value: "single" },
+  fireEvent.change(screen.getByLabelText("巡检对象"), {
+    target: { value: "employee" },
   });
   fireEvent.click(screen.getByRole("checkbox", { name: "体验门店" }));
   fireEvent.click(screen.getByRole("button", { name: "添加题目" }));
@@ -255,6 +255,9 @@ it("reports missing fields and creates a usable template in one request when cor
     await screen.findByRole("button", { name: "闭店巡检 · 已启用" }),
   ).toBeInTheDocument();
   expect(writes).toHaveLength(2);
+  expect(writes[1]?.body).toMatchObject({
+    definition: { targetType: "employee" },
+  });
   expect(
     writes.every(
       ({ method, path }) =>
@@ -270,8 +273,8 @@ it("saves all five component kinds with stable identities and activates only the
   fireEvent.change(screen.getByLabelText("模板名称"), {
     target: { value: "卫生检查" },
   });
-  fireEvent.change(screen.getByLabelText("同店同日份数"), {
-    target: { value: "single" },
+  fireEvent.change(screen.getByLabelText("巡检对象"), {
+    target: { value: "department" },
   });
   fireEvent.click(screen.getByRole("checkbox", { name: "体验门店" }));
   fireEvent.click(screen.getByRole("button", { name: "添加题目" }));
@@ -319,6 +322,7 @@ it("saves all five component kinds with stable identities and activates only the
   expect(write.body).toMatchObject({
     enterpriseKey,
     definition: {
+      targetType: "department",
       storeIds: [storeId],
       questions: [
         {
@@ -343,6 +347,8 @@ it("saves all five component kinds with stable identities and activates only the
   ).toBe(5);
   fireEvent.click(screen.getByRole("button", { name: "启用模板" }));
   const confirm = await screen.findByRole("dialog", { name: "启用模板" });
+  expect(within(confirm).getByText("部门")).toBeInTheDocument();
+  expect(within(confirm).getByText("体验门店")).toBeInTheDocument();
   expect(writes).toHaveLength(1);
   fireEvent.click(within(confirm).getByRole("button", { name: "启用模板" }));
   await waitFor(() =>

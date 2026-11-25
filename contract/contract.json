@@ -1381,9 +1381,8 @@
                   "title": {
                     "$ref": "#/$defs/r_inspections_day___schema3"
                   },
-                  "copyMode": {
-                    "type": "string",
-                    "enum": ["single", "multiple"]
+                  "targetType": {
+                    "$ref": "#/$defs/r_inspections_day___schema4"
                   }
                 },
                 "required": [
@@ -1392,7 +1391,7 @@
                   "templateVersionId",
                   "activeRevision",
                   "title",
-                  "copyMode"
+                  "targetType"
                 ],
                 "additionalProperties": false
               },
@@ -1414,15 +1413,16 @@
                   "templateTitle": {
                     "$ref": "#/$defs/r_inspections_day___schema3"
                   },
-                  "name": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/$defs/r_inspections_day___schema3"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "targetType": {
+                    "$ref": "#/$defs/r_inspections_day___schema4"
+                  },
+                  "targetId": {
+                    "$ref": "#/$defs/r_inspections_day___schema1"
+                  },
+                  "targetName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
                   },
                   "progress": {
                     "type": "string",
@@ -1484,7 +1484,9 @@
                   "sheetRevision",
                   "templateId",
                   "templateTitle",
-                  "name",
+                  "targetType",
+                  "targetId",
+                  "targetName",
                   "progress",
                   "kind"
                 ],
@@ -1505,6 +1507,10 @@
           "r_inspections_day___schema3": {
             "type": "string",
             "maxLength": 120
+          },
+          "r_inspections_day___schema4": {
+            "type": "string",
+            "enum": ["store", "employee", "department"]
           }
         }
       },
@@ -2218,8 +2224,11 @@
             "requestId": {
               "$ref": "#/$defs/b_inspections_sheets_create___schema3"
             },
-            "name": {
+            "employeeUid": {
               "$ref": "#/$defs/b_inspections_sheets_create___schema4"
+            },
+            "departmentId": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema5"
             }
           },
           "required": [
@@ -2252,8 +2261,10 @@
               "maxLength": 255
             },
             "b_inspections_sheets_create___schema4": {
-              "type": "string",
-              "maxLength": 120
+              "$ref": "#/$defs/b_inspections_sheets_create___schema1"
+            },
+            "b_inspections_sheets_create___schema5": {
+              "$ref": "#/$defs/b_inspections_sheets_create___schema1"
             }
           }
         }
@@ -2358,17 +2369,20 @@
             "$ref": "#/$defs/r_inspections_sheets_read___schema0"
           },
           "templateTitle": {
-            "$ref": "#/$defs/r_inspections_sheets_read___schema2"
+            "type": "string",
+            "maxLength": 120
           },
-          "name": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/r_inspections_sheets_read___schema2"
-              },
-              {
-                "type": "null"
-              }
-            ]
+          "targetType": {
+            "type": "string",
+            "enum": ["store", "employee", "department"]
+          },
+          "targetId": {
+            "$ref": "#/$defs/r_inspections_sheets_read___schema0"
+          },
+          "targetName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
           },
           "progress": {
             "type": "string",
@@ -2436,14 +2450,14 @@
             "maxItems": 50,
             "type": "array",
             "items": {
-              "$ref": "#/$defs/r_inspections_sheets_read___schema3"
+              "$ref": "#/$defs/r_inspections_sheets_read___schema2"
             }
           },
           "missingRequired": {
             "maxItems": 600,
             "type": "array",
             "items": {
-              "$ref": "#/$defs/r_inspections_sheets_read___schema11"
+              "$ref": "#/$defs/r_inspections_sheets_read___schema10"
             }
           },
           "missingRequiredCount": {
@@ -2470,7 +2484,9 @@
           "sheetRevision",
           "templateId",
           "templateTitle",
-          "name",
+          "targetType",
+          "targetId",
+          "targetName",
           "progress",
           "enterpriseKey",
           "storeId",
@@ -2493,10 +2509,6 @@
             "maximum": 9007199254740991
           },
           "r_inspections_sheets_read___schema2": {
-            "type": "string",
-            "maxLength": 120
-          },
-          "r_inspections_sheets_read___schema3": {
             "type": "object",
             "properties": {
               "questionId": {
@@ -2517,14 +2529,14 @@
                 "maxItems": 12,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/r_inspections_sheets_read___schema4"
+                  "$ref": "#/$defs/r_inspections_sheets_read___schema3"
                 }
               },
               "answers": {
                 "maxItems": 12,
                 "type": "array",
                 "items": {
-                  "$ref": "#/$defs/r_inspections_sheets_read___schema10"
+                  "$ref": "#/$defs/r_inspections_sheets_read___schema9"
                 }
               }
             },
@@ -2538,7 +2550,7 @@
             ],
             "additionalProperties": false
           },
-          "r_inspections_sheets_read___schema4": {
+          "r_inspections_sheets_read___schema3": {
             "oneOf": [
               {
                 "type": "object",
@@ -2547,7 +2559,7 @@
                     "$ref": "#/$defs/r_inspections_sheets_read___schema0"
                   },
                   "label": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema4"
                   },
                   "kind": {
                     "type": "string",
@@ -2568,19 +2580,19 @@
                     "$ref": "#/$defs/r_inspections_sheets_read___schema0"
                   },
                   "label": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema4"
                   },
                   "required": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
                   },
                   "kind": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema7"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
                   },
                   "minTenths": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema8"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema7"
                   },
                   "maxTenths": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema8"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema7"
                   }
                 },
                 "required": [
@@ -2600,10 +2612,10 @@
                     "$ref": "#/$defs/r_inspections_sheets_read___schema0"
                   },
                   "label": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema4"
                   },
                   "required": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
                   },
                   "kind": {
                     "type": "string",
@@ -2620,10 +2632,10 @@
                     "$ref": "#/$defs/r_inspections_sheets_read___schema0"
                   },
                   "label": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema4"
                   },
                   "required": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
                   },
                   "kind": {
                     "type": "string",
@@ -2640,10 +2652,10 @@
                     "$ref": "#/$defs/r_inspections_sheets_read___schema0"
                   },
                   "label": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema4"
                   },
                   "required": {
-                    "$ref": "#/$defs/r_inspections_sheets_read___schema6"
+                    "$ref": "#/$defs/r_inspections_sheets_read___schema5"
                   },
                   "kind": {
                     "type": "string",
@@ -2653,7 +2665,7 @@
                     "maxItems": 32,
                     "type": "array",
                     "items": {
-                      "$ref": "#/$defs/r_inspections_sheets_read___schema9"
+                      "$ref": "#/$defs/r_inspections_sheets_read___schema8"
                     }
                   }
                 },
@@ -2668,23 +2680,23 @@
               }
             ]
           },
-          "r_inspections_sheets_read___schema5": {
+          "r_inspections_sheets_read___schema4": {
             "type": "string",
             "maxLength": 120
           },
-          "r_inspections_sheets_read___schema6": {
+          "r_inspections_sheets_read___schema5": {
             "type": "boolean"
           },
-          "r_inspections_sheets_read___schema7": {
+          "r_inspections_sheets_read___schema6": {
             "type": "string",
             "const": "score"
           },
-          "r_inspections_sheets_read___schema8": {
+          "r_inspections_sheets_read___schema7": {
             "type": "integer",
             "minimum": 0,
             "maximum": 1000000
           },
-          "r_inspections_sheets_read___schema9": {
+          "r_inspections_sheets_read___schema8": {
             "type": "object",
             "properties": {
               "id": {
@@ -2693,13 +2705,13 @@
                 "maxLength": 64
               },
               "label": {
-                "$ref": "#/$defs/r_inspections_sheets_read___schema5"
+                "$ref": "#/$defs/r_inspections_sheets_read___schema4"
               }
             },
             "required": ["id", "label"],
             "additionalProperties": false
           },
-          "r_inspections_sheets_read___schema10": {
+          "r_inspections_sheets_read___schema9": {
             "type": "object",
             "properties": {
               "componentId": {
@@ -2738,7 +2750,7 @@
             "required": ["componentId", "componentRevision", "value"],
             "additionalProperties": false
           },
-          "r_inspections_sheets_read___schema11": {
+          "r_inspections_sheets_read___schema10": {
             "type": "object",
             "properties": {
               "questionId": {
@@ -3346,7 +3358,7 @@
                 "title": {
                   "$ref": "#/$defs/b_inspections_templates_create___schema3"
                 },
-                "copyMode": {
+                "targetType": {
                   "$ref": "#/$defs/b_inspections_templates_create___schema4"
                 },
                 "storeIds": {
@@ -3367,7 +3379,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "enum": ["single", "multiple"]
+                  "enum": ["store", "employee", "department"]
                 },
                 {
                   "type": "null"
@@ -3691,7 +3703,7 @@
                 "title": {
                   "$ref": "#/$defs/b_inspections_templates_createActive___schema3"
                 },
-                "copyMode": {
+                "targetType": {
                   "$ref": "#/$defs/b_inspections_templates_createActive___schema4"
                 },
                 "storeIds": {
@@ -3712,7 +3724,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "enum": ["single", "multiple"]
+                  "enum": ["store", "employee", "department"]
                 },
                 {
                   "type": "null"
@@ -4311,11 +4323,11 @@
               "title": {
                 "$ref": "#/$defs/r_inspections_templates_preview___schema2"
               },
-              "copyMode": {
+              "targetType": {
                 "anyOf": [
                   {
                     "type": "string",
-                    "enum": ["single", "multiple"]
+                    "enum": ["store", "employee", "department"]
                   },
                   {
                     "type": "null"
@@ -4673,7 +4685,7 @@
                 "title": {
                   "$ref": "#/$defs/b_inspections_templates_save___schema0"
                 },
-                "copyMode": {
+                "targetType": {
                   "$ref": "#/$defs/b_inspections_templates_save___schema1"
                 },
                 "storeIds": {
@@ -4698,7 +4710,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "enum": ["single", "multiple"]
+                  "enum": ["store", "employee", "department"]
                 },
                 {
                   "type": "null"
