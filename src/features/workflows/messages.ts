@@ -7,8 +7,8 @@ export const workflowMessages = {
   affectedWorkflows: ["受影响任务", "Affected tasks"],
   workflowType: ["任务类型", "Task type"],
   installHelp: [
-    "保存业务设置后，请在执行电脑的 Codex 中安装此任务并完成准备检查。",
-    "After saving settings, install this task in Codex on the computer that will run it and complete the preparation checks.",
+    "保存业务设置后，请在执行电脑上的智能体中安装任务并完成准备检查。",
+    "After saving the settings, use the agent on the assigned computer to install the task and complete the preparation checks.",
   ],
   noEnterprises: [
     "请先在权限设置登记业务企业，再设置自动任务。",
@@ -16,8 +16,8 @@ export const workflowMessages = {
   ],
   title: ["自动任务", "Automatic tasks"],
   intro: [
-    "业务配置由企业智脑保存，实际定时任务由您电脑上的 Codex 执行。",
-    "SMEDC saves business settings; Codex on your computer schedules and runs tasks.",
+    "企业智脑保存业务配置，定时任务由执行电脑上的智能体运行。",
+    "SMEDC stores the business settings. The agent on the assigned computer runs the scheduled tasks.",
   ],
   enterprise: ["业务企业", "Business enterprise"],
   choose: ["请选择", "Choose"],
@@ -277,8 +277,8 @@ export const workflowMessages = {
   pause: ["暂停任务", "Pause task"],
   revokeControl: ["撤销执行资格", "Revoke execution"],
   activateHelp: [
-    "允许执行后，仍需在 Codex 完成准备、指定电脑并启用任务。保存配置不会改动现有任务。",
-    "After granting execution permission, complete preparation, computer assignment and task enablement in Codex. Saving settings does not change existing tasks.",
+    "允许执行后，请通过智能体完成准备检查、指定执行电脑并启用任务。保存配置不会改动现有任务。",
+    "After allowing execution, use the agent to complete the preparation checks, assign a computer and enable the task. Saving settings does not change existing tasks.",
   ],
   activateOrderScopeHelp: [
     "每日采集选择店内订单时，准备就绪、指定电脑并启用安装后，会要求后续新订单上传声明来源口径。暂停或撤销不会取消此要求。",
@@ -291,12 +291,12 @@ export const workflowMessages = {
     "Computer assigned, name unavailable",
   ],
   installOnComputer: [
-    "请在执行电脑的 Codex 中安装此任务，并将该电脑指定为执行电脑。",
-    "Install the task in Codex and assign it to that computer.",
+    "请通过智能体安装此任务，并指定当前电脑执行。",
+    "Use the agent to install the task and assign this computer to run it.",
   ],
   assignComputer: [
-    "请在要执行任务的电脑上打开 Codex，将该电脑指定为执行电脑。",
-    "Open Codex on the computer that should run the task and assign it there.",
+    "请在要执行任务的电脑上打开智能体，并指定这台电脑执行。",
+    "Open the agent on the computer that should run the task and assign it there.",
   ],
   deviceDetails: ["电脑设置与检查记录", "Computer settings and checks"],
   earlierRuns: ["更早的运行记录", "Earlier runs"],
@@ -320,7 +320,7 @@ export const workflowMessages = {
   dependencies: ["依赖工具", "Dependencies"],
   email_identity: ["发件身份", "Sender identity"],
   sent_mail_lookup: ["已发送邮件核对", "Sent mail lookup"],
-  host_schedule: ["Codex 调度", "Codex schedule"],
+  host_schedule: ["本机定时调度", "Local scheduling"],
   host_timezone: ["时区", "Timezone"],
   host_model: ["执行模型", "Execution model"],
   assignment: ["指定电脑资格", "Assigned computer eligibility"],
@@ -347,8 +347,8 @@ export const workflowMessages = {
   window: ["业务日期", "Business dates"],
   more: ["加载更多", "Load more"],
   possibleMissed: [
-    "任务可能漏跑。请在 Codex 核对记录，补跑前先确认业务日期。",
-    "The expected window may have been missed. Check in Codex; backfills require a separately confirmed date range.",
+    "任务可能漏跑。请在执行电脑的智能体中核对记录，补跑前先确认业务日期。",
+    "The task may have missed its scheduled run. Check the records in the agent on the assigned computer and confirm the business dates before running again.",
   ],
   minimumLauncher: ["所需客户端最低版本", "Minimum client version"],
   sourceConflict: [
@@ -364,8 +364,8 @@ export const workflowMessages = {
     "Save task settings and finish source configuration first.",
   ],
   versionIncompatible: [
-    "客户端或工作流版本不兼容，请在 Codex 更新后重新检查。",
-    "Client or workflow versions are incompatible. Update in Codex and recheck.",
+    "客户端或工作流版本不兼容，请通过执行电脑上的智能体更新后重新检查。",
+    "The client or workflow version is incompatible. Use the agent on the assigned computer to update it, then run the checks again.",
   ],
   requestReference: ["请求编号", "Request reference"],
   preserved: [
@@ -396,8 +396,8 @@ export const workflowMessages = {
     "An account reference is a non-secret source label. Never enter passwords, tokens or cookies.",
   ],
   pendingHelp: [
-    "请先在 Codex 核对这些操作是否已完成，以免重复执行。",
-    "Check in Codex whether these actions completed before trying them again.",
+    "请先在执行电脑的智能体中核对这些操作是否已完成，以免重复执行。",
+    "Check in the agent on the assigned computer whether these actions completed before trying them again.",
   ],
   settled_only: ["已结账完整营业日", "Complete settled business day"],
   exclude_source_record: [
@@ -467,7 +467,7 @@ export const workflowMessages = {
   authorizationRevoked: ["已撤销", "Revoked"],
   scopeKind: ["授权动作", "Action"],
   workflowSectionIntro: [
-    "业务配置由企业智脑保存，实际定时任务由 Codex 在你的电脑上执行。",
-    "SMEDC saves business settings; Codex on your computer runs the tasks.",
+    "企业智脑保存业务配置，定时任务由执行电脑上的智能体运行。",
+    "SMEDC stores the business settings. The agent on the assigned computer runs the scheduled tasks.",
   ],
 } as const satisfies TextDictionary;
