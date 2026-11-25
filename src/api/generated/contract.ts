@@ -179,6 +179,12 @@ export const rInspectionsDaySchema2Schema = z
 
 export const rInspectionsDaySchema3Schema = z.string().max(120);
 
+export const rInspectionsDaySchema4Schema = z.enum([
+  "store",
+  "employee",
+  "department",
+]);
+
 export const rInspectionsDaySchema0Schema = z.union([
   z.strictObject({
     kind: z.literal("template"),
@@ -186,7 +192,7 @@ export const rInspectionsDaySchema0Schema = z.union([
     templateVersionId: rInspectionsDaySchema1Schema,
     activeRevision: rInspectionsDaySchema2Schema,
     title: rInspectionsDaySchema3Schema,
-    copyMode: z.enum(["single", "multiple"]),
+    targetType: rInspectionsDaySchema4Schema,
   }),
   z.strictObject({
     sheetId: rInspectionsDaySchema1Schema,
@@ -194,7 +200,9 @@ export const rInspectionsDaySchema0Schema = z.union([
     sheetRevision: rInspectionsDaySchema2Schema,
     templateId: rInspectionsDaySchema1Schema,
     templateTitle: rInspectionsDaySchema3Schema,
-    name: z.union([rInspectionsDaySchema3Schema, z.null()]),
+    targetType: rInspectionsDaySchema4Schema,
+    targetId: rInspectionsDaySchema1Schema,
+    targetName: z.string().min(1).max(255),
     progress: z.enum(["unfilled", "incomplete", "complete"]),
     scoreSummary: z
       .strictObject({
@@ -404,7 +412,11 @@ export const bInspectionsSheetsCreateSchema2Schema = z
 
 export const bInspectionsSheetsCreateSchema3Schema = z.string().min(1).max(255);
 
-export const bInspectionsSheetsCreateSchema4Schema = z.string().max(120);
+export const bInspectionsSheetsCreateSchema4Schema =
+  bInspectionsSheetsCreateSchema1Schema;
+
+export const bInspectionsSheetsCreateSchema5Schema =
+  bInspectionsSheetsCreateSchema1Schema;
 
 export const rInspectionsSheetsCreateSchema0Schema = z
   .string()
@@ -428,62 +440,60 @@ export const rInspectionsSheetsReadSchema1Schema = z
   .min(1)
   .max(9007199254740991);
 
-export const rInspectionsSheetsReadSchema2Schema = z.string().max(120);
+export const rInspectionsSheetsReadSchema4Schema = z.string().max(120);
 
-export const rInspectionsSheetsReadSchema5Schema = z.string().max(120);
+export const rInspectionsSheetsReadSchema5Schema = z.boolean();
 
-export const rInspectionsSheetsReadSchema6Schema = z.boolean();
+export const rInspectionsSheetsReadSchema6Schema = z.literal("score");
 
-export const rInspectionsSheetsReadSchema7Schema = z.literal("score");
-
-export const rInspectionsSheetsReadSchema8Schema = z
+export const rInspectionsSheetsReadSchema7Schema = z
   .number()
   .int()
   .min(0)
   .max(1000000);
 
-export const rInspectionsSheetsReadSchema9Schema = z.strictObject({
+export const rInspectionsSheetsReadSchema8Schema = z.strictObject({
   id: z.string().min(1).max(64),
-  label: rInspectionsSheetsReadSchema5Schema,
+  label: rInspectionsSheetsReadSchema4Schema,
 });
 
-export const rInspectionsSheetsReadSchema4Schema = z.union([
+export const rInspectionsSheetsReadSchema3Schema = z.union([
   z.strictObject({
     componentId: rInspectionsSheetsReadSchema0Schema,
-    label: rInspectionsSheetsReadSchema5Schema,
+    label: rInspectionsSheetsReadSchema4Schema,
     kind: z.literal("sop"),
     text: z.string().max(4000),
   }),
   z.strictObject({
     componentId: rInspectionsSheetsReadSchema0Schema,
-    label: rInspectionsSheetsReadSchema5Schema,
-    required: rInspectionsSheetsReadSchema6Schema,
-    kind: rInspectionsSheetsReadSchema7Schema,
-    minTenths: rInspectionsSheetsReadSchema8Schema,
-    maxTenths: rInspectionsSheetsReadSchema8Schema,
+    label: rInspectionsSheetsReadSchema4Schema,
+    required: rInspectionsSheetsReadSchema5Schema,
+    kind: rInspectionsSheetsReadSchema6Schema,
+    minTenths: rInspectionsSheetsReadSchema7Schema,
+    maxTenths: rInspectionsSheetsReadSchema7Schema,
   }),
   z.strictObject({
     componentId: rInspectionsSheetsReadSchema0Schema,
-    label: rInspectionsSheetsReadSchema5Schema,
-    required: rInspectionsSheetsReadSchema6Schema,
+    label: rInspectionsSheetsReadSchema4Schema,
+    required: rInspectionsSheetsReadSchema5Schema,
     kind: z.literal("comment"),
   }),
   z.strictObject({
     componentId: rInspectionsSheetsReadSchema0Schema,
-    label: rInspectionsSheetsReadSchema5Schema,
-    required: rInspectionsSheetsReadSchema6Schema,
+    label: rInspectionsSheetsReadSchema4Schema,
+    required: rInspectionsSheetsReadSchema5Schema,
     kind: z.literal("photo"),
   }),
   z.strictObject({
     componentId: rInspectionsSheetsReadSchema0Schema,
-    label: rInspectionsSheetsReadSchema5Schema,
-    required: rInspectionsSheetsReadSchema6Schema,
+    label: rInspectionsSheetsReadSchema4Schema,
+    required: rInspectionsSheetsReadSchema5Schema,
     kind: z.literal("status"),
-    options: z.array(rInspectionsSheetsReadSchema9Schema).max(32),
+    options: z.array(rInspectionsSheetsReadSchema8Schema).max(32),
   }),
 ]);
 
-export const rInspectionsSheetsReadSchema10Schema = z.strictObject({
+export const rInspectionsSheetsReadSchema9Schema = z.strictObject({
   componentId: rInspectionsSheetsReadSchema0Schema,
   componentRevision: z.number().int().min(0).max(9007199254740991),
   value: z.union([
@@ -494,16 +504,16 @@ export const rInspectionsSheetsReadSchema10Schema = z.strictObject({
   ]),
 });
 
-export const rInspectionsSheetsReadSchema3Schema = z.strictObject({
+export const rInspectionsSheetsReadSchema2Schema = z.strictObject({
   questionId: rInspectionsSheetsReadSchema0Schema,
   title: z.string().max(120),
   category: z.string().max(120),
   questionRevision: rInspectionsSheetsReadSchema1Schema,
-  components: z.array(rInspectionsSheetsReadSchema4Schema).max(12),
-  answers: z.array(rInspectionsSheetsReadSchema10Schema).max(12),
+  components: z.array(rInspectionsSheetsReadSchema3Schema).max(12),
+  answers: z.array(rInspectionsSheetsReadSchema9Schema).max(12),
 });
 
-export const rInspectionsSheetsReadSchema11Schema = z.strictObject({
+export const rInspectionsSheetsReadSchema10Schema = z.strictObject({
   questionId: rInspectionsSheetsReadSchema0Schema,
   componentId: rInspectionsSheetsReadSchema0Schema,
 });
@@ -623,7 +633,7 @@ export const bInspectionsTemplatesCreateSchema1Schema = z
 export const bInspectionsTemplatesCreateSchema3Schema = z.string().max(120);
 
 export const bInspectionsTemplatesCreateSchema4Schema = z.union([
-  z.enum(["single", "multiple"]),
+  z.enum(["store", "employee", "department"]),
   z.null(),
 ]);
 
@@ -709,7 +719,7 @@ export const bInspectionsTemplatesCreateSchema6Schema = z
 
 export const bInspectionsTemplatesCreateSchema2Schema = z.strictObject({
   title: bInspectionsTemplatesCreateSchema3Schema,
-  copyMode: bInspectionsTemplatesCreateSchema4Schema.optional(),
+  targetType: bInspectionsTemplatesCreateSchema4Schema.optional(),
   storeIds: bInspectionsTemplatesCreateSchema5Schema,
   questions: bInspectionsTemplatesCreateSchema6Schema,
 });
@@ -746,7 +756,7 @@ export const bInspectionsTemplatesCreateActiveSchema3Schema = z
   .max(120);
 
 export const bInspectionsTemplatesCreateActiveSchema4Schema = z.union([
-  z.enum(["single", "multiple"]),
+  z.enum(["store", "employee", "department"]),
   z.null(),
 ]);
 
@@ -835,7 +845,7 @@ export const bInspectionsTemplatesCreateActiveSchema6Schema = z
 
 export const bInspectionsTemplatesCreateActiveSchema2Schema = z.strictObject({
   title: bInspectionsTemplatesCreateActiveSchema3Schema,
-  copyMode: bInspectionsTemplatesCreateActiveSchema4Schema.optional(),
+  targetType: bInspectionsTemplatesCreateActiveSchema4Schema.optional(),
   storeIds: bInspectionsTemplatesCreateActiveSchema5Schema,
   questions: bInspectionsTemplatesCreateActiveSchema6Schema,
 });
@@ -997,7 +1007,7 @@ export const rInspectionsTemplatesPreviewSchema3Schema = z.strictObject({
 export const bInspectionsTemplatesSaveSchema0Schema = z.string().max(120);
 
 export const bInspectionsTemplatesSaveSchema1Schema = z.union([
-  z.enum(["single", "multiple"]),
+  z.enum(["store", "employee", "department"]),
   z.null(),
 ]);
 
@@ -6404,7 +6414,8 @@ export const inspectionsSheetsCreateBodySchema = z.strictObject({
   inspectionDate: bInspectionsSheetsCreateSchema2Schema,
   templateId: bInspectionsSheetsCreateSchema1Schema,
   requestId: bInspectionsSheetsCreateSchema3Schema,
-  name: bInspectionsSheetsCreateSchema4Schema.optional(),
+  employeeUid: bInspectionsSheetsCreateSchema4Schema.optional(),
+  departmentId: bInspectionsSheetsCreateSchema5Schema.optional(),
 });
 
 export type InspectionsSheetsCreateBody = z.infer<
@@ -6468,8 +6479,10 @@ export const inspectionsSheetsReadResponseSchema = z.strictObject({
   templateVersionId: rInspectionsSheetsReadSchema0Schema,
   sheetRevision: rInspectionsSheetsReadSchema1Schema,
   templateId: rInspectionsSheetsReadSchema0Schema,
-  templateTitle: rInspectionsSheetsReadSchema2Schema,
-  name: z.union([rInspectionsSheetsReadSchema2Schema, z.null()]),
+  templateTitle: z.string().max(120),
+  targetType: z.enum(["store", "employee", "department"]),
+  targetId: rInspectionsSheetsReadSchema0Schema,
+  targetName: z.string().min(1).max(255),
   progress: z.enum(["unfilled", "incomplete", "complete"]),
   scoreSummary: z
     .strictObject({
@@ -6489,8 +6502,8 @@ export const inspectionsSheetsReadResponseSchema = z.strictObject({
         "^(?=[1-9])(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
       ),
     ),
-  questions: z.array(rInspectionsSheetsReadSchema3Schema).max(50),
-  missingRequired: z.array(rInspectionsSheetsReadSchema11Schema).max(600),
+  questions: z.array(rInspectionsSheetsReadSchema2Schema).max(50),
+  missingRequired: z.array(rInspectionsSheetsReadSchema10Schema).max(600),
   missingRequiredCount: z.number().int().min(0).max(2400),
   nextCursor: z.union([z.string().min(1).max(4096), z.null()]),
 });
@@ -6884,7 +6897,9 @@ export const inspectionsTemplatesPreviewResponseSchema = z.strictObject({
     templateId: rInspectionsTemplatesPreviewSchema0Schema,
     draftRevision: rInspectionsTemplatesPreviewSchema1Schema,
     title: rInspectionsTemplatesPreviewSchema2Schema,
-    copyMode: z.union([z.enum(["single", "multiple"]), z.null()]).optional(),
+    targetType: z
+      .union([z.enum(["store", "employee", "department"]), z.null()])
+      .optional(),
     storeIds: z.array(rInspectionsTemplatesPreviewSchema0Schema).max(200),
     questions: z.array(rInspectionsTemplatesPreviewSchema3Schema).max(50),
   }),
@@ -6911,7 +6926,7 @@ export const inspectionsTemplatesSaveBodySchema = z.strictObject({
   expectedDraftRevision: z.number().int().min(1).max(9007199254740991),
   definition: z.strictObject({
     title: bInspectionsTemplatesSaveSchema0Schema,
-    copyMode: bInspectionsTemplatesSaveSchema1Schema.optional(),
+    targetType: bInspectionsTemplatesSaveSchema1Schema.optional(),
     storeIds: bInspectionsTemplatesSaveSchema2Schema,
     questions: bInspectionsTemplatesSaveSchema4Schema,
   }),

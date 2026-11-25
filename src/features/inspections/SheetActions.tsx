@@ -18,6 +18,7 @@ import {
   useEmployeeText,
   type EmployeeTextKey,
 } from "./employeeText";
+import { SheetTarget } from "./SheetTarget";
 import styles from "./Employee.module.css";
 
 export function SheetActions({
@@ -152,7 +153,6 @@ export function SheetActions({
       ["added", prepared.preview.addedQuestionIds],
       ["removed", prepared.preview.removedQuestionIds],
     ] as const);
-  const name = sheet.name ?? sheet.templateTitle;
   return (
     <>
       <div className={styles.row}>
@@ -191,12 +191,13 @@ export function SheetActions({
       {prepared && (
         <ConfirmDialog
           flow={replace}
-          title={`${t("replace")} · ${name}`}
+          title={`${t("replace")} · ${sheet.templateTitle}`}
           description={t("replaceDescription")}
           confirmLabel={t("confirmReplace")}
           cancelLabel={t("cancel")}
           error={replace.error ? new Error(t(errorText(replace.error))) : null}
         >
+          <SheetTarget sheet={sheet} />
           <p className={styles.identifier}>
             {t("sheetId")} <code>{sheet.sheetId}</code>
           </p>
@@ -233,12 +234,13 @@ export function SheetActions({
       )}
       <ConfirmDialog
         flow={voidFlow}
-        title={`${t("void")} · ${name}`}
+        title={`${t("void")} · ${sheet.templateTitle}`}
         description={t("voidDescription")}
         confirmLabel={t("confirmVoid")}
         cancelLabel={t("cancel")}
         error={voidFlow.error ? new Error(t(errorText(voidFlow.error))) : null}
       >
+        <SheetTarget sheet={sheet} />
         <p className={styles.identifier}>
           {t("sheetId")} <code>{sheet.sheetId}</code>
         </p>

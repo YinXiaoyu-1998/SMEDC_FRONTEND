@@ -82,19 +82,20 @@ export function TemplateBuilder({
             onChange={(e) => patched({ title: e.currentTarget.value })}
           />
         </Field>
-        <Field label={t("mode")}>
+        <Field label={t("targetType")}>
           <select
-            value={draft.copyMode ?? ""}
+            value={draft.targetType ?? ""}
             onChange={(e) =>
               patched({
-                copyMode: (e.currentTarget.value ||
-                  null) as TemplateDraft["copyMode"],
+                targetType: (e.currentTarget.value ||
+                  null) as TemplateDraft["targetType"],
               })
             }
           >
-            <option value="">{t("noMode")}</option>
-            <option value="single">{t("single")}</option>
-            <option value="multiple">{t("multiple")}</option>
+            <option value="">{t("noTargetType")}</option>
+            <option value="store">{t("store")}</option>
+            <option value="employee">{t("employee")}</option>
+            <option value="department">{t("department")}</option>
           </select>
         </Field>
       </div>

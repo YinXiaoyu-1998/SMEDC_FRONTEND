@@ -38,7 +38,7 @@ function validationField(field: string, t: ReturnType<typeof useTemplateText>) {
   const labels = {
     title: "title",
     storeIds: "stores",
-    copyMode: "mode",
+    targetType: "targetType",
     questions: "questions",
   } as const;
   const key = field.split(".")[0] as keyof typeof labels;
@@ -156,7 +156,12 @@ export function TemplateEditor({
   }
 
   const activation = useConfirmFlow({
-    prepare: () => ({ revision: revision!, activate: action.current }),
+    prepare: () => ({
+      revision: revision!,
+      activate: action.current,
+      targetType: draft.targetType,
+      storeIds: draft.storeIds,
+    }),
     submit: async ({ revision, activate }) => {
       setError(null);
       setSaved(false);
@@ -395,9 +400,25 @@ export function TemplateEditor({
         <p>
           {t("draftRevision")} {activation.prepared?.revision}
         </p>
+        {activation.prepared?.activate && (
+          <dl>
+            <dt>{t("targetType")}</dt>
+            <dd>{t(activation.prepared.targetType ?? "noTargetType")}</dd>
+            <dt>{t("stores")}</dt>
+            <dd>{storeNames(activation.prepared.storeIds, stores)}</dd>
+          </dl>
+        )}
       </ConfirmDialog>
     </div>
   );
+}
+
+function storeNames(ids: string[], stores: TemplateStore[]) {
+  return ids
+    .map(
+      (id) => stores.find((store) => store.storeId === id)?.officialName ?? id,
+    )
+    .join(", ");
 }
 
 function DraftSummary({
@@ -416,13 +437,8 @@ function DraftSummary({
         {title} · {draft.title || t("unnamed")}
       </summary>
       <p>
-        {draft.copyMode ? t(draft.copyMode) : t("noMode")} ·{" "}
-        {draft.storeIds
-          .map(
-            (id) =>
-              stores.find((store) => store.storeId === id)?.officialName ?? id,
-          )
-          .join(", ")}
+        {draft.targetType ? t(draft.targetType) : t("noTargetType")} ·{" "}
+        {storeNames(draft.storeIds, stores)}
       </p>
       {draft.questions.map((question, index) => (
         <details key={question.questionId}>
