@@ -344,15 +344,18 @@ it("selects a same-name employee from a later page and opens the returned sheet"
 it("refreshes a stale department selection and rereads the returned sheet", async () => {
   const oldId = id(40);
   const newId = id(41);
+  let dayReads = 0;
   const submitted: { departmentId: string; requestId: string }[] = [];
   vi.stubGlobal(
     "fetch",
     mockInspectionApi(true, (url, init) => {
-      if (url.pathname.endsWith("/day"))
+      if (url.pathname.endsWith("/day")) {
+        dayReads += 1;
         return jsonResponse({
           items: [{ ...template, targetType: "department" }],
           nextCursor: null,
         });
+      }
       if (url.pathname.endsWith("/directory/list_directory")) {
         expect(JSON.parse(String(init?.body))).toEqual({
           enterpriseKey: scope.enterpriseKey,
@@ -362,12 +365,16 @@ it("refreshes a stale department selection and rereads the returned sheet", asyn
           enterpriseName: "样例企业",
           stores: [],
           departments: [
-            {
-              departmentId: oldId,
-              name: "前厅",
-              status: submitted.length ? "retired" : "active",
-              version: "1",
-            },
+            ...(!submitted.length
+              ? [
+                  {
+                    departmentId: oldId,
+                    name: "前厅",
+                    status: "active",
+                    version: "1",
+                  },
+                ]
+              : []),
             {
               departmentId: newId,
               name: "后厨",
@@ -409,7 +416,10 @@ it("refreshes a stale department selection and rereads the returned sheet", asyn
   const create = screen.getByRole("button", { name: "建卷" });
   fireEvent.change(picker, { target: { value: oldId } });
   fireEvent.click(create);
-  await screen.findByText("所选对象无法建卷，请从最新名单重新选择。");
+  await screen.findByText(
+    "无法完成建卷。模板、巡检对象或先前的卷可能已变更或不可用，请核对刷新后的列表再试。",
+  );
+  await waitFor(() => expect(dayReads).toBeGreaterThan(1));
   await waitFor(() =>
     expect(
       screen.queryByRole("option", { name: "前厅" }),

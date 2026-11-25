@@ -82,9 +82,9 @@ const messages = {
     "建卷请求已过期。请核对有效巡检卷后重试。",
     "The creation request expired. Check active sheets before trying again.",
   ],
-  voidedCreate: [
-    "该请求对应的卷已作废。可以重新建卷。",
-    "The sheet from this request was voided. You can create another sheet.",
+  createUnavailable: [
+    "无法完成建卷。模板、巡检对象或先前的卷可能已变更或不可用，请核对刷新后的列表再试。",
+    "Could not create the sheet. The template, target, or previous sheet may have changed or become unavailable. Check the refreshed list and try again.",
   ],
   uncertainCreate: [
     "建卷结果待确认，请重试同一次操作。",

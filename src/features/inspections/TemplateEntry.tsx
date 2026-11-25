@@ -183,12 +183,7 @@ export function TemplateEntry({
       const receipt = await create(request.body, client.csrfToken);
       if (!live.current) return;
       setAttempt(undefined);
-      if (receipt.status === "active") {
-        onCreate(receipt.sheetId);
-      } else {
-        setProblem("voidedCreate");
-        onRefresh();
-      }
+      onCreate(receipt.sheetId);
     } catch (caught) {
       if (!live.current) return;
       if (isUncertain(caught)) {
@@ -197,25 +192,30 @@ export function TemplateEntry({
         return;
       }
       setAttempt(undefined);
+      const notFound =
+        caught instanceof WebApiError && caught.code === "INSPECTION_NOT_FOUND";
       const settingsChanged =
         caught instanceof WebApiError && caught.code === "INSPECTION_INVALID";
-      const staleTarget =
-        isDirectoryTarget &&
-        (settingsChanged ||
-          (caught instanceof WebApiError &&
-            caught.code === "INSPECTION_NOT_FOUND"));
+      const staleTarget = isDirectoryTarget && (notFound || settingsChanged);
       if (staleTarget) {
         onSelect("");
         void directory.refetch();
       }
       setProblem(
-        staleTarget
-          ? "targetRefresh"
-          : settingsChanged || isConflict(caught)
-            ? "createConflict"
-            : errorText(caught),
+        notFound
+          ? "createUnavailable"
+          : staleTarget
+            ? "targetRefresh"
+            : settingsChanged || isConflict(caught)
+              ? "createConflict"
+              : errorText(caught),
       );
-      if (settingsChanged || isAccessError(caught) || isConflict(caught))
+      if (
+        notFound ||
+        settingsChanged ||
+        isAccessError(caught) ||
+        isConflict(caught)
+      )
         onRefresh();
     } finally {
       onBusy(false);
