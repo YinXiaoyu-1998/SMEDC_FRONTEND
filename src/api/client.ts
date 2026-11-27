@@ -30,6 +30,7 @@ export interface WebApiRequestInit {
   readonly csrfToken?: string;
   readonly signal?: AbortSignal;
   readonly handleForbiddenLocally?: boolean;
+  readonly handleUnauthorizedLocally?: boolean;
 }
 
 export interface WebApiErrorInit {
@@ -189,7 +190,8 @@ export async function requestWebApi<T>(
   const payload = await readJsonBody(response);
 
   if (!response.ok) {
-    if (response.status === 401) notify(unauthorizedHandler);
+    if (response.status === 401 && !request.handleUnauthorizedLocally)
+      notify(unauthorizedHandler);
     if (response.status === 403 && !request.handleForbiddenLocally)
       notify(forbiddenHandler);
 

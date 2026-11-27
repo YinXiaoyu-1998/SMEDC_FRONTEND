@@ -4,8 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { WebApiError } from "@/api/client";
 import type { RegistrationSessionResponse } from "@/api/generated/contract";
 import { sessionQueryKey } from "@/api/session";
-import { Brand } from "@/app/Brand";
-import { LanguageSwitch } from "@/app/LanguageSwitch";
+import { AuthCard } from "@/app/AuthCard";
 import { appPaths } from "@/app/paths";
 import { useText } from "@/i18n/useText";
 import { Button } from "@/ui/Button";
@@ -216,194 +215,186 @@ export function RegistrationPage({ verifyPage }: { verifyPage: boolean }) {
     ) : null;
 
   return (
-    <main className={styles.page}>
-      <section className={styles.card} aria-labelledby="registration-title">
-        <div className={styles.topRow}>
-          <span className={styles.brand}>
-            <Brand />
-          </span>
-          <LanguageSwitch />
-        </div>
-        <h1 id="registration-title" className={styles.title}>
-          {t(
-            verifyPage && session?.status === "sent"
-              ? "registration.verify"
-              : "registration.title",
+    <AuthCard
+      title={t(
+        verifyPage && session?.status === "sent"
+          ? "registration.verify"
+          : "registration.title",
+      )}
+      titleId="registration-title"
+    >
+      {error && (
+        <p role="alert" className={styles.formError}>
+          {t(error)}
+        </p>
+      )}
+      {!session && !error && <p role="status">{t("app.loading")}</p>}
+      {session && !verifyPage && (
+        <>
+          {session.status !== "start" && (
+            <a href="/register/verify">{t("registration.resume")}</a>
           )}
-        </h1>
-        {error && (
-          <p role="alert" className={styles.formError}>
-            {t(error)}
-          </p>
-        )}
-        {!session && !error && <p role="status">{t("app.loading")}</p>}
-        {session && !verifyPage && (
-          <>
-            {session.status !== "start" && (
-              <a href="/register/verify">{t("registration.resume")}</a>
-            )}
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (sameRecipient) void send();
-              }}
-              className={styles.form}
-            >
-              <label className={styles.field}>
-                {t("login.email")}
-                <input
-                  className={styles.input}
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  required
-                  maxLength={254}
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              </label>
-              {sameRecipient ? (
-                <Button
-                  type="submit"
-                  busy={busy === "send"}
-                  disabled={!!busy || seconds > 0}
-                >
-                  {t("registration.send")}
-                  {cooldown}
-                </Button>
-              ) : (
-                <Challenge
-                  key={locale}
-                  prefix={session.captcha.prefix}
-                  sceneId={session.captcha.sceneId}
-                  disabled={
-                    !!busy ||
-                    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) ||
-                    seconds > 0
-                  }
-                  busy={busy === "send"}
-                  onVerify={send}
-                  onSuccess={openVerificationPage}
-                />
-              )}
-            </form>
-            <p>{t("registration.employee")}</p>
-          </>
-        )}
-        {verifyPage && session?.status === "start" && (
-          <a href="/register">{t("registration.restart")}</a>
-        )}
-        {verifyPage && session?.status === "sent" && (
-          <>
-            <p>{session.email}</p>
-            <form onSubmit={verify} className={styles.form}>
-              <label className={styles.field}>
-                {t("registration.code")}
-                <input
-                  className={styles.input}
-                  name="code"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  required
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </label>
-              <small>
-                {t("registration.expires")}{" "}
-                {new Date(session.expiresAt).toLocaleTimeString(
-                  locale === "zh" ? "zh-CN" : "en",
-                  { hour: "2-digit", minute: "2-digit" },
-                )}
-              </small>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (sameRecipient) void send();
+            }}
+            className={styles.form}
+          >
+            <label className={styles.field}>
+              {t("login.email")}
+              <input
+                className={styles.input}
+                type="email"
+                name="email"
+                autoComplete="email"
+                required
+                maxLength={254}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+            {sameRecipient ? (
               <Button
                 type="submit"
-                busy={busy === "verify"}
-                disabled={!!busy || !/^[0-9]{6}$/.test(code)}
-              >
-                {t("registration.verify")}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => void send()}
                 busy={busy === "send"}
                 disabled={!!busy || seconds > 0}
               >
-                {t("registration.resend")}
+                {t("registration.send")}
                 {cooldown}
               </Button>
-            </form>
-            <a href="/register">{t("registration.change")}</a>
-          </>
-        )}
-        {verifyPage && session?.status === "verified" && (
-          <>
-            <p>
-              {t("registration.owner")} <strong>{session.email}</strong>
-            </p>
-            <form
-              onSubmit={complete}
-              onChange={(event) =>
-                setCompleteValid(event.currentTarget.checkValidity())
-              }
-              className={styles.form}
+            ) : (
+              <Challenge
+                key={locale}
+                prefix={session.captcha.prefix}
+                sceneId={session.captcha.sceneId}
+                disabled={
+                  !!busy ||
+                  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient) ||
+                  seconds > 0
+                }
+                busy={busy === "send"}
+                onVerify={send}
+                onSuccess={openVerificationPage}
+              />
+            )}
+          </form>
+          <p>{t("registration.employee")}</p>
+        </>
+      )}
+      {verifyPage && session?.status === "start" && (
+        <a href="/register">{t("registration.restart")}</a>
+      )}
+      {verifyPage && session?.status === "sent" && (
+        <>
+          <p>{session.email}</p>
+          <form onSubmit={verify} className={styles.form}>
+            <label className={styles.field}>
+              {t("registration.code")}
+              <input
+                className={styles.input}
+                name="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </label>
+            <small>
+              {t("registration.expires")}{" "}
+              {new Date(session.expiresAt).toLocaleTimeString(
+                locale === "zh" ? "zh-CN" : "en",
+                { hour: "2-digit", minute: "2-digit" },
+              )}
+            </small>
+            <Button
+              type="submit"
+              busy={busy === "verify"}
+              disabled={!!busy || !/^[0-9]{6}$/.test(code)}
             >
-              <label className={styles.field}>
-                {t("registration.org")}
-                <input
-                  className={styles.input}
-                  name="organizationName"
-                  required
-                  pattern=".*\S.*"
-                  maxLength={191}
-                  autoComplete="organization"
-                />
-              </label>
-              <label className={styles.field}>
-                {t("registration.name")}
-                <input
-                  className={styles.input}
-                  name="displayName"
-                  required
-                  pattern=".*\S.*"
-                  maxLength={191}
-                  autoComplete="name"
-                />
-              </label>
-              <label className={styles.field}>
-                {t("login.password")}
-                <input
-                  className={styles.input}
-                  name="password"
-                  type="password"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </label>
-              <Button
-                type="submit"
-                busy={busy === "create"}
-                disabled={!completeValid}
-              >
-                {t("registration.create")}
-              </Button>
-            </form>
-          </>
+              {t("registration.verify")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => void send()}
+              busy={busy === "send"}
+              disabled={!!busy || seconds > 0}
+            >
+              {t("registration.resend")}
+              {cooldown}
+            </Button>
+          </form>
+          <a href="/register">{t("registration.change")}</a>
+        </>
+      )}
+      {verifyPage && session?.status === "verified" && (
+        <>
+          <p>
+            {t("registration.owner")} <strong>{session.email}</strong>
+          </p>
+          <form
+            onSubmit={complete}
+            onChange={(event) =>
+              setCompleteValid(event.currentTarget.checkValidity())
+            }
+            className={styles.form}
+          >
+            <label className={styles.field}>
+              {t("registration.org")}
+              <input
+                className={styles.input}
+                name="organizationName"
+                required
+                pattern=".*\S.*"
+                maxLength={191}
+                autoComplete="organization"
+              />
+            </label>
+            <label className={styles.field}>
+              {t("registration.name")}
+              <input
+                className={styles.input}
+                name="displayName"
+                required
+                pattern=".*\S.*"
+                maxLength={191}
+                autoComplete="name"
+              />
+            </label>
+            <label className={styles.field}>
+              {t("login.password")}
+              <input
+                className={styles.input}
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
+            </label>
+            <Button
+              type="submit"
+              busy={busy === "create"}
+              disabled={!completeValid}
+            >
+              {t("registration.create")}
+            </Button>
+          </form>
+        </>
+      )}
+      {verifyPage && session?.status === "email_in_use" && (
+        <p role="status">{t("registration.existing")}</p>
+      )}
+      {verifyPage &&
+        (error === "registration.sessionExpired" ||
+          session?.status === "email_in_use") && (
+          <a href="/register">{t("registration.restart")}</a>
         )}
-        {verifyPage && session?.status === "email_in_use" && (
-          <p role="status">{t("registration.existing")}</p>
-        )}
-        {verifyPage &&
-          (error === "registration.sessionExpired" ||
-            session?.status === "email_in_use") && (
-            <a href="/register">{t("registration.restart")}</a>
-          )}
-        <a href={appPaths.login}>{t("registration.login")}</a>
-      </section>
-    </main>
+      <a href={appPaths.login}>{t("registration.login")}</a>
+    </AuthCard>
   );
 }

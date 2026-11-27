@@ -63,11 +63,29 @@ verify() {
   for asset in $assets; do
     curl -fsS --max-time 15 -o /dev/null "$base$asset"
   done
-  # 代理必须真的把请求送到后端：无会话读会话应得 401，设备授权页缺参数应得 400。
+  # 普通会话探针必须确实抵达 API。
   status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' "$base/api/web/v1/session")
   test "$status" = 401
   status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' "$base/oauth/device/verify")
-  test "$status" = 400
+  # 兼容先发布静态文件、再切换 Nginx 的顺序，以及恢复旧版入口。
+  if [ "$status" = 200 ]; then
+    local route expected response
+    for route in /oauth/device/verify /auth/password/setup /auth/password/setup/form; do
+      response=$(curl -fsS --max-time 15 "$base$route")
+      grep -q 'id="root"' <<< "$response"
+    done
+    for route in password-setup device-verification; do
+      case "$route" in
+        password-setup) expected=PASSWORD_SETUP_EXPIRED ;;
+        device-verification) expected=DEVICE_VERIFICATION_EXPIRED ;;
+      esac
+      response=$(curl -sS --max-time 15 -w '\n%{http_code}' "$base/api/web/v1/$route/session")
+      test "${response##*$'\n'}" = 400
+      grep -q "$expected" <<< "$response"
+    done
+  else
+    test "$status" = 400
+  fi
   # 未知路径交给 SPA，而不是 Nginx 404。
   curl -fsS --max-time 15 -o /dev/null "$base/definitely-not-a-route"
 }

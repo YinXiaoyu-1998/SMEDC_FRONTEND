@@ -4,10 +4,9 @@ import { Navigate, useNavigate, useSearchParams } from "react-router";
 
 import { useLogin, useSession } from "@/api/session";
 import { useAuthFeedback } from "@/app/authFeedback";
-import { LanguageSwitch } from "@/app/LanguageSwitch";
 import { LoadingSkeleton } from "@/app/LoadingSkeleton";
+import { AuthCard } from "@/app/AuthCard";
 import { appPaths, resolveLoginTarget } from "@/app/paths";
-import { Brand } from "@/app/Brand";
 import { useText } from "@/i18n/useText";
 import { Button } from "@/ui/Button";
 
@@ -89,99 +88,82 @@ export function LoginPage() {
   };
 
   return (
-    <main className={styles.page}>
-      <section className={styles.card} aria-labelledby="login-title">
-        <div className={styles.topRow}>
-          <span className={styles.brand}>
-            <Brand />
-          </span>
-          <LanguageSwitch />
+    <AuthCard title={t("login.title")} titleId="login-title">
+      {sessionExpired ? (
+        <p className={styles.notice} role="status">
+          {t("login.expired")}
+        </p>
+      ) : null}
+
+      {formError !== null ? (
+        <p className={styles.formError} role="alert">
+          {t(formError)}
+        </p>
+      ) : null}
+
+      <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="login-email">
+            {t("login.email")}
+          </label>
+          <input
+            id="login-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            className={styles.input}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            aria-invalid={emailError !== null ? true : undefined}
+            aria-describedby={
+              emailError !== null ? "login-email-error" : undefined
+            }
+          />
+          {emailError !== null ? (
+            <p
+              id="login-email-error"
+              className={styles.fieldError}
+              role="alert"
+            >
+              {t(emailError)}
+            </p>
+          ) : null}
         </div>
 
-        <h1 id="login-title" className={styles.title}>
-          {t("login.title")}
-        </h1>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="login-password">
+            {t("login.password")}
+          </label>
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            className={styles.input}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={passwordError !== null ? true : undefined}
+            aria-describedby={
+              passwordError !== null ? "login-password-error" : undefined
+            }
+          />
+          {passwordError !== null ? (
+            <p
+              id="login-password-error"
+              className={styles.fieldError}
+              role="alert"
+            >
+              {t(passwordError)}
+            </p>
+          ) : null}
+        </div>
 
-        {sessionExpired ? (
-          <p className={styles.notice} role="status">
-            {t("login.expired")}
-          </p>
-        ) : null}
-
-        {formError !== null ? (
-          <p className={styles.formError} role="alert">
-            {t(formError)}
-          </p>
-        ) : null}
-
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-email">
-              {t("login.email")}
-            </label>
-            <input
-              id="login-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              className={styles.input}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              aria-invalid={emailError !== null ? true : undefined}
-              aria-describedby={
-                emailError !== null ? "login-email-error" : undefined
-              }
-            />
-            {emailError !== null ? (
-              <p
-                id="login-email-error"
-                className={styles.fieldError}
-                role="alert"
-              >
-                {t(emailError)}
-              </p>
-            ) : null}
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-password">
-              {t("login.password")}
-            </label>
-            <input
-              id="login-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              className={styles.input}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              aria-invalid={passwordError !== null ? true : undefined}
-              aria-describedby={
-                passwordError !== null ? "login-password-error" : undefined
-              }
-            />
-            {passwordError !== null ? (
-              <p
-                id="login-password-error"
-                className={styles.fieldError}
-                role="alert"
-              >
-                {t(passwordError)}
-              </p>
-            ) : null}
-          </div>
-
-          <Button
-            type="submit"
-            busy={login.isPending}
-            className={styles.submit}
-          >
-            {t("login.submit")}
-          </Button>
-        </form>
-        <a href="/register">{t("registration.title")}</a>
-        <p>{t("registration.employee")}</p>
-      </section>
-    </main>
+        <Button type="submit" busy={login.isPending} className={styles.submit}>
+          {t("login.submit")}
+        </Button>
+      </form>
+      <a href="/register">{t("registration.title")}</a>
+      <p>{t("registration.employee")}</p>
+    </AuthCard>
   );
 }
