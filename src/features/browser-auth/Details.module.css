@@ -1,0 +1,33 @@
+.heading {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.details {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--font-size-sm);
+}
+
+.heading + .details {
+  margin-top: var(--space-2);
+}
+
+.details div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.details dt {
+  color: var(--color-text-muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

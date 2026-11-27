@@ -5770,6 +5770,66 @@ export const rWorkflowsSaveEnterpriseWorkflowSchema33Schema = z.enum([
   "dianping",
 ]);
 
+export const deviceVerificationReadBodySchema = z.strictObject({});
+
+export type DeviceVerificationReadBody = z.infer<
+  typeof deviceVerificationReadBodySchema
+>;
+
+export const deviceVerificationReadParamsSchema = z.strictObject({});
+
+export type DeviceVerificationReadParams = z.infer<
+  typeof deviceVerificationReadParamsSchema
+>;
+
+export const deviceVerificationReadQuerySchema = z.strictObject({
+  userCode: z.string().optional(),
+});
+
+export type DeviceVerificationReadQuery = z.infer<
+  typeof deviceVerificationReadQuerySchema
+>;
+
+export const deviceVerificationReadResponseSchema = z.strictObject({
+  instanceName: z.string(),
+  instanceHostname: z.string(),
+  csrfToken: z.string(),
+});
+
+export type DeviceVerificationReadResponse = z.infer<
+  typeof deviceVerificationReadResponseSchema
+>;
+
+export const deviceVerificationSignInBodySchema = z.strictObject({
+  userCode: z.string(),
+  email: z.string(),
+  password: z.string(),
+});
+
+export type DeviceVerificationSignInBody = z.infer<
+  typeof deviceVerificationSignInBodySchema
+>;
+
+export const deviceVerificationSignInParamsSchema = z.strictObject({});
+
+export type DeviceVerificationSignInParams = z.infer<
+  typeof deviceVerificationSignInParamsSchema
+>;
+
+export const deviceVerificationSignInQuerySchema = z.strictObject({});
+
+export type DeviceVerificationSignInQuery = z.infer<
+  typeof deviceVerificationSignInQuerySchema
+>;
+
+export const deviceVerificationSignInResponseSchema = z.strictObject({
+  ok: z.literal(true),
+});
+
+export type DeviceVerificationSignInResponse = z.infer<
+  typeof deviceVerificationSignInResponseSchema
+>;
+
 export const directoryCheckDepartmentNameBodySchema = z.strictObject({
   enterpriseKey: z.string().min(1).max(128),
   name: z.string().min(1).max(255),
@@ -7184,6 +7244,95 @@ export const ledgerRequestsReadResponseSchema = z.strictObject({
 
 export type LedgerRequestsReadResponse = z.infer<
   typeof ledgerRequestsReadResponseSchema
+>;
+
+export const passwordSetupCompleteBodySchema = z.strictObject({
+  password: z.string(),
+  passwordConfirmation: z.string(),
+});
+
+export type PasswordSetupCompleteBody = z.infer<
+  typeof passwordSetupCompleteBodySchema
+>;
+
+export const passwordSetupCompleteParamsSchema = z.strictObject({});
+
+export type PasswordSetupCompleteParams = z.infer<
+  typeof passwordSetupCompleteParamsSchema
+>;
+
+export const passwordSetupCompleteQuerySchema = z.strictObject({});
+
+export type PasswordSetupCompleteQuery = z.infer<
+  typeof passwordSetupCompleteQuerySchema
+>;
+
+export const passwordSetupCompleteResponseSchema = z.strictObject({
+  ok: z.literal(true),
+});
+
+export type PasswordSetupCompleteResponse = z.infer<
+  typeof passwordSetupCompleteResponseSchema
+>;
+
+export const passwordSetupExchangeBodySchema = z.strictObject({
+  token: z.string().min(1).max(256),
+});
+
+export type PasswordSetupExchangeBody = z.infer<
+  typeof passwordSetupExchangeBodySchema
+>;
+
+export const passwordSetupExchangeParamsSchema = z.strictObject({});
+
+export type PasswordSetupExchangeParams = z.infer<
+  typeof passwordSetupExchangeParamsSchema
+>;
+
+export const passwordSetupExchangeQuerySchema = z.strictObject({});
+
+export type PasswordSetupExchangeQuery = z.infer<
+  typeof passwordSetupExchangeQuerySchema
+>;
+
+export const passwordSetupExchangeResponseSchema = z.strictObject({
+  ok: z.literal(true),
+});
+
+export type PasswordSetupExchangeResponse = z.infer<
+  typeof passwordSetupExchangeResponseSchema
+>;
+
+export const passwordSetupSessionBodySchema = z.strictObject({});
+
+export type PasswordSetupSessionBody = z.infer<
+  typeof passwordSetupSessionBodySchema
+>;
+
+export const passwordSetupSessionParamsSchema = z.strictObject({});
+
+export type PasswordSetupSessionParams = z.infer<
+  typeof passwordSetupSessionParamsSchema
+>;
+
+export const passwordSetupSessionQuerySchema = z.strictObject({});
+
+export type PasswordSetupSessionQuery = z.infer<
+  typeof passwordSetupSessionQuerySchema
+>;
+
+export const passwordSetupSessionResponseSchema = z.strictObject({
+  account: z.strictObject({
+    displayName: z.string(),
+    email: z.string(),
+    organizationName: z.string(),
+    role: z.enum(["admin", "employee"]),
+  }),
+  csrfToken: z.string(),
+});
+
+export type PasswordSetupSessionResponse = z.infer<
+  typeof passwordSetupSessionResponseSchema
 >;
 
 export const permissionsAccountsListBodySchema = z.strictObject({});
@@ -10147,6 +10296,34 @@ export type WorkflowsSaveEnterpriseWorkflowResponse = z.infer<
 // route id → 调用方需要的静态元数据；运行时校验以各自的 zod schema 为准
 
 export const webApiRoutes = {
+  "deviceVerification.read": {
+    method: "GET",
+    path: "/api/web/v1/device-verification/session",
+    auth: "anonymous",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DEVICE_VERIFICATION_EXPIRED",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "读取待授权设备并签发浏览器校验 Cookie 与 CSRF 令牌",
+  },
+  "deviceVerification.signIn": {
+    method: "POST",
+    path: "/api/web/v1/device-verification/sign-in",
+    auth: "anonymous-write",
+    errors: [
+      "BROWSER_INVALID_CREDENTIALS",
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "DEVICE_VERIFICATION_EXPIRED",
+      "DEVICE_VERIFICATION_SESSION_CHANGED",
+      "INTERNAL_ERROR",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "验证账户密码并完成待处理的设备授权",
+  },
   "directory.checkDepartmentName": {
     method: "POST",
     path: "/api/web/v1/orgs/:orgId/directory/check_department_name",
@@ -10644,6 +10821,46 @@ export const webApiRoutes = {
       "WEB_API_INVALID_REQUEST",
     ],
     summary: "轮询本人台账 ZIP 任务的进度与分区结果",
+  },
+  "passwordSetup.complete": {
+    method: "POST",
+    path: "/api/web/v1/password-setup/complete",
+    auth: "anonymous-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "PASSWORD_SETUP_EXPIRED",
+      "PASSWORD_SETUP_MISMATCH",
+      "PASSWORD_SETUP_REJECTED",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "在短期设置会话内保存首次密码或重置密码",
+  },
+  "passwordSetup.exchange": {
+    method: "POST",
+    path: "/api/web/v1/password-setup/exchange",
+    auth: "anonymous-write",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "PASSWORD_SETUP_EXPIRED",
+      "WEB_API_INVALID_REQUEST",
+    ],
+    summary: "兑换一次性设密码链接并签发短期设置会话",
+  },
+  "passwordSetup.session": {
+    method: "GET",
+    path: "/api/web/v1/password-setup/session",
+    auth: "anonymous",
+    errors: [
+      "BROWSER_SECURITY_CHECK_FAILED",
+      "BROWSER_SIGN_IN_REQUIRED",
+      "INTERNAL_ERROR",
+      "PASSWORD_SETUP_EXPIRED",
+    ],
+    summary: "读取短期设密码会话的账户和 CSRF 令牌",
   },
   "permissions.accounts.list": {
     method: "GET",

@@ -15,8 +15,7 @@
 | `/etc/nginx/snippets/smedc-app-security.conf`   | `deploy/security-headers.conf`         |
 | `/var/www/smedc-acme`                           | Certbot webroot，与官网共用            |
 
-`deploy/nginx-app.conf` 里的转发前缀是契约的一部分：`/api/web/v1/`、`/oauth/device/`、`/auth/password/`。
-少写一个，线上就是 404；多写一个，等于把 MCP 面暴露到网页域。
+公开认证页面的路径保持稳定。`/oauth/device/verify`、`/auth/password/setup` 和 `/auth/password/setup/form` 由 SPA 接管；`/api/web/v1/` 和旧版表单提交继续转发到后端。
 
 ## 首次启用（需单独授权的主机操作）
 
@@ -37,7 +36,7 @@
 - `https://app.smedatacenter.xyz/` 返回 SPA 首页，`/assets/*` 带 `immutable` 缓存头且 200。
 - 未登录打开 `/admin/<orgId>/permissions` 跳到 `/login`，登录后回到原路径。
 - 接口请求走同源 `/api/web/v1/*`；响应带 `cache-control: no-store`。
-- `/oauth/device/verify?user_code=...` 与 `/auth/password/setup#token=...` 仍能由后端渲染并完成流程。
+- 用合成账户验证设备授权与 Launcher 轮询，以及首次设密码、重置密码和旧链接。原路径应显示 React 认证页面。
 - 未知路径返回 SPA 的 404 页面，而不是 Nginx 404。
 - `api.smedatacenter.xyz/healthz` 仍为 200，MCP 与 Launcher 不受影响。
 
@@ -71,8 +70,15 @@
 5. 存在 `/opt/smedc/app-enabled` 标记时做公网校验，失败自动恢复原 `current` 并保留原回滚指针。
 6. 校验通过后才更新 `previous-release`。
 
-公网校验除了首页与静态资源，还断言两件「配置是否真的通了」的事：
-`/api/web/v1/session` 无会话返回 **401**（代理到达后端），`/oauth/device/verify` 缺参数返回 **400**（服务端渲染页面被正确转发）。
+公网校验检查首页、静态资源和普通会话接口。认证入口切换后，三条原路径都应返回 SPA，
+两个新会话接口都应返回明确的 **400** JSON 错误。切换前仍接受设备授权旧入口的 **400**。
+
+### 认证入口切换
+
+1. 先发布支持新增 JSON 认证接口的 API，保留旧 HTML 和提交路由。
+2. 发布包含 React 认证页的静态产物。
+3. 安装匹配的 app Nginx 配置，运行 `nginx -t` 后 reload，再完成认证验收。
+4. 若需退回旧前端版本，先恢复 app Nginx 的旧路由并 reload，再回滚静态产物或 API。
 
 ### 回滚
 

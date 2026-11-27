@@ -3,6 +3,98 @@
   "prefix": "/api/web/v1",
   "routes": [
     {
+      "id": "deviceVerification.read",
+      "method": "GET",
+      "path": "/api/web/v1/device-verification/session",
+      "auth": "anonymous",
+      "summary": "读取待授权设备并签发浏览器校验 Cookie 与 CSRF 令牌",
+      "request": {
+        "query": {
+          "type": "object",
+          "properties": {
+            "userCode": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "instanceName": {
+            "type": "string"
+          },
+          "instanceHostname": {
+            "type": "string"
+          },
+          "csrfToken": {
+            "type": "string"
+          }
+        },
+        "required": ["instanceName", "instanceHostname", "csrfToken"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "DEVICE_VERIFICATION_EXPIRED",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "deviceVerification.signIn",
+      "method": "POST",
+      "path": "/api/web/v1/device-verification/sign-in",
+      "auth": "anonymous-write",
+      "summary": "验证账户密码并完成待处理的设备授权",
+      "request": {
+        "body": {
+          "type": "object",
+          "properties": {
+            "userCode": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          },
+          "required": ["userCode", "email", "password"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": ["ok"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_INVALID_CREDENTIALS",
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "DEVICE_VERIFICATION_EXPIRED",
+        "DEVICE_VERIFICATION_SESSION_CHANGED",
+        "INTERNAL_ERROR",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 8192
+        }
+      }
+    },
+    {
       "id": "directory.checkDepartmentName",
       "method": "POST",
       "path": "/api/web/v1/orgs/:orgId/directory/check_department_name",
@@ -5499,6 +5591,143 @@
         "LEDGER_PDF_UNAVAILABLE",
         "LEDGER_REQUEST_INVALID",
         "WEB_API_INVALID_REQUEST"
+      ]
+    },
+    {
+      "id": "passwordSetup.complete",
+      "method": "POST",
+      "path": "/api/web/v1/password-setup/complete",
+      "auth": "anonymous-write",
+      "summary": "在短期设置会话内保存首次密码或重置密码",
+      "request": {
+        "body": {
+          "type": "object",
+          "properties": {
+            "password": {
+              "type": "string"
+            },
+            "passwordConfirmation": {
+              "type": "string"
+            }
+          },
+          "required": ["password", "passwordConfirmation"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": ["ok"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "PASSWORD_SETUP_EXPIRED",
+        "PASSWORD_SETUP_MISMATCH",
+        "PASSWORD_SETUP_REJECTED",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 8192
+        }
+      }
+    },
+    {
+      "id": "passwordSetup.exchange",
+      "method": "POST",
+      "path": "/api/web/v1/password-setup/exchange",
+      "auth": "anonymous-write",
+      "summary": "兑换一次性设密码链接并签发短期设置会话",
+      "request": {
+        "body": {
+          "type": "object",
+          "properties": {
+            "token": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "required": ["token"],
+          "additionalProperties": false
+        }
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": ["ok"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "PASSWORD_SETUP_EXPIRED",
+        "WEB_API_INVALID_REQUEST"
+      ],
+      "transport": {
+        "request": {
+          "contentType": "application/json",
+          "maxBodyBytes": 8192
+        }
+      }
+    },
+    {
+      "id": "passwordSetup.session",
+      "method": "GET",
+      "path": "/api/web/v1/password-setup/session",
+      "auth": "anonymous",
+      "summary": "读取短期设密码会话的账户和 CSRF 令牌",
+      "request": {},
+      "response": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "organizationName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "employee"]
+              }
+            },
+            "required": ["displayName", "email", "organizationName", "role"],
+            "additionalProperties": false
+          },
+          "csrfToken": {
+            "type": "string"
+          }
+        },
+        "required": ["account", "csrfToken"],
+        "additionalProperties": false
+      },
+      "errors": [
+        "BROWSER_SECURITY_CHECK_FAILED",
+        "BROWSER_SIGN_IN_REQUIRED",
+        "INTERNAL_ERROR",
+        "PASSWORD_SETUP_EXPIRED"
       ]
     },
     {
